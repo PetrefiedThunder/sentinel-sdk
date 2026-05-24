@@ -24,7 +24,7 @@ configure(api_key="sk_live_...")
 
 @oversight(
     risk_level="high",
-    approvers=["slack://channel/agent-approvals"],
+    approvers=["mailto:finance@acme.com"],
     timeout_seconds=300,
 )
 def transfer_funds(amount: int, recipient: str):
@@ -32,8 +32,8 @@ def transfer_funds(amount: int, recipient: str):
 ```
 
 When your agent calls `transfer_funds(1000, "acct_xyz")`, Sentinel pauses
-execution, posts an approval card to Slack, and only runs the function once a
-human clicks Approve. If rejected, `ApprovalRejected` is raised. If no response
+execution, emails an approval request, and only runs the function once a human
+approves it. If rejected, `ApprovalRejected` is raised. If no response
 within `timeout_seconds`, `ApprovalTimeout` is raised (unless `fallback="execute"`).
 
 ## Configuration
