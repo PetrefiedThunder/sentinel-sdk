@@ -7,7 +7,7 @@ from typing import Any, Optional
 import httpx
 
 from .config import SentinelConfig, get_config
-from .exceptions import ApprovalTimeout, SentinelError
+from .exceptions import ApprovalTimeout, SentinelConfigError, SentinelError
 
 USER_AGENT = "sentinel-sdk-python/0.1.0"
 
@@ -18,9 +18,10 @@ class SentinelClient:
 
     # ------------- internals -------------
     def _headers(self) -> dict:
+        if not self.config.api_key:
+            raise SentinelConfigError("Call sentinel.configure(api_key=...) before using Sentinel")
         h = {"User-Agent": USER_AGENT, "Content-Type": "application/json"}
-        if self.config.api_key:
-            h["Authorization"] = f"Bearer {self.config.api_key}"
+        h["Authorization"] = f"Bearer {self.config.api_key}"
         return h
 
     def _url(self, path: str) -> str:
@@ -84,7 +85,7 @@ class SentinelClient:
         }
         try:
             with httpx.Client(timeout=10.0) as c:
-                c.post(self._url("/v1/audit"), json=payload, headers=self._headers())
+                c.post(self._url("/v1/audit-events"), json=payload, headers=self._headers())
         except Exception:
             # best-effort — never raises
             pass
@@ -147,7 +148,7 @@ class SentinelClient:
         }
         try:
             async with httpx.AsyncClient(timeout=10.0) as c:
-                await c.post(self._url("/v1/audit"), json=payload, headers=self._headers())
+                await c.post(self._url("/v1/audit-events"), json=payload, headers=self._headers())
         except Exception:
             pass
 

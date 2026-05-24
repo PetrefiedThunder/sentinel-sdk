@@ -2,6 +2,10 @@ class SentinelError(Exception):
     """Base error for the Sentinel SDK."""
 
 
+class SentinelConfigError(SentinelError):
+    """Raised when the SDK is used without required configuration."""
+
+
 class ApprovalRejected(SentinelError):
     """Raised when an approval request is rejected by an approver."""
 

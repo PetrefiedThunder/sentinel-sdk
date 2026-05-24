@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from sentinel import ApprovalRejected, oversight
+from sentinel import ApprovalRejected, SentinelClient, SentinelConfigError, configure, oversight
 
 
 @patch("sentinel.decorator.SentinelClient")
@@ -18,7 +18,13 @@ def test_approval_success(mock_client_cls):
 
     result = transfer_funds(100, to="alice")
     assert result == {"amount": 100, "to": "alice"}
-    mock_client.create_approval.assert_called_once()
+    mock_client.create_approval.assert_called_once_with(
+        function_name="transfer_funds",
+        arguments={"amount": 100, "to": "alice"},
+        risk_level="high",
+        approvers=None,
+        timeout_seconds=None,
+    )
     mock_client.wait_for_decision.assert_called_once_with("act_1", timeout=None)
     mock_client.emit_audit_event.assert_called_once()
 
@@ -44,3 +50,9 @@ def test_rejection(mock_client_cls):
         dangerous()
     assert "too risky" in str(exc.value)
     assert ran["v"] is False
+
+
+def test_requires_api_key_before_network_calls():
+    configure(api_key=None)
+    with pytest.raises(SentinelConfigError):
+        SentinelClient().create_approval(function_name="dangerous", arguments={})

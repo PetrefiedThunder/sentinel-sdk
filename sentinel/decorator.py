@@ -29,6 +29,13 @@ def _serialize_arguments(value: Any) -> Any:
     return _truncate_repr(value)
 
 
+def _bound_arguments(fn: Callable, args: tuple, kwargs: dict) -> dict:
+    signature = inspect.signature(fn)
+    bound = signature.bind_partial(*args, **kwargs)
+    bound.apply_defaults()
+    return _serialize_arguments(dict(bound.arguments))
+
+
 def oversight(
     risk_level: str = "medium",
     approvers: Optional[list] = None,
@@ -44,10 +51,7 @@ def oversight(
                 cfg = get_config()
                 client = SentinelClient(cfg)
                 fb = fallback or cfg.fallback
-                arguments = {
-                    "args": _serialize_arguments(list(args)),
-                    "kwargs": _serialize_arguments(dict(kwargs)),
-                }
+                arguments = _bound_arguments(fn, args, kwargs)
                 approval = await client.acreate_approval(
                     function_name=fn.__name__,
                     arguments=arguments,
@@ -98,10 +102,7 @@ def oversight(
             cfg = get_config()
             client = SentinelClient(cfg)
             fb = fallback or cfg.fallback
-            arguments = {
-                "args": _serialize_arguments(list(args)),
-                "kwargs": _serialize_arguments(dict(kwargs)),
-            }
+            arguments = _bound_arguments(fn, args, kwargs)
             approval = client.create_approval(
                 function_name=fn.__name__,
                 arguments=arguments,
