@@ -21,7 +21,7 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://oversight.sh"
+Homepage = "https://pauseapi.app"
 Repository = "https://github.com/PetrefiedThunder/sentinel-sdk"
 
 [tool.hatch.build.targets.wheel]

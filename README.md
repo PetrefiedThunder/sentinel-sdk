@@ -40,7 +40,7 @@ within `timeout_seconds`, `ApprovalTimeout` is raised (unless `fallback="execute
 
 Set via `configure(...)` or env vars:
 
-- `SENTINEL_API_URL` (default `https://api.oversight.sh`)
+- `SENTINEL_API_URL` (default `https://api.pauseapi.app`)
 - `SENTINEL_API_KEY`
 - `SENTINEL_TIMEOUT` (default `300`)
 - `SENTINEL_FALLBACK` (default `reject`)
@@ -57,7 +57,7 @@ Install with `pip install sentinel-oversight[langchain]`.
 
 ## Links
 
-- Website: https://oversight.sh
+- Website: https://pauseapi.app
 - API repo: https://github.com/PetrefiedThunder/sentinel-api
 - This SDK: https://github.com/PetrefiedThunder/sentinel-sdk
 

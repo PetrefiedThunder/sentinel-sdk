@@ -4,7 +4,7 @@ from typing import Optional
 
 
 def _default_api_url() -> str:
-    return os.environ.get("SENTINEL_API_URL", "https://api.oversight.sh")
+    return os.environ.get("SENTINEL_API_URL", "https://api.pauseapi.app")
 
 
 def _default_api_key() -> Optional[str]:
