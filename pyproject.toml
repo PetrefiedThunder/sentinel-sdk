@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sentinel-oversight"
+version = "0.1.0"
+description = "Oversight infrastructure for AI agents — human-in-the-loop approvals."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+authors = [{ name = "Christopher Sellers", email = "1@christophersellers.com" }]
+dependencies = [
+    "httpx>=0.27",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+langchain = ["langchain-core>=0.2.0"]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio",
+]
+
+[project.urls]
+Homepage = "https://oversight.sh"
+Repository = "https://github.com/PetrefiedThunder/sentinel-sdk"
+
+[tool.hatch.build.targets.wheel]
+packages = ["sentinel"]
