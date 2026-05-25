@@ -4,10 +4,7 @@ from typing import Optional
 
 
 def _default_api_url() -> str:
-    return os.environ.get(
-        "SENTINEL_API_URL",
-        "https://sentinel-api-production-9c76.up.railway.app",
-    )
+    return os.environ.get("SENTINEL_API_URL", "https://api.pauseapi.app")
 
 
 def _default_api_key() -> Optional[str]:

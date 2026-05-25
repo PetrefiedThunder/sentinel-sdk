@@ -9,7 +9,7 @@ import httpx
 from .config import SentinelConfig, get_config
 from .exceptions import ApprovalTimeout, SentinelAPIError, SentinelConfigError, SentinelError
 
-USER_AGENT = "sentinel-sdk-python/0.1.4"
+USER_AGENT = "sentinel-sdk-python/0.1.5"
 
 
 def _raise_for_status(r: httpx.Response) -> None:
