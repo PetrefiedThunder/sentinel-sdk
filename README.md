@@ -55,7 +55,7 @@ Each entry in `approvers=[...]` is a string. The format determines the channel.
 |---------------------------------|---------|------------------------------------|
 | `name@company.com`              | Email   | `alice@acme.com`                   |
 | `mailto:name@company.com`       | Email (explicit) | `mailto:alice@acme.com`   |
-| `sms:+15551234567`              | SMS (Twilio) | `sms:+14155550123`            |
+| `sms:+15551234567`              | SMS (Twilio) | `sms:+14155550123` — requires consent, see [SMS approvers](#sms-approvers--tcpa-consent) |
 
 You can mix formats — every approver receives a notification, the **first**
 decision wins.
@@ -69,6 +69,37 @@ decision wins.
 
 By default, emails send from `onboarding@resend.dev`. To get branded
 `approvals@yourdomain.app` email, verify your domain in Resend (Pro plan).
+
+## SMS approvers — TCPA consent
+
+To use `sms:+1...` approvers you must first register an opt-in record for each
+phone number. Sentinel won't create an approval whose approvers include an
+SMS destination without an active consent record — the API returns
+`400 SMS approver requires active SMS consent contact`.
+
+```python
+from sentinel import SentinelClient
+client = SentinelClient()
+
+# One-time, per phone number, after you've collected a real opt-in:
+client.register_sms_contact(
+    phone_number="+15551234567",
+    display_name="Maya (CTO)",
+    consent_source="onboarding_checkbox",       # e.g. "signed_form", "captured_web_form"
+    consent_note="Checked the SMS opt-in box during signup on 2026-05-25",
+)
+```
+
+Other helpers:
+```python
+client.list_sms_contacts()           # all active + revoked contacts for this tenant
+client.revoke_sms_contact("con_…")   # marks consent revoked; future SMS won't send
+```
+
+The customer can also reply **STOP** to any Sentinel SMS — the Twilio inbound
+webhook (`/webhooks/twilio/inbound`) automatically revokes their consent
+record. **HELP** returns a description and contact info. These two keywords
+are TCPA-mandated.
 
 ## Risk levels
 

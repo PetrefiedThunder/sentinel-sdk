@@ -9,7 +9,7 @@ import httpx
 from .config import SentinelConfig, get_config
 from .exceptions import ApprovalTimeout, SentinelAPIError, SentinelConfigError, SentinelError
 
-USER_AGENT = "sentinel-sdk-python/0.1.5"
+USER_AGENT = "sentinel-sdk-python/0.1.6"
 
 
 def _raise_for_status(r: httpx.Response) -> None:
@@ -142,6 +142,45 @@ class SentinelClient:
             if time.monotonic() >= deadline:
                 raise ApprovalTimeout(action_id=action_id, timeout_seconds=timeout)
 
+    def register_sms_contact(
+        self,
+        phone_number: str,
+        display_name: str,
+        consent_source: str,
+        consent_note: str = "",
+        consent_attested: bool = True,
+    ) -> dict:
+        """Register a phone number for SMS approvals (TCPA-compliant opt-in).
+
+        You must have a recorded business-relationship opt-in (signed form,
+        captured web checkbox, etc). The `consent_source` and `consent_note`
+        fields are stored as evidence; `consent_attested=True` is the API's
+        affirmative attestation that the opt-in was collected lawfully.
+
+        Without this call, any `approvers=["sms:+1..."]` will be rejected with
+        a 400 "SMS approver requires active SMS consent contact".
+        """
+        payload = {
+            "phone_number": phone_number,
+            "display_name": display_name,
+            "consent_attested": bool(consent_attested),
+            "consent_source": consent_source,
+            "consent_note": consent_note,
+        }
+        r = self._get_client().post("/v1/approver-contacts", json=payload)
+        _raise_for_status(r)
+        return r.json()
+
+    def list_sms_contacts(self) -> list:
+        r = self._get_client().get("/v1/approver-contacts")
+        _raise_for_status(r)
+        return r.json()
+
+    def revoke_sms_contact(self, contact_id: str) -> dict:
+        r = self._get_client().delete(f"/v1/approver-contacts/{contact_id}")
+        _raise_for_status(r)
+        return r.json()
+
     def list_audit_events(self, action_id: Optional[str] = None) -> list:
         params = {"action_id": action_id} if action_id else None
         r = self._get_client().get("/v1/audit-events", params=params)
@@ -217,6 +256,35 @@ class SentinelClient:
                 return data
             if time.monotonic() >= deadline:
                 raise ApprovalTimeout(action_id=action_id, timeout_seconds=timeout)
+
+    async def aregister_sms_contact(
+        self,
+        phone_number: str,
+        display_name: str,
+        consent_source: str,
+        consent_note: str = "",
+        consent_attested: bool = True,
+    ) -> dict:
+        payload = {
+            "phone_number": phone_number,
+            "display_name": display_name,
+            "consent_attested": bool(consent_attested),
+            "consent_source": consent_source,
+            "consent_note": consent_note,
+        }
+        r = await self._get_aclient().post("/v1/approver-contacts", json=payload)
+        _raise_for_status(r)
+        return r.json()
+
+    async def alist_sms_contacts(self) -> list:
+        r = await self._get_aclient().get("/v1/approver-contacts")
+        _raise_for_status(r)
+        return r.json()
+
+    async def arevoke_sms_contact(self, contact_id: str) -> dict:
+        r = await self._get_aclient().delete(f"/v1/approver-contacts/{contact_id}")
+        _raise_for_status(r)
+        return r.json()
 
     async def alist_audit_events(self, action_id: Optional[str] = None) -> list:
         params = {"action_id": action_id} if action_id else None
