@@ -5,7 +5,7 @@ from .config import SentinelConfig, configure, get_config
 from .decorator import oversight
 from .exceptions import ApprovalRejected, ApprovalTimeout, SentinelAPIError, SentinelConfigError, SentinelError
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 __all__ = [
     "oversight",

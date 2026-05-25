@@ -9,7 +9,7 @@ import httpx
 from .config import SentinelConfig, get_config
 from .exceptions import ApprovalTimeout, SentinelAPIError, SentinelConfigError, SentinelError
 
-USER_AGENT = "sentinel-sdk-python/0.1.2"
+USER_AGENT = "sentinel-sdk-python/0.1.4"
 
 
 def _raise_for_status(r: httpx.Response) -> None:
@@ -29,19 +29,59 @@ def _raise_for_status(r: httpx.Response) -> None:
 
 
 class SentinelClient:
+    """Thread-safe Sentinel client with HTTP connection keep-alive.
+
+    A single httpx.Client is reused across calls — avoids ~95 ms TLS handshake
+    on every request, which compounds when polling.
+    """
+
     def __init__(self, config: Optional[SentinelConfig] = None):
         self.config = config or get_config()
+        self._client: Optional[httpx.Client] = None
+        self._aclient: Optional[httpx.AsyncClient] = None
 
     # ------------- internals -------------
     def _headers(self) -> dict:
         if not self.config.api_key:
             raise SentinelConfigError("Call sentinel.configure(api_key=...) before using Sentinel")
-        h = {"User-Agent": USER_AGENT, "Content-Type": "application/json"}
-        h["Authorization"] = f"Bearer {self.config.api_key}"
-        return h
+        return {
+            "User-Agent": USER_AGENT,
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.config.api_key}",
+        }
 
     def _url(self, path: str) -> str:
         return f"{self.config.api_url.rstrip('/')}{path}"
+
+    def _get_client(self) -> httpx.Client:
+        if self._client is None:
+            self._client = httpx.Client(
+                base_url=self.config.api_url.rstrip("/"),
+                headers=self._headers(),
+                timeout=60.0,
+                limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
+            )
+        return self._client
+
+    def _get_aclient(self) -> httpx.AsyncClient:
+        if self._aclient is None:
+            self._aclient = httpx.AsyncClient(
+                base_url=self.config.api_url.rstrip("/"),
+                headers=self._headers(),
+                timeout=60.0,
+                limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
+            )
+        return self._aclient
+
+    def close(self) -> None:
+        if self._client is not None:
+            self._client.close()
+            self._client = None
+
+    async def aclose(self) -> None:
+        if self._aclient is not None:
+            await self._aclient.aclose()
+            self._aclient = None
 
     # ------------- sync API -------------
     def create_approval(
@@ -59,16 +99,14 @@ class SentinelClient:
             "approvers": approvers or [],
             "timeout_seconds": timeout_seconds or self.config.timeout_seconds,
         }
-        with httpx.Client(timeout=30.0) as c:
-            r = c.post(self._url("/v1/approvals"), json=payload, headers=self._headers())
-            _raise_for_status(r)
-            return r.json()
+        r = self._get_client().post("/v1/approvals", json=payload)
+        _raise_for_status(r)
+        return r.json()
 
     def get_approval(self, action_id: str) -> dict:
-        with httpx.Client(timeout=30.0) as c:
-            r = c.get(self._url(f"/v1/approvals/{action_id}"), headers=self._headers())
-            _raise_for_status(r)
-            return r.json()
+        r = self._get_client().get(f"/v1/approvals/{action_id}")
+        _raise_for_status(r)
+        return r.json()
 
     def wait_for_decision(
         self,
@@ -76,24 +114,39 @@ class SentinelClient:
         timeout: Optional[float] = None,
         poll_interval: Optional[float] = None,
     ) -> dict:
+        """Block until the approval is decided or the timeout elapses.
+
+        Uses the server-side long-poll endpoint when available (single RTT per
+        ~30s wait window), falling back to client polling.
+        """
         timeout = timeout or self.config.timeout_seconds
-        poll_interval = poll_interval or self.config.poll_interval
         deadline = time.monotonic() + timeout
         while True:
-            data = self.get_approval(action_id)
+            remaining = max(1.0, min(30.0, deadline - time.monotonic()))
+            try:
+                r = self._get_client().get(
+                    f"/v1/approvals/{action_id}/wait",
+                    params={"timeout": remaining},
+                    timeout=remaining + 5.0,
+                )
+                _raise_for_status(r)
+                data = r.json()
+            except SentinelAPIError as e:
+                # Fall back to plain polling if /wait isn't available (older server)
+                if e.status_code != 404:
+                    raise
+                data = self.get_approval(action_id)
             status = data.get("status") or data.get("decision")
             if status in ("approved", "rejected"):
                 return data
             if time.monotonic() >= deadline:
                 raise ApprovalTimeout(action_id=action_id, timeout_seconds=timeout)
-            time.sleep(poll_interval)
 
     def list_audit_events(self, action_id: Optional[str] = None) -> list:
         params = {"action_id": action_id} if action_id else None
-        with httpx.Client(timeout=30.0) as c:
-            r = c.get(self._url("/v1/audit-events"), params=params, headers=self._headers())
-            _raise_for_status(r)
-            return r.json()
+        r = self._get_client().get("/v1/audit-events", params=params)
+        _raise_for_status(r)
+        return r.json()
 
     def emit_audit_event(
         self,
@@ -107,8 +160,7 @@ class SentinelClient:
             "error": error,
         }
         try:
-            with httpx.Client(timeout=10.0) as c:
-                c.post(self._url("/v1/audit-events"), json=payload, headers=self._headers())
+            self._get_client().post("/v1/audit-events", json=payload, timeout=10.0)
         except Exception:
             # best-effort — never raises
             pass
@@ -129,16 +181,14 @@ class SentinelClient:
             "approvers": approvers or [],
             "timeout_seconds": timeout_seconds or self.config.timeout_seconds,
         }
-        async with httpx.AsyncClient(timeout=30.0) as c:
-            r = await c.post(self._url("/v1/approvals"), json=payload, headers=self._headers())
-            _raise_for_status(r)
-            return r.json()
+        r = await self._get_aclient().post("/v1/approvals", json=payload)
+        _raise_for_status(r)
+        return r.json()
 
     async def aget_approval(self, action_id: str) -> dict:
-        async with httpx.AsyncClient(timeout=30.0) as c:
-            r = await c.get(self._url(f"/v1/approvals/{action_id}"), headers=self._headers())
-            _raise_for_status(r)
-            return r.json()
+        r = await self._get_aclient().get(f"/v1/approvals/{action_id}")
+        _raise_for_status(r)
+        return r.json()
 
     async def await_for_decision(
         self,
@@ -147,23 +197,32 @@ class SentinelClient:
         poll_interval: Optional[float] = None,
     ) -> dict:
         timeout = timeout or self.config.timeout_seconds
-        poll_interval = poll_interval or self.config.poll_interval
         deadline = time.monotonic() + timeout
         while True:
-            data = await self.aget_approval(action_id)
+            remaining = max(1.0, min(30.0, deadline - time.monotonic()))
+            try:
+                r = await self._get_aclient().get(
+                    f"/v1/approvals/{action_id}/wait",
+                    params={"timeout": remaining},
+                    timeout=remaining + 5.0,
+                )
+                _raise_for_status(r)
+                data = r.json()
+            except SentinelAPIError as e:
+                if e.status_code != 404:
+                    raise
+                data = await self.aget_approval(action_id)
             status = data.get("status") or data.get("decision")
             if status in ("approved", "rejected"):
                 return data
             if time.monotonic() >= deadline:
                 raise ApprovalTimeout(action_id=action_id, timeout_seconds=timeout)
-            await asyncio.sleep(poll_interval)
 
     async def alist_audit_events(self, action_id: Optional[str] = None) -> list:
         params = {"action_id": action_id} if action_id else None
-        async with httpx.AsyncClient(timeout=30.0) as c:
-            r = await c.get(self._url("/v1/audit-events"), params=params, headers=self._headers())
-            _raise_for_status(r)
-            return r.json()
+        r = await self._get_aclient().get("/v1/audit-events", params=params)
+        _raise_for_status(r)
+        return r.json()
 
     async def aemit_audit_event(
         self,
@@ -177,8 +236,7 @@ class SentinelClient:
             "error": error,
         }
         try:
-            async with httpx.AsyncClient(timeout=10.0) as c:
-                await c.post(self._url("/v1/audit-events"), json=payload, headers=self._headers())
+            await self._get_aclient().post("/v1/audit-events", json=payload, timeout=10.0)
         except Exception:
             pass
 
