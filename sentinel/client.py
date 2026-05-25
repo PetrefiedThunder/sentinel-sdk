@@ -9,7 +9,7 @@ import httpx
 from .config import SentinelConfig, get_config
 from .exceptions import ApprovalTimeout, SentinelAPIError, SentinelConfigError, SentinelError
 
-USER_AGENT = "sentinel-sdk-python/0.1.6"
+USER_AGENT = "sentinel-sdk-python/0.1.7"
 
 
 def _raise_for_status(r: httpx.Response) -> None:
@@ -142,6 +142,23 @@ class SentinelClient:
             if time.monotonic() >= deadline:
                 raise ApprovalTimeout(action_id=action_id, timeout_seconds=timeout)
 
+    def get_tenant(self) -> dict:
+        """Fetch the current tenant's settings (default_approvers, etc)."""
+        r = self._get_client().get("/v1/tenants/me")
+        _raise_for_status(r)
+        return r.json()
+
+    def set_default_approvers(self, approvers: list[str]) -> dict:
+        """Set the tenant's default-approvers list. Used when `@oversight()`
+        decorators don't specify their own `approvers=[...]`.
+
+        Example:
+            client.set_default_approvers(["sms:+15551234567", "ops@acme.com"])
+        """
+        r = self._get_client().patch("/v1/tenants/me", json={"default_approvers": approvers})
+        _raise_for_status(r)
+        return r.json()
+
     def register_sms_contact(
         self,
         phone_number: str,
@@ -256,6 +273,16 @@ class SentinelClient:
                 return data
             if time.monotonic() >= deadline:
                 raise ApprovalTimeout(action_id=action_id, timeout_seconds=timeout)
+
+    async def aget_tenant(self) -> dict:
+        r = await self._get_aclient().get("/v1/tenants/me")
+        _raise_for_status(r)
+        return r.json()
+
+    async def aset_default_approvers(self, approvers: list[str]) -> dict:
+        r = await self._get_aclient().patch("/v1/tenants/me", json={"default_approvers": approvers})
+        _raise_for_status(r)
+        return r.json()
 
     async def aregister_sms_contact(
         self,

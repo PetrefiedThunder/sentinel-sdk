@@ -101,6 +101,28 @@ webhook (`/webhooks/twilio/inbound`) automatically revokes their consent
 record. **HELP** returns a description and contact info. These two keywords
 are TCPA-mandated.
 
+## Default approvers
+
+If you don't want to pass `approvers=[...]` on every decorator, set a default
+on your tenant. The API falls back to the tenant's `default_approvers` when
+the caller's list is empty.
+
+```python
+from sentinel import SentinelClient
+client = SentinelClient()
+
+client.set_default_approvers(["sms:+15551234567", "ops@yourcompany.com"])
+# now any @oversight(...) call without approvers uses these
+```
+
+Read or override via the web UI at `https://app.pauseapi.app/contacts`.
+
+Resolution order when an approval is created:
+1. The caller's explicit `approvers=[...]` (if non-empty)
+2. The tenant's saved `default_approvers`
+3. The global `DEFAULT_APPROVERS` env var on the API
+4. 400 error if all three are empty
+
 ## Risk levels
 
 `risk_level` is a string the dashboard uses for prioritization. Allowed values:
