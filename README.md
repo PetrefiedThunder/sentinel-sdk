@@ -31,7 +31,7 @@ configure(api_key="sk_live_…")
 
 @oversight(
     risk_level="high",
-    approvers=["alice@acme.com", "slack://channel/C0AB123CDEF"],
+    approvers=["sms:+15551234567", "alice@acme.com"],
     timeout_seconds=300,
 )
 def transfer_funds(amount: int, recipient: str):
@@ -41,7 +41,7 @@ def transfer_funds(amount: int, recipient: str):
 When your agent calls `transfer_funds(1000, "acct_xyz")`:
 1. Sentinel **pauses** execution and creates an approval on the backend.
 2. Notifications fire to every approver in the list (rules below).
-3. A human clicks **Approve** (Slack button, dashboard, or signed email link).
+3. A human clicks **Approve** from a signed text/email link or the dashboard.
 4. The wrapped function **runs**, and its return value flows back to the caller.
 
 If rejected → `ApprovalRejected(reason)` is raised. If no response within
@@ -55,7 +55,6 @@ Each entry in `approvers=[...]` is a string. The format determines the channel.
 |---------------------------------|---------|------------------------------------|
 | `name@company.com`              | Email   | `alice@acme.com`                   |
 | `mailto:name@company.com`       | Email (explicit) | `mailto:alice@acme.com`   |
-| `slack://channel/CXXXXXXXX`     | Slack   | `slack://channel/C0AB123CDEF`      |
 | `sms:+15551234567`              | SMS (Twilio) | `sms:+14155550123`            |
 
 You can mix formats — every approver receives a notification, the **first**
@@ -63,17 +62,13 @@ decision wins.
 
 ## Notification routing
 
-- **Slack** — fires if `SLACK_BOT_TOKEN` is set on the backend AND either the
-  account-default `SLACK_CHANNEL` is configured *or* an approver is
-  `slack://channel/...`. Posts a Block Kit message with Approve/Reject buttons.
 - **Email** — fires if `RESEND_API_KEY` is set AND any approver looks like an
   email address. Email contains signed approve/reject links (HMAC-SHA256, scoped
   to that action_id and timeout window).
 - **SMS** — fires if Twilio credentials are set AND an approver uses `sms:`.
 
-By default, Slack messages send from `Sentinel` and emails send from
-`onboarding@resend.dev`. To get branded `approvals@yourdomain.app` email, verify
-your domain in Resend (Pro plan).
+By default, emails send from `onboarding@resend.dev`. To get branded
+`approvals@yourdomain.app` email, verify your domain in Resend (Pro plan).
 
 ## Risk levels
 
