@@ -6,6 +6,20 @@ class SentinelConfigError(SentinelError):
     """Raised when the SDK is used without required configuration."""
 
 
+class SentinelAPIError(SentinelError):
+    """Raised when a Sentinel API request returns a non-2xx response."""
+
+    def __init__(self, status_code: int, message: str = "", url: str | None = None):
+        self.status_code = status_code
+        self.url = url
+        msg = f"Sentinel API {status_code}"
+        if url:
+            msg += f" {url}"
+        if message:
+            msg += f": {message}"
+        super().__init__(msg)
+
+
 class ApprovalRejected(SentinelError):
     """Raised when an approval request is rejected by an approver."""
 

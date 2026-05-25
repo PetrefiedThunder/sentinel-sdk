@@ -7,9 +7,25 @@ from typing import Any, Optional
 import httpx
 
 from .config import SentinelConfig, get_config
-from .exceptions import ApprovalTimeout, SentinelConfigError, SentinelError
+from .exceptions import ApprovalTimeout, SentinelAPIError, SentinelConfigError, SentinelError
 
-USER_AGENT = "sentinel-sdk-python/0.1.0"
+USER_AGENT = "sentinel-sdk-python/0.1.2"
+
+
+def _raise_for_status(r: httpx.Response) -> None:
+    """Translate non-2xx into SentinelAPIError with the API's error body."""
+    if r.is_success:
+        return
+    detail = ""
+    try:
+        body = r.json()
+        if isinstance(body, dict):
+            detail = body.get("detail") or body.get("message") or str(body)
+        else:
+            detail = str(body)
+    except Exception:
+        detail = (r.text or "")[:500]
+    raise SentinelAPIError(r.status_code, detail, url=str(r.request.url))
 
 
 class SentinelClient:
@@ -45,13 +61,13 @@ class SentinelClient:
         }
         with httpx.Client(timeout=30.0) as c:
             r = c.post(self._url("/v1/approvals"), json=payload, headers=self._headers())
-            r.raise_for_status()
+            _raise_for_status(r)
             return r.json()
 
     def get_approval(self, action_id: str) -> dict:
         with httpx.Client(timeout=30.0) as c:
             r = c.get(self._url(f"/v1/approvals/{action_id}"), headers=self._headers())
-            r.raise_for_status()
+            _raise_for_status(r)
             return r.json()
 
     def wait_for_decision(
@@ -71,6 +87,13 @@ class SentinelClient:
             if time.monotonic() >= deadline:
                 raise ApprovalTimeout(action_id=action_id, timeout_seconds=timeout)
             time.sleep(poll_interval)
+
+    def list_audit_events(self, action_id: Optional[str] = None) -> list:
+        params = {"action_id": action_id} if action_id else None
+        with httpx.Client(timeout=30.0) as c:
+            r = c.get(self._url("/v1/audit-events"), params=params, headers=self._headers())
+            _raise_for_status(r)
+            return r.json()
 
     def emit_audit_event(
         self,
@@ -108,13 +131,13 @@ class SentinelClient:
         }
         async with httpx.AsyncClient(timeout=30.0) as c:
             r = await c.post(self._url("/v1/approvals"), json=payload, headers=self._headers())
-            r.raise_for_status()
+            _raise_for_status(r)
             return r.json()
 
     async def aget_approval(self, action_id: str) -> dict:
         async with httpx.AsyncClient(timeout=30.0) as c:
             r = await c.get(self._url(f"/v1/approvals/{action_id}"), headers=self._headers())
-            r.raise_for_status()
+            _raise_for_status(r)
             return r.json()
 
     async def await_for_decision(
@@ -135,6 +158,13 @@ class SentinelClient:
                 raise ApprovalTimeout(action_id=action_id, timeout_seconds=timeout)
             await asyncio.sleep(poll_interval)
 
+    async def alist_audit_events(self, action_id: Optional[str] = None) -> list:
+        params = {"action_id": action_id} if action_id else None
+        async with httpx.AsyncClient(timeout=30.0) as c:
+            r = await c.get(self._url("/v1/audit-events"), params=params, headers=self._headers())
+            _raise_for_status(r)
+            return r.json()
+
     async def aemit_audit_event(
         self,
         action_id: str,
@@ -153,4 +183,4 @@ class SentinelClient:
             pass
 
 
-__all__ = ["SentinelClient", "SentinelError"]
+__all__ = ["SentinelClient", "SentinelError", "SentinelAPIError"]
