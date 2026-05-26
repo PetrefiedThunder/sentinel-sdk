@@ -10,7 +10,7 @@ import httpx
 from .config import SentinelConfig, get_config
 from .exceptions import ApprovalTimeout, SentinelAPIError, SentinelConfigError, SentinelError
 
-USER_AGENT = "sentinel-sdk-python/0.1.8"
+USER_AGENT = "sentinel-sdk-python/0.1.9"
 
 
 def _ensure_json_serializable(arguments: Any) -> None:

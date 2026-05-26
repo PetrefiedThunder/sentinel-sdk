@@ -4,6 +4,18 @@ All notable changes to the Sentinel Python SDK (`sentinel-oversight` on PyPI).
 This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.9] — 2026-05-26
+
+### Added
+- `sentinel.adapters.crewai.gated(tool, ...)` — wrap any CrewAI tool
+  (BaseTool instance or `@tool`-decorated callable) so each invocation
+  pauses for Sentinel approval. Preserves the tool's external interface
+  so CrewAI's executor calls it normally.
+- `sentinel.adapters.autogen.gated(...)` — decorator for AutoGen-style
+  tool functions. Detects sync vs. async automatically, preserves
+  `functools.wraps` metadata so AutoGen's tool registration sees the
+  original signature.
+
 ## [0.1.8] — 2026-05-26
 
 ### Fixed
