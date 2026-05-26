@@ -1,7 +1,9 @@
-# Sentinel SDK
+# Sentinel SDK (Python)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI version](https://img.shields.io/pypi/v/sentinel-oversight.svg)](https://pypi.org/project/sentinel-oversight/)
+[![Python](https://img.shields.io/pypi/pyversions/sentinel-oversight.svg)](https://pypi.org/project/sentinel-oversight/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Status](https://img.shields.io/badge/status-public%20beta-blue.svg)](https://pauseapi.app)
 
 **Oversight infrastructure for AI agents.**
 
