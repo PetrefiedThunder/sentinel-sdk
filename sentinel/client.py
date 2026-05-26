@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from typing import Any, Optional
 
@@ -9,7 +10,26 @@ import httpx
 from .config import SentinelConfig, get_config
 from .exceptions import ApprovalTimeout, SentinelAPIError, SentinelConfigError, SentinelError
 
-USER_AGENT = "sentinel-sdk-python/0.1.7"
+USER_AGENT = "sentinel-sdk-python/0.1.8"
+
+
+def _ensure_json_serializable(arguments: Any) -> None:
+    """Fail fast if `arguments` can't be JSON-encoded.
+
+    Without this check the POST silently succeeds (httpx converts the value
+    via its own serializer, or the server stores something useless), and
+    the agent then hangs until `timeout_seconds` waiting on a decision it
+    can never get. Raise immediately with the offending type so the caller
+    sees the real error.
+    """
+    try:
+        json.dumps(arguments)
+    except TypeError as e:
+        raise TypeError(
+            f"@oversight arguments must be JSON-serializable. "
+            f"Got an un-serializable value: {e}. "
+            f"Convert sets/objects/bytes to plain dict/list/str/int/float/bool/None before the call."
+        ) from e
 
 
 def _raise_for_status(r: httpx.Response) -> None:
@@ -92,6 +112,7 @@ class SentinelClient:
         approvers: Optional[list] = None,
         timeout_seconds: Optional[float] = None,
     ) -> dict:
+        _ensure_json_serializable(arguments)
         payload = {
             "function_name": function_name,
             "arguments": arguments,
@@ -230,6 +251,7 @@ class SentinelClient:
         approvers: Optional[list] = None,
         timeout_seconds: Optional[float] = None,
     ) -> dict:
+        _ensure_json_serializable(arguments)
         payload = {
             "function_name": function_name,
             "arguments": arguments,
