@@ -46,3 +46,20 @@ ignore = [
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
+version_variables = [
+    "sentinel/__init__.py:__version__",
+    "sentinel/client.py:USER_AGENT",
+]
+branch = "main"
+upload_to_pypi = false  # GH Actions publish.yml handles PyPI via OIDC
+upload_to_release = false  # SBOM workflow attaches release assets
+build_command = "python -m pip install build && python -m build"
+commit_message = "chore(release): {version}\n\n{changelog}"
+
+[tool.semantic_release.commit_parser_options]
+allowed_tags = ["feat", "fix", "perf", "refactor", "docs", "build", "ci", "test", "chore"]
+minor_tags = ["feat"]
+patch_tags = ["fix", "perf", "refactor"]
