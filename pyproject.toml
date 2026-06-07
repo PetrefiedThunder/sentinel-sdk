@@ -26,3 +26,23 @@ Repository = "https://github.com/PetrefiedThunder/sentinel-sdk"
 
 [tool.hatch.build.targets.wheel]
 packages = ["sentinel"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["dist", "build", ".venv", "tests/fixtures"]
+
+[tool.ruff.lint]
+# Sensible default — pyflakes, pycodestyle, isort, bugbear, comprehensions
+select = ["E", "F", "W", "I", "B", "C4", "UP", "SIM", "TCH"]
+ignore = [
+    "E501",  # line length handled by formatter
+    "B008",  # FastAPI uses Depends() in defaults
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B011"]  # assert False in tests is fine
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
