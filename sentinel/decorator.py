@@ -41,9 +41,18 @@ def oversight(
     approvers: Optional[list] = None,
     timeout_seconds: Optional[float] = None,
     fallback: Optional[str] = None,
+    idempotency_key: str | Callable[[], str] | None = None,
 ) -> Callable:
     def decorator(fn: Callable) -> Callable:
         is_async = inspect.iscoroutinefunction(fn)
+
+        def _approval_kwargs() -> dict:
+            """Extra kwargs for create_approval. Callable keys are invoked
+            once per wrapped-function invocation."""
+            if idempotency_key is None:
+                return {}
+            key = idempotency_key() if callable(idempotency_key) else idempotency_key
+            return {"idempotency_key": key}
 
         if is_async:
             @functools.wraps(fn)
@@ -58,6 +67,7 @@ def oversight(
                     risk_level=risk_level,
                     approvers=approvers,
                     timeout_seconds=timeout_seconds,
+                    **_approval_kwargs(),
                 )
                 action_id = approval.get("action_id") or approval.get("id")
                 try:
@@ -109,6 +119,7 @@ def oversight(
                 risk_level=risk_level,
                 approvers=approvers,
                 timeout_seconds=timeout_seconds,
+                **_approval_kwargs(),
             )
             action_id = approval.get("action_id") or approval.get("id")
             try:

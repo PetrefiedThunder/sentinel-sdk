@@ -130,6 +130,21 @@ Resolution order when an approval is created:
 `risk_level` is a string the dashboard uses for prioritization. Allowed values:
 `low`, `medium`, `high`, `critical`. Required.
 
+## Idempotency
+
+Pass `idempotency_key` to safely retry approval creation. The same tenant + key
+replays the original response; reusing a key with a different body returns 409.
+
+```python
+client.create_approval(
+    function_name="transfer_funds",
+    arguments={"amount": 100},
+    idempotency_key="transfer-2026-06-09-001",
+)
+```
+
+`@oversight(idempotency_key=...)` also accepts a callable, invoked once per call.
+
 ## Configuration
 
 Set via `configure(...)` or environment variables:

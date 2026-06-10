@@ -111,6 +111,7 @@ class SentinelClient:
         risk_level: str = "medium",
         approvers: Optional[list] = None,
         timeout_seconds: Optional[float] = None,
+        idempotency_key: Optional[str] = None,
     ) -> dict:
         _ensure_json_serializable(arguments)
         payload = {
@@ -120,7 +121,8 @@ class SentinelClient:
             "approvers": approvers or [],
             "timeout_seconds": timeout_seconds or self.config.timeout_seconds,
         }
-        r = self._get_client().post("/v1/approvals", json=payload)
+        headers = {"Idempotency-Key": idempotency_key} if idempotency_key else None
+        r = self._get_client().post("/v1/approvals", json=payload, headers=headers)
         _raise_for_status(r)
         return r.json()
 
@@ -250,6 +252,7 @@ class SentinelClient:
         risk_level: str = "medium",
         approvers: Optional[list] = None,
         timeout_seconds: Optional[float] = None,
+        idempotency_key: Optional[str] = None,
     ) -> dict:
         _ensure_json_serializable(arguments)
         payload = {
@@ -259,7 +262,8 @@ class SentinelClient:
             "approvers": approvers or [],
             "timeout_seconds": timeout_seconds or self.config.timeout_seconds,
         }
-        r = await self._get_aclient().post("/v1/approvals", json=payload)
+        headers = {"Idempotency-Key": idempotency_key} if idempotency_key else None
+        r = await self._get_aclient().post("/v1/approvals", json=payload, headers=headers)
         _raise_for_status(r)
         return r.json()
 
