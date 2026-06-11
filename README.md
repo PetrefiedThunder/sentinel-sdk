@@ -198,6 +198,20 @@ agent.run("…", callbacks=[SentinelCallbackHandler(risk_level="high")])
 
 Install with `pip install sentinel-oversight[langchain]`.
 
+## OpenAI Agents SDK
+
+```python
+from agents import Agent, function_tool
+from sentinel.adapters.openai_agents import gated
+
+@function_tool
+def wire_transfer(amount: int, recipient: str) -> dict: ...
+
+agent = Agent(name="ops", tools=[gated(wire_transfer, risk_level="high")])
+```
+
+No extra install needed — the adapter has no dependency on `openai-agents`.
+
 ## Links
 
 - Website: <https://pauseapi.app>
