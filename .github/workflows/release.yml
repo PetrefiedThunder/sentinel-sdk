@@ -1,14 +1,17 @@
 name: release
 
-# python-semantic-release reads commit messages on main, derives the
-# next version per conventional commits, updates CHANGELOG.md +
-# pyproject.toml + __init__.py, commits + tags. Tag push triggers
-# the existing publish.yml workflow which ships to PyPI via Trusted
-# Publishing.
-
+# python-semantic-release reads commit messages on main, derives the next
+# version per conventional commits, updates CHANGELOG.md + pyproject.toml +
+# __init__.py, commits + tags. The tag push triggers publish.yml which ships
+# to PyPI via Trusted Publishing.
+#
+# TRIGGER IS MANUAL ON PURPOSE. Cutting a release publishes an immutable
+# version to PyPI (irreversible) — the first run will cut v1.0.0. A maintainer
+# runs this deliberately:  gh workflow run release.yml  (or the Actions UI).
+# To restore auto-release on every merge to main, add back:
+#     push:
+#       branches: [main]
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -31,7 +34,11 @@ jobs:
           python-version: '3.11'
 
       - name: Install python-semantic-release
-        run: pip install python-semantic-release
+        # Pinned to v9: the [tool.semantic_release] config in pyproject.toml uses
+        # the v8/v9 schema. v10+ restructured changelog templating and aborts
+        # with KeyError 'changelog'. Verified: v9.21.1 generates the changelog
+        # cleanly; v10.5.3 reproduces the failure.
+        run: pip install 'python-semantic-release>=9,<10'
 
       - name: Release
         env:
