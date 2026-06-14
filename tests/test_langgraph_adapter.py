@@ -141,9 +141,7 @@ def test_async_fn_wrapped_is_awaitable():
 def test_async_rejected_raises():
     client = MagicMock()
     client.acreate_approval = AsyncMock(return_value={"action_id": "act_4"})
-    client.await_for_decision = AsyncMock(
-        return_value={"status": "rejected", "reason": "nope"}
-    )
+    client.await_for_decision = AsyncMock(return_value={"status": "rejected", "reason": "nope"})
     gate = SentinelToolGate(client=client)
 
     ran = {"v": False}

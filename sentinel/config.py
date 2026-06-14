@@ -1,13 +1,12 @@
 import os
 from dataclasses import dataclass, field, replace
-from typing import Optional
 
 
 def _default_api_url() -> str:
     return os.environ.get("SENTINEL_API_URL", "https://api.pauseapi.app")
 
 
-def _default_api_key() -> Optional[str]:
+def _default_api_key() -> str | None:
     return os.environ.get("SENTINEL_API_KEY")
 
 
@@ -25,7 +24,7 @@ def _default_fallback() -> str:
 @dataclass
 class SentinelConfig:
     api_url: str = field(default_factory=_default_api_url)
-    api_key: Optional[str] = field(default_factory=_default_api_key)
+    api_key: str | None = field(default_factory=_default_api_key)
     timeout_seconds: float = field(default_factory=_default_timeout)
     poll_interval: float = 2.0
     fallback: str = field(default_factory=_default_fallback)

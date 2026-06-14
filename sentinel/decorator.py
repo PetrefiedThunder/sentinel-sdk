@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import functools
 import inspect
-from typing import Any, Callable, Optional
+from typing import TYPE_CHECKING, Any
 
 from .client import SentinelClient
 from .config import get_config
 from .exceptions import ApprovalRejected, ApprovalTimeout
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 _PRIMITIVES = (str, int, float, bool, type(None))
 _MAX_REPR = 500
@@ -22,7 +25,7 @@ def _truncate_repr(obj: Any) -> str:
 def _serialize_arguments(value: Any) -> Any:
     if isinstance(value, _PRIMITIVES):
         return value
-    if isinstance(value, (list, tuple)):
+    if isinstance(value, list | tuple):
         return [_serialize_arguments(v) for v in value]
     if isinstance(value, dict):
         return {str(k): _serialize_arguments(v) for k, v in value.items()}
@@ -38,9 +41,9 @@ def _bound_arguments(fn: Callable, args: tuple, kwargs: dict) -> dict:
 
 def oversight(
     risk_level: str = "medium",
-    approvers: Optional[list] = None,
-    timeout_seconds: Optional[float] = None,
-    fallback: Optional[str] = None,
+    approvers: list | None = None,
+    timeout_seconds: float | None = None,
+    fallback: str | None = None,
     idempotency_key: str | Callable[[], str] | None = None,
 ) -> Callable:
     def decorator(fn: Callable) -> Callable:
@@ -55,6 +58,7 @@ def oversight(
             return {"idempotency_key": key}
 
         if is_async:
+
             @functools.wraps(fn)
             async def awrapper(*args, **kwargs):
                 cfg = get_config()
@@ -71,14 +75,13 @@ def oversight(
                 )
                 action_id = approval.get("action_id") or approval.get("id")
                 try:
-                    decision = await client.await_for_decision(
-                        action_id, timeout=timeout_seconds
-                    )
+                    decision = await client.await_for_decision(action_id, timeout=timeout_seconds)
                 except ApprovalTimeout:
                     if fb == "execute":
                         result = await fn(*args, **kwargs)
                         await client.aemit_audit_event(
-                            action_id, execution_result=_truncate_repr(result),
+                            action_id,
+                            execution_result=_truncate_repr(result),
                             error="timeout-fallback-execute",
                         )
                         return result
@@ -98,9 +101,7 @@ def oversight(
                     )
                     return result
                 if status == "rejected":
-                    raise ApprovalRejected(
-                        reason=decision.get("reason", ""), action_id=action_id
-                    )
+                    raise ApprovalRejected(reason=decision.get("reason", ""), action_id=action_id)
                 raise ApprovalRejected(
                     reason=f"Unknown decision status: {status}", action_id=action_id
                 )
@@ -128,7 +129,8 @@ def oversight(
                 if fb == "execute":
                     result = fn(*args, **kwargs)
                     client.emit_audit_event(
-                        action_id, execution_result=_truncate_repr(result),
+                        action_id,
+                        execution_result=_truncate_repr(result),
                         error="timeout-fallback-execute",
                     )
                     return result
@@ -143,17 +145,11 @@ def oversight(
                         action_id, execution_result=None, error=_truncate_repr(e)
                     )
                     raise
-                client.emit_audit_event(
-                    action_id, execution_result=_truncate_repr(result)
-                )
+                client.emit_audit_event(action_id, execution_result=_truncate_repr(result))
                 return result
             if status == "rejected":
-                raise ApprovalRejected(
-                    reason=decision.get("reason", ""), action_id=action_id
-                )
-            raise ApprovalRejected(
-                reason=f"Unknown decision status: {status}", action_id=action_id
-            )
+                raise ApprovalRejected(reason=decision.get("reason", ""), action_id=action_id)
+            raise ApprovalRejected(reason=f"Unknown decision status: {status}", action_id=action_id)
 
         return wrapper
 

@@ -19,14 +19,18 @@ sync vs. async semantics of the original. Use `tool_allowlist` to gate only
 specific tools, or `tool_denylist` to exempt specific tools; ungated tools
 call through directly with no approval round-trip.
 """
+
 from __future__ import annotations
 
 import asyncio
 import functools
-from typing import Any, Callable, Iterable, Optional
+from typing import TYPE_CHECKING, Any
 
 from ..client import SentinelClient
 from ..exceptions import ApprovalRejected
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
 
 
 class SentinelToolGate:
@@ -35,12 +39,12 @@ class SentinelToolGate:
 
     def __init__(
         self,
-        client: Optional[SentinelClient] = None,
+        client: SentinelClient | None = None,
         risk_level: str = "high",
-        approvers: Optional[list[str]] = None,
-        timeout_seconds: Optional[float] = None,
-        tool_allowlist: Optional[Iterable[str]] = None,
-        tool_denylist: Optional[Iterable[str]] = None,
+        approvers: list[str] | None = None,
+        timeout_seconds: float | None = None,
+        tool_allowlist: Iterable[str] | None = None,
+        tool_denylist: Iterable[str] | None = None,
     ):
         self.client = client or SentinelClient()
         self.risk_level = risk_level
@@ -56,7 +60,7 @@ class SentinelToolGate:
             return tool_name not in self.tool_denylist
         return True
 
-    def wrap(self, fn: Callable, function_name: Optional[str] = None) -> Callable:
+    def wrap(self, fn: Callable, function_name: str | None = None) -> Callable:
         """Return a wrapper around ``fn`` that requires Sentinel approval
         before each invocation. Preserves sync vs. async semantics."""
         derived_name = function_name or getattr(fn, "__name__", "langgraph_tool")
@@ -101,9 +105,7 @@ class SentinelToolGate:
                 timeout_seconds=self.timeout_seconds,
             )
             action_id = approval.get("action_id") or approval.get("id")
-            decision = self.client.wait_for_decision(
-                action_id, timeout=self.timeout_seconds
-            )
+            decision = self.client.wait_for_decision(action_id, timeout=self.timeout_seconds)
             status = decision.get("status") or decision.get("decision")
             if status != "approved":
                 raise ApprovalRejected(
