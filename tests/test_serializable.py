@@ -1,4 +1,5 @@
 """Regression test for 0.1.8 — fail fast on un-serializable arguments."""
+
 import pytest
 
 from sentinel.client import _ensure_json_serializable

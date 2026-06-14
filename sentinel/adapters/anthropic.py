@@ -40,12 +40,16 @@ manual `tool_use` loop you'd write against the Claude API.
 
 The executor returns tool_result blocks ready to feed back into the API.
 """
+
 from __future__ import annotations
 
-from typing import Any, Callable, Iterable, Optional
+from typing import TYPE_CHECKING, Any
 
 from ..client import SentinelClient
 from ..exceptions import ApprovalRejected
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
 
 
 class GatedToolExecutor:
@@ -59,16 +63,14 @@ class GatedToolExecutor:
         self,
         tools: dict[str, Callable[..., Any]],
         *,
-        gated_tools: Optional[Iterable[str]] = None,
-        client: Optional[SentinelClient] = None,
+        gated_tools: Iterable[str] | None = None,
+        client: SentinelClient | None = None,
         risk_level: str = "high",
-        approvers: Optional[list[str]] = None,
-        timeout_seconds: Optional[float] = None,
+        approvers: list[str] | None = None,
+        timeout_seconds: float | None = None,
     ):
         self.tools = tools
-        self.gated_tools: Optional[set[str]] = (
-            set(gated_tools) if gated_tools is not None else None
-        )
+        self.gated_tools: set[str] | None = set(gated_tools) if gated_tools is not None else None
         self.client = client or SentinelClient()
         self.risk_level = risk_level
         self.approvers = approvers

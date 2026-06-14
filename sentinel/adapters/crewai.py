@@ -22,22 +22,26 @@ CrewAI tools are typically built with @tool() or BaseTool. Wrap them with
 The adapter wraps the underlying callable so CrewAI calls it normally —
 Sentinel intercepts inside the wrapper and pauses for human approval.
 """
+
 from __future__ import annotations
 
-from typing import Any, Callable, Optional
+from typing import TYPE_CHECKING, Any
 
 from ..client import SentinelClient
 from ..exceptions import ApprovalRejected
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def gated(
     tool: Any,
     *,
-    client: Optional[SentinelClient] = None,
+    client: SentinelClient | None = None,
     risk_level: str = "high",
-    approvers: Optional[list[str]] = None,
-    timeout_seconds: Optional[float] = None,
-    function_name: Optional[str] = None,
+    approvers: list[str] | None = None,
+    timeout_seconds: float | None = None,
+    function_name: str | None = None,
 ) -> Any:
     """Wrap a CrewAI tool (BaseTool instance or @tool-decorated callable)
     so each invocation pauses for Sentinel approval.

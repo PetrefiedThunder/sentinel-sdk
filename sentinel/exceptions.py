@@ -35,5 +35,9 @@ class ApprovalTimeout(SentinelError):
     def __init__(self, action_id: str | None = None, timeout_seconds: float | None = None):
         self.action_id = action_id
         self.timeout_seconds = timeout_seconds
-        msg = f"Approval timed out after {timeout_seconds}s" if timeout_seconds else "Approval timed out"
+        msg = (
+            f"Approval timed out after {timeout_seconds}s"
+            if timeout_seconds
+            else "Approval timed out"
+        )
         super().__init__(msg)

@@ -16,25 +16,30 @@ newer `autogen-core` — anywhere you register a Python callable as a tool.
 Async functions are supported transparently — the returned wrapper preserves
 sync vs. async semantics of the original.
 """
+
 from __future__ import annotations
 
 import asyncio
 import functools
-from typing import Any, Callable, Optional
+from typing import TYPE_CHECKING, Any
 
 from ..client import SentinelClient
 from ..exceptions import ApprovalRejected
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 
 def gated(
     *,
-    client: Optional[SentinelClient] = None,
+    client: SentinelClient | None = None,
     risk_level: str = "high",
-    approvers: Optional[list[str]] = None,
-    timeout_seconds: Optional[float] = None,
-    function_name: Optional[str] = None,
+    approvers: list[str] | None = None,
+    timeout_seconds: float | None = None,
+    function_name: str | None = None,
 ) -> Callable[[Callable], Callable]:
     """Decorator that gates an AutoGen-registered function behind Sentinel."""
+
     def decorator(fn: Callable) -> Callable:
         sentinel_client = client or SentinelClient()
         derived_name = function_name or getattr(fn, "__name__", "autogen_tool")
@@ -76,9 +81,7 @@ def gated(
                 timeout_seconds=timeout_seconds,
             )
             action_id = approval.get("action_id") or approval.get("id")
-            decision = sentinel_client.wait_for_decision(
-                action_id, timeout=timeout_seconds
-            )
+            decision = sentinel_client.wait_for_decision(action_id, timeout=timeout_seconds)
             status = decision.get("status") or decision.get("decision")
             if status != "approved":
                 raise ApprovalRejected(

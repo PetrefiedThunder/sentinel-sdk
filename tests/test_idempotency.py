@@ -1,4 +1,5 @@
 """Idempotency-Key support on POST /v1/approvals (client + decorator)."""
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -39,9 +40,7 @@ def _make_client(captured: list) -> SentinelClient:
 def test_header_sent_with_exact_value():
     captured = []
     client = _make_client(captured)
-    client.create_approval(
-        function_name="transfer", arguments={"a": 1}, idempotency_key="key-123"
-    )
+    client.create_approval(function_name="transfer", arguments={"a": 1}, idempotency_key="key-123")
     assert captured[0].headers["Idempotency-Key"] == "key-123"
 
 
@@ -55,9 +54,7 @@ def test_header_absent_when_not_set():
 def test_header_merge_keeps_authorization():
     captured = []
     client = _make_client(captured)
-    client.create_approval(
-        function_name="transfer", arguments={"a": 1}, idempotency_key="key-123"
-    )
+    client.create_approval(function_name="transfer", arguments={"a": 1}, idempotency_key="key-123")
     assert captured[0].headers["Authorization"] == "Bearer sk_test"
     assert captured[0].headers["Idempotency-Key"] == "key-123"
 

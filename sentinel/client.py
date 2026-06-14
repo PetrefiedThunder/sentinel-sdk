@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import asyncio
+import contextlib
 import json
 import time
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
@@ -55,10 +55,10 @@ class SentinelClient:
     on every request, which compounds when polling.
     """
 
-    def __init__(self, config: Optional[SentinelConfig] = None):
+    def __init__(self, config: SentinelConfig | None = None):
         self.config = config or get_config()
-        self._client: Optional[httpx.Client] = None
-        self._aclient: Optional[httpx.AsyncClient] = None
+        self._client: httpx.Client | None = None
+        self._aclient: httpx.AsyncClient | None = None
 
     # ------------- internals -------------
     def _headers(self) -> dict:
@@ -109,9 +109,9 @@ class SentinelClient:
         function_name: str,
         arguments: Any,
         risk_level: str = "medium",
-        approvers: Optional[list] = None,
-        timeout_seconds: Optional[float] = None,
-        idempotency_key: Optional[str] = None,
+        approvers: list | None = None,
+        timeout_seconds: float | None = None,
+        idempotency_key: str | None = None,
     ) -> dict:
         _ensure_json_serializable(arguments)
         payload = {
@@ -134,8 +134,8 @@ class SentinelClient:
     def wait_for_decision(
         self,
         action_id: str,
-        timeout: Optional[float] = None,
-        poll_interval: Optional[float] = None,
+        timeout: float | None = None,
+        poll_interval: float | None = None,
     ) -> dict:
         """Block until the approval is decided or the timeout elapses.
 
@@ -221,7 +221,7 @@ class SentinelClient:
         _raise_for_status(r)
         return r.json()
 
-    def list_audit_events(self, action_id: Optional[str] = None) -> list:
+    def list_audit_events(self, action_id: str | None = None) -> list:
         params = {"action_id": action_id} if action_id else None
         r = self._get_client().get("/v1/audit-events", params=params)
         _raise_for_status(r)
@@ -231,14 +231,14 @@ class SentinelClient:
         self,
         action_id: str,
         execution_result: Any = None,
-        error: Optional[str] = None,
+        error: str | None = None,
     ) -> None:
         payload = {
             "action_id": action_id,
             "execution_result": execution_result,
             "error": error,
         }
-        try:
+        try:  # noqa: SIM105 - keep explicit comment documenting best-effort intent
             self._get_client().post("/v1/audit-events", json=payload, timeout=10.0)
         except Exception:
             # best-effort — never raises
@@ -250,9 +250,9 @@ class SentinelClient:
         function_name: str,
         arguments: Any,
         risk_level: str = "medium",
-        approvers: Optional[list] = None,
-        timeout_seconds: Optional[float] = None,
-        idempotency_key: Optional[str] = None,
+        approvers: list | None = None,
+        timeout_seconds: float | None = None,
+        idempotency_key: str | None = None,
     ) -> dict:
         _ensure_json_serializable(arguments)
         payload = {
@@ -275,8 +275,8 @@ class SentinelClient:
     async def await_for_decision(
         self,
         action_id: str,
-        timeout: Optional[float] = None,
-        poll_interval: Optional[float] = None,
+        timeout: float | None = None,
+        poll_interval: float | None = None,
     ) -> dict:
         timeout = timeout or self.config.timeout_seconds
         deadline = time.monotonic() + timeout
@@ -339,7 +339,7 @@ class SentinelClient:
         _raise_for_status(r)
         return r.json()
 
-    async def alist_audit_events(self, action_id: Optional[str] = None) -> list:
+    async def alist_audit_events(self, action_id: str | None = None) -> list:
         params = {"action_id": action_id} if action_id else None
         r = await self._get_aclient().get("/v1/audit-events", params=params)
         _raise_for_status(r)
@@ -349,17 +349,15 @@ class SentinelClient:
         self,
         action_id: str,
         execution_result: Any = None,
-        error: Optional[str] = None,
+        error: str | None = None,
     ) -> None:
         payload = {
             "action_id": action_id,
             "execution_result": execution_result,
             "error": error,
         }
-        try:
+        with contextlib.suppress(Exception):
             await self._get_aclient().post("/v1/audit-events", json=payload, timeout=10.0)
-        except Exception:
-            pass
 
 
 __all__ = ["SentinelClient", "SentinelError", "SentinelAPIError"]

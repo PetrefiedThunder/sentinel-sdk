@@ -6,7 +6,7 @@ and blocks until a decision is reached.
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from ..client import SentinelClient
 from ..exceptions import ApprovalRejected
@@ -37,10 +37,10 @@ class SentinelCallbackHandler:
 
     def __init__(
         self,
-        client: Optional[SentinelClient] = None,
+        client: SentinelClient | None = None,
         risk_level: str = "medium",
-        approvers: Optional[list] = None,
-        timeout_seconds: Optional[float] = None,
+        approvers: list | None = None,
+        timeout_seconds: float | None = None,
     ):
         self.client = client or SentinelClient()
         self.risk_level = risk_level
