@@ -1,6 +1,6 @@
 """Sentinel SDK — oversight infrastructure for AI agents."""
 
-from .client import SentinelClient
+from .client import PageResult, SentinelClient
 from .config import SentinelConfig, configure, get_config
 from .decorator import oversight
 from .exceptions import (
@@ -16,6 +16,7 @@ __version__ = "0.1.9"
 __all__ = [
     "oversight",
     "SentinelClient",
+    "PageResult",
     "SentinelConfig",
     "configure",
     "get_config",

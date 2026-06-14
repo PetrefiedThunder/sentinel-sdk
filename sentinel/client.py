@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import json
 import time
+from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
@@ -11,6 +12,35 @@ from .config import SentinelConfig, get_config
 from .exceptions import ApprovalTimeout, SentinelAPIError, SentinelConfigError, SentinelError
 
 USER_AGENT = "sentinel-sdk-python/0.1.9"
+
+
+@dataclass
+class PageResult:
+    """One page of results from a cursor-paginated list endpoint.
+
+    Mirrors the JS SDK's PageResult: `data` is the list of items, `has_more`
+    indicates whether another page exists, and `next_cursor` is the opaque
+    cursor to pass back to fetch it (None when there are no more pages).
+    """
+
+    data: list = field(default_factory=list)
+    has_more: bool = False
+    next_cursor: str | None = None
+
+    @classmethod
+    def from_envelope(cls, body: Any) -> PageResult:
+        """Build a PageResult from the API's {data, has_more, next_cursor} body.
+
+        Tolerates a bare list (older servers that return an unwrapped array):
+        the whole list becomes a single terminal page.
+        """
+        if isinstance(body, dict):
+            return cls(
+                data=body.get("data") or [],
+                has_more=bool(body.get("has_more", False)),
+                next_cursor=body.get("next_cursor"),
+            )
+        return cls(data=list(body or []), has_more=False, next_cursor=None)
 
 
 def _ensure_json_serializable(arguments: Any) -> None:
@@ -110,7 +140,7 @@ class SentinelClient:
         arguments: Any,
         risk_level: str = "medium",
         approvers: list | None = None,
-        timeout_seconds: float | None = None,
+        timeout_seconds: int | None = None,
         idempotency_key: str | None = None,
     ) -> dict:
         _ensure_json_serializable(arguments)
@@ -119,7 +149,10 @@ class SentinelClient:
             "arguments": arguments,
             "risk_level": risk_level,
             "approvers": approvers or [],
-            "timeout_seconds": timeout_seconds or self.config.timeout_seconds,
+            # The API types timeout_seconds as an integer and 422s on a
+            # fractional value. Coerce here so float configs/callers still work
+            # (fractional seconds are truncated toward zero, e.g. 1.9 -> 1).
+            "timeout_seconds": int(timeout_seconds or self.config.timeout_seconds),
         }
         headers = {"Idempotency-Key": idempotency_key} if idempotency_key else None
         r = self._get_client().post("/v1/approvals", json=payload, headers=headers)
@@ -130,6 +163,28 @@ class SentinelClient:
         r = self._get_client().get(f"/v1/approvals/{action_id}")
         _raise_for_status(r)
         return r.json()
+
+    def list_approvals(
+        self,
+        status: str | None = None,
+        limit: int = 50,
+        cursor: str | None = None,
+    ) -> PageResult:
+        """List approvals one page at a time (cursor pagination).
+
+        Mirrors the JS SDK's `listApprovals`. Always sends `limit` (default 50,
+        server max 100) so the API returns the {data, has_more, next_cursor}
+        envelope. Pass the returned `next_cursor` back as `cursor` for the next
+        page; iterate until `has_more` is False.
+        """
+        params: dict[str, Any] = {"limit": limit}
+        if status is not None:
+            params["status"] = status
+        if cursor is not None:
+            params["cursor"] = cursor
+        r = self._get_client().get("/v1/approvals", params=params)
+        _raise_for_status(r)
+        return PageResult.from_envelope(r.json())
 
     def wait_for_decision(
         self,
@@ -227,6 +282,27 @@ class SentinelClient:
         _raise_for_status(r)
         return r.json()
 
+    def list_audit_events_page(
+        self,
+        action_id: str | None = None,
+        limit: int = 50,
+        cursor: str | None = None,
+    ) -> PageResult:
+        """List audit events one page at a time (cursor pagination).
+
+        Mirrors the JS SDK's `listAuditEventsPage`. Unlike the legacy
+        `list_audit_events()`, this always sends `limit` (default 50, server
+        max 500) so the API returns the {data, has_more, next_cursor} envelope.
+        """
+        params: dict[str, Any] = {"limit": limit}
+        if action_id is not None:
+            params["action_id"] = action_id
+        if cursor is not None:
+            params["cursor"] = cursor
+        r = self._get_client().get("/v1/audit-events", params=params)
+        _raise_for_status(r)
+        return PageResult.from_envelope(r.json())
+
     def emit_audit_event(
         self,
         action_id: str,
@@ -251,7 +327,7 @@ class SentinelClient:
         arguments: Any,
         risk_level: str = "medium",
         approvers: list | None = None,
-        timeout_seconds: float | None = None,
+        timeout_seconds: int | None = None,
         idempotency_key: str | None = None,
     ) -> dict:
         _ensure_json_serializable(arguments)
@@ -260,7 +336,8 @@ class SentinelClient:
             "arguments": arguments,
             "risk_level": risk_level,
             "approvers": approvers or [],
-            "timeout_seconds": timeout_seconds or self.config.timeout_seconds,
+            # See create_approval: API requires an integer; coerce to avoid 422.
+            "timeout_seconds": int(timeout_seconds or self.config.timeout_seconds),
         }
         headers = {"Idempotency-Key": idempotency_key} if idempotency_key else None
         r = await self._get_aclient().post("/v1/approvals", json=payload, headers=headers)
@@ -271,6 +348,22 @@ class SentinelClient:
         r = await self._get_aclient().get(f"/v1/approvals/{action_id}")
         _raise_for_status(r)
         return r.json()
+
+    async def alist_approvals(
+        self,
+        status: str | None = None,
+        limit: int = 50,
+        cursor: str | None = None,
+    ) -> PageResult:
+        """Async counterpart of `list_approvals`."""
+        params: dict[str, Any] = {"limit": limit}
+        if status is not None:
+            params["status"] = status
+        if cursor is not None:
+            params["cursor"] = cursor
+        r = await self._get_aclient().get("/v1/approvals", params=params)
+        _raise_for_status(r)
+        return PageResult.from_envelope(r.json())
 
     async def await_for_decision(
         self,
@@ -345,6 +438,22 @@ class SentinelClient:
         _raise_for_status(r)
         return r.json()
 
+    async def alist_audit_events_page(
+        self,
+        action_id: str | None = None,
+        limit: int = 50,
+        cursor: str | None = None,
+    ) -> PageResult:
+        """Async counterpart of `list_audit_events_page`."""
+        params: dict[str, Any] = {"limit": limit}
+        if action_id is not None:
+            params["action_id"] = action_id
+        if cursor is not None:
+            params["cursor"] = cursor
+        r = await self._get_aclient().get("/v1/audit-events", params=params)
+        _raise_for_status(r)
+        return PageResult.from_envelope(r.json())
+
     async def aemit_audit_event(
         self,
         action_id: str,
@@ -360,4 +469,4 @@ class SentinelClient:
             await self._get_aclient().post("/v1/audit-events", json=payload, timeout=10.0)
 
 
-__all__ = ["SentinelClient", "SentinelError", "SentinelAPIError"]
+__all__ = ["SentinelClient", "SentinelError", "SentinelAPIError", "PageResult"]
