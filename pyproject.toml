@@ -15,6 +15,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Adapter extras. Only langchain has a hard third-party import
+# (sentinel/adapters/langchain.py needs langchain_core); the openai-agents and
+# semantic-kernel adapters intentionally have no runtime dependency on their
+# host frameworks, so they need no extra. README only advertises [langchain].
+langchain = ["langchain-core>=0.3"]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio",
