@@ -27,3 +27,33 @@ jobs:
 
       - name: Pytest
         run: pytest -q
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # gitleaks scans git history; full clone avoids missing commits.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: pip install --upgrade pip uv
+
+      # Day-one policy: a pre-existing advisory in a dependency must not
+      # red-line main, so this step is non-blocking. pip-audit resolves the
+      # dependency set from pyproject.toml.
+      - name: Dependency audit (pip-audit)
+        continue-on-error: true
+        run: uvx pip-audit .
+
+      # Secret scan is a HARD gate. Uses the gitleaks binary (not the action,
+      # which 500s without a permissions block). gitleaks auto-detects the
+      # root .gitleaks.toml; no -c flag needed.
+      - name: Secret scan (gitleaks)
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz | tar -xz -C /tmp gitleaks
+          /tmp/gitleaks git . --redact --no-banner
