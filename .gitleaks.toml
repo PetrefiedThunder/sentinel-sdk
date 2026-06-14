@@ -1,0 +1,15 @@
+# gitleaks config for sentinel-sdk (public repo)
+# Extends the built-in default ruleset; adds a narrow allowlist so that
+# secret-shaped DUMMY values used in test fixtures (e.g. "sk_test") do not
+# fail CI. Library code under sentinel/ stays strict.
+title = "sentinel-sdk gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allow dummy secret-shaped values in test fixtures only"
+# Scoped to the tests/ tree. Real secrets in sentinel/ are still caught.
+paths = [
+  '''tests/.*''',
+]
