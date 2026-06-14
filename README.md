@@ -212,6 +212,24 @@ agent = Agent(name="ops", tools=[gated(wire_transfer, risk_level="high")])
 
 No extra install needed — the adapter has no dependency on `openai-agents`.
 
+## Semantic Kernel
+
+```python
+from semantic_kernel import Kernel
+from sentinel.adapters.semantic_kernel import gate_kernel
+
+kernel = Kernel()
+kernel.add_plugin(OpsPlugin(), plugin_name="ops")
+
+gate_kernel(kernel, risk_level="high", approvers=["ops@acme.com"])
+# Every function the kernel invokes now pauses for Sentinel approval.
+```
+
+Registers a function-invocation filter, so every `@kernel_function` runs
+through Sentinel approval. Use `function_allowlist` / `function_denylist` to
+scope which functions are gated. No extra install needed — the adapter has no
+dependency on `semantic-kernel`.
+
 ## Links
 
 - Website: <https://pauseapi.app>
