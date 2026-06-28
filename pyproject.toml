@@ -23,7 +23,7 @@ langchain = ["langchain-core>=0.3"]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio",
-    "ruff==0.15.18",  # pinned to match .pre-commit-config.yaml so CI and pre-commit agree
+    "ruff==0.15.20",  # pinned to match .pre-commit-config.yaml so CI and pre-commit agree
 ]
 
 [project.urls]
