@@ -78,7 +78,15 @@ def oversight(
                     decision = await client.await_for_decision(action_id, timeout=timeout_seconds)
                 except ApprovalTimeout:
                     if fb == "execute":
-                        result = await fn(*args, **kwargs)
+                        try:
+                            result = await fn(*args, **kwargs)
+                        except Exception as e:
+                            await client.aemit_audit_event(
+                                action_id,
+                                execution_result=None,
+                                error=f"timeout-fallback-execute: {_truncate_repr(e)}",
+                            )
+                            raise
                         await client.aemit_audit_event(
                             action_id,
                             execution_result=_truncate_repr(result),
@@ -127,7 +135,15 @@ def oversight(
                 decision = client.wait_for_decision(action_id, timeout=timeout_seconds)
             except ApprovalTimeout:
                 if fb == "execute":
-                    result = fn(*args, **kwargs)
+                    try:
+                        result = fn(*args, **kwargs)
+                    except Exception as e:
+                        client.emit_audit_event(
+                            action_id,
+                            execution_result=None,
+                            error=f"timeout-fallback-execute: {_truncate_repr(e)}",
+                        )
+                        raise
                     client.emit_audit_event(
                         action_id,
                         execution_result=_truncate_repr(result),

@@ -308,23 +308,40 @@ def test_decorator_closes_client_on_every_exit(monkeypatch, mode, outcome):
 
 
 @pytest.mark.parametrize("mode", ["sync", "async"])
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="BE-003: failing timeout fallback does not emit audit evidence",
-)
 def test_timeout_fallback_exception_is_audited(monkeypatch, mode):
+    """BE-003: failed explicit fallback must preserve the error and audit attempt."""
     client = decorator_client(monkeypatch, mode, failure=ApprovalTimeout("action", 1))
+    original_error = ValueError("synthetic operation error")
+    operation = MagicMock(side_effect=original_error)
 
-    def operation():
-        raise ValueError("synthetic operation error")
-
-    with pytest.raises(ValueError, match="synthetic operation error"):
+    with pytest.raises(ValueError, match="synthetic operation error") as raised:
         wrap_call(mode, operation, fallback="execute")()
+    assert raised.value is original_error
+    operation.assert_called_once_with()
     audit = client.aemit_audit_event if mode == "async" else client.emit_audit_event
     audit.assert_called_once()
+    if mode == "async":
+        audit.assert_awaited_once()
     assert audit.call_args.args[0] == "action"
+    assert audit.call_args.kwargs["execution_result"] is None
+    assert "timeout-fallback-execute" in audit.call_args.kwargs["error"]
     assert "synthetic operation error" in audit.call_args.kwargs["error"]
+
+
+@pytest.mark.parametrize("mode", ["sync", "async"])
+def test_timeout_fallback_success_is_audited(monkeypatch, mode):
+    """BE-003: successful explicit fallback keeps its existing result and audit."""
+    client = decorator_client(monkeypatch, mode, failure=ApprovalTimeout("action", 1))
+    operation = MagicMock(return_value="success")
+
+    assert wrap_call(mode, operation, fallback="execute")() == "success"
+    operation.assert_called_once_with()
+    audit = client.aemit_audit_event if mode == "async" else client.emit_audit_event
+    audit.assert_called_once_with(
+        "action", execution_result="'success'", error="timeout-fallback-execute"
+    )
+    if mode == "async":
+        audit.assert_awaited_once()
 
 
 @pytest.mark.asyncio
