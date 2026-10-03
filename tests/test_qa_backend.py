@@ -350,7 +350,7 @@ def test_timeout_fallback_exception_is_audited(monkeypatch, mode):
     if mode == "async":
         audit.assert_awaited_once()
     assert audit.call_args.args[0] == "action"
-    assert audit.call_args.kwargs["execution_result"] is None
+    assert audit.call_args.kwargs["execution_result"] == "None"
     assert "timeout-fallback-execute" in audit.call_args.kwargs["error"]
     assert "synthetic operation error" in audit.call_args.kwargs["error"]
 

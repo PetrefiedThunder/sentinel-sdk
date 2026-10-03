@@ -83,7 +83,7 @@ def oversight(
                         except Exception as e:
                             await client.aemit_audit_event(
                                 action_id,
-                                execution_result=None,
+                                execution_result=_truncate_repr(None),
                                 error=f"timeout-fallback-execute: {_truncate_repr(e)}",
                             )
                             raise
@@ -101,7 +101,9 @@ def oversight(
                         result = await fn(*args, **kwargs)
                     except Exception as e:
                         await client.aemit_audit_event(
-                            action_id, execution_result=None, error=_truncate_repr(e)
+                            action_id,
+                            execution_result=_truncate_repr(None),
+                            error=_truncate_repr(e),
                         )
                         raise
                     await client.aemit_audit_event(
@@ -140,7 +142,7 @@ def oversight(
                     except Exception as e:
                         client.emit_audit_event(
                             action_id,
-                            execution_result=None,
+                            execution_result=_truncate_repr(None),
                             error=f"timeout-fallback-execute: {_truncate_repr(e)}",
                         )
                         raise
@@ -158,7 +160,7 @@ def oversight(
                     result = fn(*args, **kwargs)
                 except Exception as e:
                     client.emit_audit_event(
-                        action_id, execution_result=None, error=_truncate_repr(e)
+                        action_id, execution_result=_truncate_repr(None), error=_truncate_repr(e)
                     )
                     raise
                 client.emit_audit_event(action_id, execution_result=_truncate_repr(result))
