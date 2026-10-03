@@ -120,13 +120,9 @@ def test_async_callable_rejection_preserves_semantics_and_stops_execution(adapte
     client.acreate_approval.assert_awaited_once()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="FE-002: positional arguments omitted when kwargs exist",
-)
 @pytest.mark.parametrize("adapter", ["autogen", "crewai", "langgraph", "openai_agents"])
 def test_mixed_sync_arguments_are_fully_presented_for_approval(adapter):
+    """FE-002: approval must include both positional and keyword inputs."""
     client = _client({"status": "approved"})
 
     def action(amount: int, *, recipient: str):
@@ -142,13 +138,9 @@ def test_mixed_sync_arguments_are_fully_presented_for_approval(adapter):
     }
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="FE-002: positional arguments omitted when kwargs exist",
-)
 @pytest.mark.parametrize("adapter", ["autogen", "langgraph", "openai_agents"])
 def test_mixed_async_arguments_are_fully_presented_for_approval(adapter):
+    """FE-002: async approval must include positional and keyword inputs."""
     client = _client({"status": "approved"})
 
     async def action(amount: int, *, recipient: str):
