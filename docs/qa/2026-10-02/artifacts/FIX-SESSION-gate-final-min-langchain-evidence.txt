@@ -1,0 +1,11 @@
+UTC start: 2026-10-03T02:47:23+00:00
+Command: cat docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-langchain03-corrected.txt
+Exit: 0
+
+UTC start: 2026-10-03T02:42:22+00:00
+Command: .venv/bin/python -c 'import os,sys; os.environ["PYTEST_DISABLE_PLUGIN_AUTOLOAD"]="1"; sys.path.insert(0,"/private/tmp/sentinel-fix-langchain03"); import langchain_core; print("langchain-core",langchain_core.__version__); import pytest; raise SystemExit(pytest.main(["tests/test_qa_adapters.py","-q","-k","real_langchain"]))'
+Exit: 0
+
+langchain-core 0.3.0
+....................................                                     [100%]
+36 passed, 59 deselected in 1.55s

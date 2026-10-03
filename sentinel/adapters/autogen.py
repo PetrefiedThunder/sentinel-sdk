@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Any
 
 from ..client import SentinelClient
 from ..exceptions import ApprovalRejected
+from ._arguments import approval_arguments
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -48,7 +49,7 @@ def gated(
 
             @functools.wraps(fn)
             async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
-                arguments = kwargs if kwargs else {"args": list(args)}
+                arguments = approval_arguments(fn, args, kwargs)
                 approval = await sentinel_client.acreate_approval(
                     function_name=derived_name,
                     arguments=arguments,
@@ -72,7 +73,7 @@ def gated(
 
         @functools.wraps(fn)
         def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
-            arguments = kwargs if kwargs else {"args": list(args)}
+            arguments = approval_arguments(fn, args, kwargs)
             approval = sentinel_client.create_approval(
                 function_name=derived_name,
                 arguments=arguments,

@@ -1,0 +1,1454 @@
+UTC start: 2026-10-03T02:49:33+00:00
+Command: python3 -c 'import subprocess; paths=subprocess.check_output(["git","diff","--cached","--name-only"],text=True).splitlines(); assert paths; assert all(p.startswith("docs/qa/2026-10-02/") for p in paths); assert all(p.endswith((".md",".txt")) for p in paths); assert "docs/qa/2026-10-02/FINDINGS.md" not in paths; assert "docs/qa/2026-10-02/COVERAGE.md" not in paths; print("Staged scope:",len(paths),"QA-only paths; findings/coverage remain unchanged."); subprocess.run(["git","diff","--cached","--check"],check=True)'
+Exit: 1
+
+docs/qa/2026-10-02/artifacts/FIX-SESSION-be003-before.txt:18: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-be003-before.txt:26: trailing whitespace.
++tests/test_qa_backend.py:322:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-be003-before.txt:27: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-be003-before.txt:54: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-be003-before.txt:62: trailing whitespace.
++tests/test_qa_backend.py:322:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-be003-before.txt:63: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-be003-check.txt:4: new blank line at EOF.
+docs/qa/2026-10-02/artifacts/FIX-SESSION-be003-diff.txt:48: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-be003-diff.txt:49: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-be003-diff.txt:61: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-be003-diff.txt:78: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-be003-diff.txt:79: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-be003-root-review.txt:48: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-be003-root-review.txt:49: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-be003-root-review.txt:61: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-be003-root-review.txt:78: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-be003-root-review.txt:79: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-be003-stage.txt:4: new blank line at EOF.
+docs/qa/2026-10-02/artifacts/FIX-SESSION-docs-diff-check.txt:4: new blank line at EOF.
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:21: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:23: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:25: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:31: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:48: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:69: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:71: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:73: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:79: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:96: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:117: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:119: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:121: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:127: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:144: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:165: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:167: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:169: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:175: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:192: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:213: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:215: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:217: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:223: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:240: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:261: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:263: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:265: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:271: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt:288: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-diff.txt:4: new blank line at EOF.
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-stage.txt:4: new blank line at EOF.
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-before.txt:19: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-before.txt:22: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-before.txt:32: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-before.txt:51: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-before.txt:54: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-before.txt:64: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-before.txt:83: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-before.txt:86: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-before.txt:96: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-before.txt:115: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-before.txt:118: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-before.txt:128: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-before.txt:147: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-before.txt:150: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-before.txt:160: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-before.txt:179: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-before.txt:182: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-before.txt:192: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-before.txt:211: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-before.txt:214: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-before.txt:224: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-corrected-review.txt:11: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-corrected-review.txt:21: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-corrected-review.txt:24: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-corrected-review.txt:29: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-corrected-review.txt:30: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-corrected-review.txt:34: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-corrected-review.txt:43: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-corrected-review.txt:45: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-restage.txt:4: new blank line at EOF.
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-root-diff.txt:10: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-root-diff.txt:14: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-root-diff.txt:18: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-root-diff.txt:27: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-root-diff.txt:40: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-root-diff.txt:44: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-root-diff.txt:49: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-root-diff.txt:62: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-root-diff.txt:66: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-root-diff.txt:70: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-root-diff.txt:79: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-root-diff.txt:92: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-root-diff.txt:96: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-root-diff.txt:97: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-root-diff.txt:100: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-root-diff.txt:109: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-root-diff.txt:123: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-root-diff.txt:124: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-root-diff.txt:134: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-root-diff.txt:138: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-root-diff.txt:139: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-root-diff.txt:149: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-stage-check.txt:4: new blank line at EOF.
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-stage.txt:4: new blank line at EOF.
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:13: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:23: trailing whitespace.
++sentinel/client.py:56:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:24: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:34: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:43: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:46: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:56: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:72: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:76: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:78: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:81: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:85: trailing whitespace.
++tests/test_adapter_arguments.py:163:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:86: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:103: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:109: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:133: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:143: trailing whitespace.
++sentinel/client.py:56:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:144: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:154: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:163: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:166: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:176: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:192: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:196: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:198: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:201: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:205: trailing whitespace.
++tests/test_adapter_arguments.py:163:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:206: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:223: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:229: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:253: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:263: trailing whitespace.
++sentinel/client.py:56:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:264: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:274: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:283: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:286: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:296: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:312: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:316: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:318: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:321: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:325: trailing whitespace.
++tests/test_adapter_arguments.py:163:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:326: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:343: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:349: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:373: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:383: trailing whitespace.
++sentinel/client.py:56:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:384: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:394: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:403: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:406: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:416: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:432: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:436: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:438: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:441: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:445: trailing whitespace.
++tests/test_adapter_arguments.py:163:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:446: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:463: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:469: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:493: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:503: trailing whitespace.
++sentinel/client.py:56:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:504: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:514: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:523: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:526: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:536: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:552: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:556: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:558: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:561: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:565: trailing whitespace.
++tests/test_adapter_arguments.py:163:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:566: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:586: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:592: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:616: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:626: trailing whitespace.
++sentinel/client.py:56:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:627: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:637: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:646: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:649: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:659: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:675: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:679: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:681: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:684: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:688: trailing whitespace.
++tests/test_adapter_arguments.py:163:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:689: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:709: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:715: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:739: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:749: trailing whitespace.
++sentinel/client.py:56:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:750: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:760: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:769: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:772: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:782: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:798: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:802: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:804: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:807: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:811: trailing whitespace.
++tests/test_adapter_arguments.py:163:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:812: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:834: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-default-regression-before.txt:840: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-diff.txt:10: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-diff.txt:14: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-diff.txt:18: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-diff.txt:27: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-diff.txt:40: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-diff.txt:44: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-diff.txt:49: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-diff.txt:62: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-diff.txt:66: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-diff.txt:70: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-diff.txt:79: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-diff.txt:92: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-diff.txt:96: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-diff.txt:97: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-diff.txt:100: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-diff.txt:109: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-diff.txt:123: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-diff.txt:124: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-diff.txt:134: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-diff.txt:138: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-diff.txt:139: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-diff.txt:149: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:13: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:16: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:32: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:39: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:49: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:52: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:68: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:75: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:85: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:88: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:104: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:111: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:121: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:124: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:140: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:147: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:157: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:160: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:176: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:183: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:193: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:196: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:212: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:219: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:229: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:232: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:248: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:255: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:268: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:271: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:273: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:276: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:282: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:298: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:301: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:303: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:306: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:312: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:328: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:331: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:333: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:336: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:342: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:358: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:361: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:363: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:366: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:372: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:388: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:391: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:393: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:396: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:402: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:418: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:421: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:423: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:426: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:432: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:448: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:451: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:453: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:456: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:462: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:478: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:481: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:483: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:486: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:492: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:508: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:511: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:513: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:516: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:522: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:538: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:541: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:543: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:546: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:552: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:568: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:571: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:573: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:576: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:582: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:598: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:601: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:603: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:606: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:612: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:628: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:631: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:633: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:636: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:642: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:658: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:661: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:663: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:666: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:672: trailing whitespace.
++E
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:696: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:699: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:705: trailing whitespace.
++tests/test_adapter_arguments.py:111:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:706: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:740: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:743: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:749: trailing whitespace.
++tests/test_adapter_arguments.py:111:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:750: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:784: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:787: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:793: trailing whitespace.
++tests/test_adapter_arguments.py:111:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:794: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:828: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:831: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:837: trailing whitespace.
++tests/test_adapter_arguments.py:111:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:838: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:872: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:875: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:881: trailing whitespace.
++tests/test_adapter_arguments.py:111:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:882: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:916: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:919: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:925: trailing whitespace.
++tests/test_adapter_arguments.py:111:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:926: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:960: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:963: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:969: trailing whitespace.
++tests/test_adapter_arguments.py:111:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:970: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1004: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1007: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1013: trailing whitespace.
++tests/test_adapter_arguments.py:111:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1014: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1048: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1051: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1057: trailing whitespace.
++tests/test_adapter_arguments.py:111:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1058: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1092: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1095: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1101: trailing whitespace.
++tests/test_adapter_arguments.py:111:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1102: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1136: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1139: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1145: trailing whitespace.
++tests/test_adapter_arguments.py:111:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1146: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1180: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1183: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1189: trailing whitespace.
++tests/test_adapter_arguments.py:111:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1190: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1224: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1227: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1234: trailing whitespace.
++tests/test_adapter_arguments.py:112:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1235: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1269: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1272: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1279: trailing whitespace.
++tests/test_adapter_arguments.py:112:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1280: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1314: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1317: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1324: trailing whitespace.
++tests/test_adapter_arguments.py:112:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1325: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1359: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1362: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1369: trailing whitespace.
++tests/test_adapter_arguments.py:112:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1370: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1404: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1407: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1414: trailing whitespace.
++tests/test_adapter_arguments.py:112:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1415: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1449: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1452: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1459: trailing whitespace.
++tests/test_adapter_arguments.py:112:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1460: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1494: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1497: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1504: trailing whitespace.
++tests/test_adapter_arguments.py:112:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1505: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1539: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1542: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1549: trailing whitespace.
++tests/test_adapter_arguments.py:112:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1550: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1584: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1587: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1594: trailing whitespace.
++tests/test_adapter_arguments.py:112:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1595: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1619: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1623: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1637: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1641: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1655: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1659: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1673: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1677: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1691: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1695: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1709: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1713: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1727: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-worker-expanded-before.txt:1731: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-final-product-check.txt:4: new blank line at EOF.
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-client-audit.txt:27: new blank line at EOF.
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-diff.txt:4: new blank line at EOF.
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-source.txt:6: trailing whitespace.
++     2
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-source.txt:10: trailing whitespace.
++     6
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-source.txt:14: trailing whitespace.
++    10
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-source.txt:17: trailing whitespace.
++    13
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-source.txt:20: trailing whitespace.
++    16
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-source.txt:21: trailing whitespace.
++    17
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-source.txt:27: trailing whitespace.
++    23
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-source.txt:28: trailing whitespace.
++    24
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-source.txt:37: trailing whitespace.
++    33
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-source.txt:38: trailing whitespace.
++    34
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-source.txt:44: trailing whitespace.
++    40
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-source.txt:45: trailing whitespace.
++    41
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-source.txt:55: trailing whitespace.
++    51
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-source.txt:63: trailing whitespace.
++    59
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-source.txt:65: trailing whitespace.
++    61
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-source.txt:101: trailing whitespace.
++    97
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-source.txt:120: trailing whitespace.
++   116
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-source.txt:122: trailing whitespace.
++   118
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-source.txt:158: trailing whitespace.
++   154
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-source.txt:173: trailing whitespace.
++   169
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-source.txt:175: trailing whitespace.
++   171
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-staged-diff.txt:48: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-staged-diff.txt:49: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-staged-diff.txt:61: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-staged-diff.txt:78: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-be003-staged-diff.txt:79: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:6: trailing whitespace.
++     2
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:12: trailing whitespace.
++     8
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:14: trailing whitespace.
++    10
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:17: trailing whitespace.
++    13
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:19: trailing whitespace.
++    15
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:20: trailing whitespace.
++    16
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:24: trailing whitespace.
++    20
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:29: trailing whitespace.
++    25
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:33: trailing whitespace.
++    29
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:37: trailing whitespace.
++    33
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:48: trailing whitespace.
++    44
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:49: trailing whitespace.
++    45
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:52: trailing whitespace.
++    48
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:67: trailing whitespace.
++    63
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:68: trailing whitespace.
++    64
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:83: trailing whitespace.
++    79
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:84: trailing whitespace.
++    80
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:87: trailing whitespace.
++    83
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:91: trailing whitespace.
++    87
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:96: trailing whitespace.
++    92
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:106: trailing whitespace.
++   102
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:109: trailing whitespace.
++   105
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:119: trailing whitespace.
++   115
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:129: trailing whitespace.
++   125
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:134: trailing whitespace.
++   130
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:139: trailing whitespace.
++   135
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:165: trailing whitespace.
++   161
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:170: trailing whitespace.
++   166
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:178: trailing whitespace.
++   174
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:192: trailing whitespace.
++   188
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:200: trailing whitespace.
++   196
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:226: trailing whitespace.
++   222
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:232: trailing whitespace.
++   228
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:236: trailing whitespace.
++   232
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:243: trailing whitespace.
++   239
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:253: trailing whitespace.
++   249
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:258: trailing whitespace.
++   254
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:272: trailing whitespace.
++   268
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:277: trailing whitespace.
++   273
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:282: trailing whitespace.
++   278
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:288: trailing whitespace.
++   284
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:296: trailing whitespace.
++   292
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:309: trailing whitespace.
++   305
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:326: trailing whitespace.
++   322
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:350: trailing whitespace.
++   346
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:355: trailing whitespace.
++   351
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:371: trailing whitespace.
++   367
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:399: trailing whitespace.
++   395
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:404: trailing whitespace.
++   400
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:409: trailing whitespace.
++   405
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:428: trailing whitespace.
++   424
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:433: trailing whitespace.
++   429
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:438: trailing whitespace.
++   434
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:444: trailing whitespace.
++   440
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:460: trailing whitespace.
++   456
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:474: trailing whitespace.
++   470
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-client.txt:475: trailing whitespace.
++   471
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-diff.txt:10: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-diff.txt:12: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-diff.txt:20: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-diff.txt:29: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-diff.txt:43: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-diff.txt:46: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-diff.txt:53: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-diff.txt:54: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-diff.txt:58: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-diff.txt:59: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-diff.txt:71: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-diff.txt:74: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-diff.txt:94: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-diff.txt:95: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-source.txt:6: trailing whitespace.
++     2
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-source.txt:9: trailing whitespace.
++     5
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-source.txt:12: trailing whitespace.
++     8
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-source.txt:13: trailing whitespace.
++     9
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-source.txt:18: trailing whitespace.
++    14
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-source.txt:23: trailing whitespace.
++    19
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:6: trailing whitespace.
++     2
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:11: trailing whitespace.
++     7
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:13: trailing whitespace.
++     9
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:16: trailing whitespace.
++    12
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:19: trailing whitespace.
++    15
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:20: trailing whitespace.
++    16
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:29: trailing whitespace.
++    25
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:33: trailing whitespace.
++    29
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:37: trailing whitespace.
++    33
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:46: trailing whitespace.
++    42
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:50: trailing whitespace.
++    46
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:52: trailing whitespace.
++    48
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:55: trailing whitespace.
++    51
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:56: trailing whitespace.
++    52
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:59: trailing whitespace.
++    55
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:62: trailing whitespace.
++    58
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:76: trailing whitespace.
++    72
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:77: trailing whitespace.
++    73
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:81: trailing whitespace.
++    77
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:84: trailing whitespace.
++    80
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:86: trailing whitespace.
++    82
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:89: trailing whitespace.
++    85
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:94: trailing whitespace.
++    90
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:95: trailing whitespace.
++    91
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:108: trailing whitespace.
++   104
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:111: trailing whitespace.
++   107
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:119: trailing whitespace.
++   115
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:120: trailing whitespace.
++   116
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:132: trailing whitespace.
++   128
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:135: trailing whitespace.
++   131
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:138: trailing whitespace.
++   134
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:139: trailing whitespace.
++   135
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:143: trailing whitespace.
++   139
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:147: trailing whitespace.
++   143
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:150: trailing whitespace.
++   146
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:151: trailing whitespace.
++   147
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:156: trailing whitespace.
++   152
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:160: trailing whitespace.
++   156
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:162: trailing whitespace.
++   158
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-correction-tests.txt:165: trailing whitespace.
++   161
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-diff.txt:10: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-diff.txt:14: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-diff.txt:18: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-diff.txt:27: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-diff.txt:40: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-diff.txt:44: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-diff.txt:49: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-diff.txt:62: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-diff.txt:66: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-diff.txt:70: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-diff.txt:79: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-diff.txt:92: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-diff.txt:96: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-diff.txt:97: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-diff.txt:100: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-diff.txt:109: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-diff.txt:123: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-diff.txt:124: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-diff.txt:134: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-diff.txt:138: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-diff.txt:139: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-diff.txt:149: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-helper.txt:6: trailing whitespace.
++     2
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-helper.txt:9: trailing whitespace.
++     5
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-helper.txt:12: trailing whitespace.
++     8
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-helper.txt:13: trailing whitespace.
++     9
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-helper.txt:18: trailing whitespace.
++    14
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-helper.txt:23: trailing whitespace.
++    19
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:6: trailing whitespace.
++     2
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:11: trailing whitespace.
++     7
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:13: trailing whitespace.
++     9
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:15: trailing whitespace.
++    11
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:18: trailing whitespace.
++    14
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:19: trailing whitespace.
++    15
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:28: trailing whitespace.
++    24
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:32: trailing whitespace.
++    28
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:36: trailing whitespace.
++    32
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:45: trailing whitespace.
++    41
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:49: trailing whitespace.
++    45
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:51: trailing whitespace.
++    47
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:54: trailing whitespace.
++    50
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:55: trailing whitespace.
++    51
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:58: trailing whitespace.
++    54
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:61: trailing whitespace.
++    57
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:76: trailing whitespace.
++    72
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:77: trailing whitespace.
++    73
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:81: trailing whitespace.
++    77
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:84: trailing whitespace.
++    80
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:86: trailing whitespace.
++    82
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:89: trailing whitespace.
++    85
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:94: trailing whitespace.
++    90
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:95: trailing whitespace.
++    91
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:108: trailing whitespace.
++   104
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:111: trailing whitespace.
++   107
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:119: trailing whitespace.
++   115
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:120: trailing whitespace.
++   116
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:132: trailing whitespace.
++   128
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:135: trailing whitespace.
++   131
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:138: trailing whitespace.
++   134
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:139: trailing whitespace.
++   135
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:143: trailing whitespace.
++   139
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-fe002-tests.txt:147: trailing whitespace.
++   143
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-product-diff.txt:10: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-product-diff.txt:12: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-product-diff.txt:20: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-product-diff.txt:54: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-product-diff.txt:58: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-product-diff.txt:62: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-product-diff.txt:71: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-product-diff.txt:84: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-product-diff.txt:88: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-product-diff.txt:93: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-product-diff.txt:108: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-product-diff.txt:120: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-product-diff.txt:124: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-product-diff.txt:128: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-product-diff.txt:137: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-product-diff.txt:150: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-product-diff.txt:154: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-product-diff.txt:155: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-product-diff.txt:158: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-product-diff.txt:167: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-product-diff.txt:180: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-product-diff.txt:187: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:186: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:189: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:196: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:197: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:201: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:202: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:212: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:216: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:217: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:227: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:231: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:232: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:244: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:247: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:267: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:268: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:345: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:346: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:378: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:379: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:391: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:408: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:409: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:435: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-final-test-diff.txt:436: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-source.txt:6: trailing whitespace.
++     2
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-source.txt:10: trailing whitespace.
++     6
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-source.txt:12: trailing whitespace.
++     8
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-source.txt:14: trailing whitespace.
++    10
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-source.txt:17: trailing whitespace.
++    13
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-source.txt:18: trailing whitespace.
++    14
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-source.txt:21: trailing whitespace.
++    17
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-source.txt:25: trailing whitespace.
++    21
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-source.txt:28: trailing whitespace.
++    24
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-source.txt:37: trailing whitespace.
++    33
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-source.txt:44: trailing whitespace.
++    40
+docs/qa/2026-10-02/artifacts/FIX-SESSION-gate-source.txt:56: trailing whitespace.
++    52
+docs/qa/2026-10-02/artifacts/FIX-SESSION-inspect-source.txt:1505: new blank line at EOF.
+docs/qa/2026-10-02/artifacts/FIX-SESSION-snapshot-negative-control.txt:23: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-snapshot-negative-control.txt:33: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-snapshot-negative-control.txt:36: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-snapshot-negative-control.txt:40: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-snapshot-negative-control.txt:45: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-before.txt:22: trailing whitespace.
++tests/test_qa_dx.py:147:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-before.txt:23: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-check.txt:4: new blank line at EOF.
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-expanded-before.txt:18: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-expanded-before.txt:21: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-expanded-before.txt:24: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-expanded-before.txt:35: trailing whitespace.
++tests/test_qa_backend.py:266:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-expanded-before.txt:36: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-expanded-before.txt:64: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-expanded-before.txt:67: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-expanded-before.txt:70: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-expanded-before.txt:82: trailing whitespace.
++tests/test_qa_backend.py:267:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-expanded-before.txt:83: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-expanded-before.txt:111: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-expanded-before.txt:114: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-expanded-before.txt:117: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-expanded-before.txt:128: trailing whitespace.
++tests/test_qa_backend.py:266:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-expanded-before.txt:129: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-expanded-before.txt:157: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-expanded-before.txt:160: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-expanded-before.txt:163: trailing whitespace.
++
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-expanded-before.txt:175: trailing whitespace.
++tests/test_qa_backend.py:267:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-expanded-before.txt:176: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-expanded-before.txt:204: trailing whitespace.
++tests/test_qa_dx.py:143:
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-expanded-before.txt:205: trailing whitespace.
++_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+docs/qa/2026-10-02/artifacts/FIX-SESSION-ux003-stage.txt:4: new blank line at EOF.
+docs/qa/2026-10-02/artifacts/FIX-SESSION-validation-config.txt:138: new blank line at EOF.
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import subprocess; paths=subprocess.check_output(["git","diff","--cached","--name-only"],text=True).splitlines(); assert paths; assert all(p.startswith("docs/qa/2026-10-02/") for p in paths); assert all(p.endswith((".md",".txt")) for p in paths); assert "docs/qa/2026-10-02/FINDINGS.md" not in paths; assert "docs/qa/2026-10-02/COVERAGE.md" not in paths; print("Staged scope:",len(paths),"QA-only paths; findings/coverage remain unchanged."); subprocess.run(["git","diff","--cached","--check"],check=True)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                               ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['git', 'diff', '--cached', '--check']' returned non-zero exit status 2.
+Staged scope: 172 QA-only paths; findings/coverage remain unchanged.

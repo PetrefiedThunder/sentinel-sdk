@@ -1,0 +1,28 @@
+UTC start: 2026-10-03T02:39:37+00:00
+Command: git status --short --branch
+Exit: 0
+
+## qa/2026-10-02-fixes
+ M README.md
+AM docs/qa/2026-10-02/FIX-SESSION-LOG.md
+A  docs/qa/2026-10-02/artifacts/FIX-SESSION-baseline.txt
+A  docs/qa/2026-10-02/artifacts/FIX-SESSION-client-focused.txt
+A  docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-before.txt
+A  docs/qa/2026-10-02/artifacts/FIX-SESSION-inspect-source.txt
+A  docs/qa/2026-10-02/artifacts/FIX-SESSION-snapshot-decorator-tests.txt
+A  docs/qa/2026-10-02/artifacts/FIX-SESSION-snapshot-decorator.txt
+A  docs/qa/2026-10-02/artifacts/FIX-SESSION-snapshot-files.txt
+A  docs/qa/2026-10-02/artifacts/FIX-SESSION-snapshot-findings.txt
+A  docs/qa/2026-10-02/artifacts/FIX-SESSION-snapshot-identity.txt
+A  docs/qa/2026-10-02/artifacts/FIX-SESSION-snapshot-origin.txt
+A  docs/qa/2026-10-02/artifacts/FIX-SESSION-snapshot-readme.txt
+A  docs/qa/2026-10-02/artifacts/FIX-SESSION-snapshot-references.txt
+A  docs/qa/2026-10-02/artifacts/FIX-SESSION-snapshot-serializer-tests.txt
+A  docs/qa/2026-10-02/artifacts/FIX-SESSION-snapshot-tests.txt
+A  docs/qa/2026-10-02/artifacts/FIX-SESSION-snapshot-worktrees.txt
+ M sentinel/adapters/langchain.py
+ M tests/test_qa_adapters.py
+?? docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-after.txt
+?? docs/qa/2026-10-02/artifacts/FIX-SESSION-fe001-lint.txt
+?? docs/qa/2026-10-02/artifacts/FIX-SESSION-snapshot-decision.txt
+?? docs/qa/2026-10-02/artifacts/FIX-SESSION-snapshot-negative-control.txt

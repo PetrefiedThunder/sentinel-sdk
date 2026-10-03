@@ -1,0 +1,7 @@
+UTC start: 2026-10-03T02:46:52+00:00
+Command: .venv/bin/python -m pytest tests/test_qa_backend.py tests/test_qa_dx.py tests/test_decorator.py tests/test_idempotency.py -q
+Exit: 0
+
+...............................xxxx.....................xxxxxxxx....x... [ 61%]
+.....................xx......x................                           [100%]
+102 passed, 16 xfailed in 0.57s

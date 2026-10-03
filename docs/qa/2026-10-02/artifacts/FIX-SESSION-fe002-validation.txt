@@ -1,0 +1,8 @@
+UTC start: 2026-10-03T02:42:41+00:00
+Command: .venv/bin/python -m pytest tests/test_qa_adapters.py tests/test_adapter_arguments.py tests/test_langgraph_adapter.py tests/test_openai_agents_adapter.py -q
+Exit: 0
+
+........................................................................ [ 39%]
+........................................................................ [ 78%]
+.......................................                                  [100%]
+183 passed in 0.35s

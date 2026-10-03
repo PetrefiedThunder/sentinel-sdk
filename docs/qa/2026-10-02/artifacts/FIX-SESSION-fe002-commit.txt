@@ -1,0 +1,21 @@
+UTC start: 2026-10-03T02:44:28+00:00
+Command: git commit -m 'fix(FE-002): include mixed adapter call arguments in approvals' -m 'Root cause: four adapters chose kwargs whenever present and silently omitted positional execution inputs from human approval.' -m 'Fix: share signature binding for mixed calls, preserve both argument sets when signatures are unavailable, and preserve nonmixed payload conventions and omitted defaults. Invalid mixed bindings fail before approval.' -m 'Proof: tests/test_qa_adapters.py::test_mixed_sync_arguments_are_fully_presented_for_approval and ::test_mixed_async_arguments_are_fully_presented_for_approval now pass normally. tests/test_adapter_arguments.py covers seven wrapper paths, variadics, collisions, invalid binding, omitted dependencies and compatibility. Related suite: 190 passed.'
+Exit: 0
+
+[qa/2026-10-02-fixes b1a9a1d] fix(FE-002): include mixed adapter call arguments in approvals
+ Committer: Christopher L Sellers <sellers@Christophers-MacBook-Pro.local>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly. Run the
+following command and follow the instructions in your editor to edit
+your configuration file:
+
+    git config --global --edit
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 7 files changed, 202 insertions(+), 18 deletions(-)
+ create mode 100644 sentinel/adapters/_arguments.py
+ create mode 100644 tests/test_adapter_arguments.py

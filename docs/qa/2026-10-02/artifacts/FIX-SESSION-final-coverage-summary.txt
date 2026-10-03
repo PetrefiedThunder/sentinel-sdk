@@ -1,0 +1,6 @@
+UTC start: 2026-10-03T02:48:03+00:00
+Command: python3 -c 'import json; from pathlib import Path; d=json.loads(Path("/private/tmp/sentinel-fix-coverage.json").read_text())["totals"]; print(json.dumps(d,sort_keys=True)); import xml.etree.ElementTree as ET; tree=ET.parse("/private/tmp/sentinel-fix-final-junit.xml"); cases=tree.findall(".//testcase"); print("junit total",len(cases),"failures",len(tree.findall(".//failure")),"errors",len(tree.findall(".//error")),"xfail",len([s for s in tree.findall(".//skipped") if s.attrib.get("type")=="pytest.xfail"]),"other_skip",len([s for s in tree.findall(".//skipped") if s.attrib.get("type")!="pytest.xfail"]))'
+Exit: 0
+
+{"covered_branches": 140, "covered_lines": 695, "excluded_lines": 16, "missing_branches": 22, "missing_lines": 26, "num_branches": 162, "num_partial_branches": 22, "num_statements": 721, "percent_branches_covered": 86.41975308641975, "percent_branches_covered_display": "86", "percent_covered": 94.56398640996602, "percent_covered_display": "95", "percent_statements_covered": 96.39389736477115, "percent_statements_covered_display": "96"}
+junit total 335 failures 0 errors 0 xfail 16 other_skip 0

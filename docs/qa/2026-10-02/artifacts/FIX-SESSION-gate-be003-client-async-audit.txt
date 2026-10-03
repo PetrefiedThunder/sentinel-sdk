@@ -1,0 +1,26 @@
+UTC start: 2026-10-03T02:46:04+00:00
+Command: sed -n 451,480p sentinel/client.py
+Exit: 0
+
+        if cursor is not None:
+            params["cursor"] = cursor
+        r = await self._get_aclient().get("/v1/audit-events", params=params)
+        _raise_for_status(r)
+        return PageResult.from_envelope(r.json())
+
+    async def aemit_audit_event(
+        self,
+        action_id: str,
+        execution_result: Any = None,
+        error: str | None = None,
+    ) -> None:
+        payload = {
+            "action_id": action_id,
+            "execution_result": execution_result,
+            "error": error,
+        }
+        with contextlib.suppress(Exception):
+            await self._get_aclient().post("/v1/audit-events", json=payload, timeout=10.0)
+
+
+__all__ = ["SentinelClient", "SentinelError", "SentinelAPIError", "PageResult"]

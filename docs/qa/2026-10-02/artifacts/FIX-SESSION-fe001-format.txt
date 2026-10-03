@@ -1,0 +1,16 @@
+UTC start: 2026-10-03T02:39:40+00:00
+Command: .venv/bin/ruff format --check sentinel/adapters/langchain.py tests/test_qa_adapters.py
+Exit: 1
+
+unformatted: File would be reformatted
+   --> tests/test_qa_adapters.py:262:26
+    |
+261 |     assert requests == (
+    -         ["/v1/approvals"] if stage == "create" else ["/v1/approvals", "/v1/approvals/qa-action/wait"]
+262 +         ["/v1/approvals"]
+263 +         if stage == "create"
+264 +         else ["/v1/approvals", "/v1/approvals/qa-action/wait"]
+265 |     )
+    |
+
+1 file would be reformatted, 1 file already formatted

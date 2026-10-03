@@ -1,0 +1,228 @@
+UTC start: 2026-10-03T02:46:41+00:00
+Command: .venv/bin/python -m pytest tests/test_qa_backend.py tests/test_qa_dx.py -q -k 'missing_arguments_never_request or missing_required_argument'
+Exit: 1
+
+FFFFF                                                                    [100%]
+=================================== FAILURES ===================================
+________ test_missing_arguments_never_request_approval[positional-sync] ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10cd60990>
+mode = 'sync', missing = 'positional'
+
+    @pytest.mark.parametrize("mode", ["sync", "async"])
+    @pytest.mark.parametrize("missing", ["positional", "keyword-only"])
+    def test_missing_arguments_never_request_approval(monkeypatch, mode, missing):
+        """UX-003: required arguments fail before either sync or async approval."""
+        client = decorator_client(monkeypatch, mode, decision={"status": "approved"})
+        calls = []
+
+        def operation(amount, recipient, *, memo):
+            calls.append((amount, recipient, memo))
+
+        async def async_operation(amount, recipient, *, memo):
+            operation(amount, recipient, memo=memo)
+
+        wrapped = oversight()(async_operation if mode == "async" else operation)
+        args, kwargs = ((10,), {"memo": "test"}) if missing == "positional" else ((10, "recipient"), {})
+        with pytest.raises(TypeError, match="required.*argument"):
+            if mode == "async":
+                asyncio.run(wrapped(*args, **kwargs))
+            else:
+                wrapped(*args, **kwargs)
+        assert calls == []
+>       client.create_approval.assert_not_called()
+
+tests/test_qa_backend.py:266:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='mock.create_approval' id='4511508112'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'create_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='operation', arguments={'amount': 10, 'memo': 'test'}, risk_level='medium', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+_______ test_missing_arguments_never_request_approval[positional-async] ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10cd61350>
+mode = 'async', missing = 'positional'
+
+    @pytest.mark.parametrize("mode", ["sync", "async"])
+    @pytest.mark.parametrize("missing", ["positional", "keyword-only"])
+    def test_missing_arguments_never_request_approval(monkeypatch, mode, missing):
+        """UX-003: required arguments fail before either sync or async approval."""
+        client = decorator_client(monkeypatch, mode, decision={"status": "approved"})
+        calls = []
+
+        def operation(amount, recipient, *, memo):
+            calls.append((amount, recipient, memo))
+
+        async def async_operation(amount, recipient, *, memo):
+            operation(amount, recipient, memo=memo)
+
+        wrapped = oversight()(async_operation if mode == "async" else operation)
+        args, kwargs = ((10,), {"memo": "test"}) if missing == "positional" else ((10, "recipient"), {})
+        with pytest.raises(TypeError, match="required.*argument"):
+            if mode == "async":
+                asyncio.run(wrapped(*args, **kwargs))
+            else:
+                wrapped(*args, **kwargs)
+        assert calls == []
+        client.create_approval.assert_not_called()
+>       client.acreate_approval.assert_not_called()
+
+tests/test_qa_backend.py:267:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <AsyncMock name='mock.acreate_approval' id='4510992016'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'acreate_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='async_operation', arguments={'amount': 10, 'memo': 'test'}, risk_level='medium', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+_______ test_missing_arguments_never_request_approval[keyword-only-sync] _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ce04050>
+mode = 'sync', missing = 'keyword-only'
+
+    @pytest.mark.parametrize("mode", ["sync", "async"])
+    @pytest.mark.parametrize("missing", ["positional", "keyword-only"])
+    def test_missing_arguments_never_request_approval(monkeypatch, mode, missing):
+        """UX-003: required arguments fail before either sync or async approval."""
+        client = decorator_client(monkeypatch, mode, decision={"status": "approved"})
+        calls = []
+
+        def operation(amount, recipient, *, memo):
+            calls.append((amount, recipient, memo))
+
+        async def async_operation(amount, recipient, *, memo):
+            operation(amount, recipient, memo=memo)
+
+        wrapped = oversight()(async_operation if mode == "async" else operation)
+        args, kwargs = ((10,), {"memo": "test"}) if missing == "positional" else ((10, "recipient"), {})
+        with pytest.raises(TypeError, match="required.*argument"):
+            if mode == "async":
+                asyncio.run(wrapped(*args, **kwargs))
+            else:
+                wrapped(*args, **kwargs)
+        assert calls == []
+>       client.create_approval.assert_not_called()
+
+tests/test_qa_backend.py:266:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='mock.create_approval' id='4510480912'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'create_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='operation', arguments={'amount': 10, 'recipient': 'recipient'}, risk_level='medium', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+______ test_missing_arguments_never_request_approval[keyword-only-async] _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ce07790>
+mode = 'async', missing = 'keyword-only'
+
+    @pytest.mark.parametrize("mode", ["sync", "async"])
+    @pytest.mark.parametrize("missing", ["positional", "keyword-only"])
+    def test_missing_arguments_never_request_approval(monkeypatch, mode, missing):
+        """UX-003: required arguments fail before either sync or async approval."""
+        client = decorator_client(monkeypatch, mode, decision={"status": "approved"})
+        calls = []
+
+        def operation(amount, recipient, *, memo):
+            calls.append((amount, recipient, memo))
+
+        async def async_operation(amount, recipient, *, memo):
+            operation(amount, recipient, memo=memo)
+
+        wrapped = oversight()(async_operation if mode == "async" else operation)
+        args, kwargs = ((10,), {"memo": "test"}) if missing == "positional" else ((10, "recipient"), {})
+        with pytest.raises(TypeError, match="required.*argument"):
+            if mode == "async":
+                asyncio.run(wrapped(*args, **kwargs))
+            else:
+                wrapped(*args, **kwargs)
+        assert calls == []
+        client.create_approval.assert_not_called()
+>       client.acreate_approval.assert_not_called()
+
+tests/test_qa_backend.py:267:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <AsyncMock name='mock.acreate_approval' id='4510163920'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'acreate_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='async_operation', arguments={'amount': 10, 'recipient': 'recipient'}, risk_level='medium', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+____ test_missing_required_argument_fails_before_requesting_human_approval _____
+
+quickstart = ({'__builtins__': {'__name__': 'builtins', '__doc__': "Built-in functions, types, exceptions, and other objects.\n\nTh...a1120>, 'transfer_funds': <function transfer_funds at 0x10cdefc40>}, <MagicMock spec='SentinelClient' id='4513035088'>)
+
+    def test_missing_required_argument_fails_before_requesting_human_approval(quickstart):
+        """UX-003: validate complete arguments before involving an approver."""
+        namespace, client = quickstart
+        with pytest.raises(TypeError, match="required.*argument"):
+            namespace["transfer_funds"](1000)
+>       client.create_approval.assert_not_called()
+
+tests/test_qa_dx.py:143:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='mock.create_approval' id='4510164176'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'create_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='transfer_funds', arguments={'amount': 1000}, risk_level='high', approvers=['sms:+15551234567', 'alice@acme.com'], timeout_seconds=300)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_qa_backend.py::test_missing_arguments_never_request_approval[positional-sync]
+FAILED tests/test_qa_backend.py::test_missing_arguments_never_request_approval[positional-async]
+FAILED tests/test_qa_backend.py::test_missing_arguments_never_request_approval[keyword-only-sync]
+FAILED tests/test_qa_backend.py::test_missing_arguments_never_request_approval[keyword-only-async]
+FAILED tests/test_qa_dx.py::test_missing_required_argument_fails_before_requesting_human_approval
+5 failed, 101 deselected in 0.21s

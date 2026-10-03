@@ -1,0 +1,302 @@
+UTC start: 2026-10-03T02:38:45+00:00
+Command: .venv/bin/python -m pytest tests/test_qa_adapters.py -q --runxfail -k real_langchain_tool_does_not_run_after_gate_failure
+Exit: 1
+
+FFFFFF                                                                   [100%]
+=================================== FAILURES ===================================
+__ test_real_langchain_tool_does_not_run_after_gate_failure[rejected-invoke] ___
+
+asynchronous = False, failure = 'rejected'
+
+    @pytest.mark.xfail(
+        strict=True,
+        raises=AssertionError,
+        reason="FE-001: LangChain swallows callback rejection and runs tool",
+    )
+    @pytest.mark.parametrize("asynchronous", [False, True], ids=["invoke", "ainvoke"])
+    @pytest.mark.parametrize("failure", ["rejected", "timeout", "transport_error"])
+    def test_real_langchain_tool_does_not_run_after_gate_failure(asynchronous, failure):
+        pytest.importorskip("langchain_core")
+        from langchain_core.tools import tool
+
+        from sentinel.adapters.langchain import SentinelCallbackHandler
+
+        calls = []
+
+        @tool
+        def local_action(value: int) -> str:
+            """Record a local action without contacting any external service."""
+            calls.append(value)
+            return "executed"
+
+        client = _client({"status": "rejected", "reason": "qa denied"})
+        if failure == "timeout":
+            client.wait_for_decision.side_effect = ApprovalTimeout("qa-action", 1)
+        elif failure == "transport_error":
+            client.create_approval.side_effect = ConnectionError("qa local connection failure")
+        config = {"callbacks": [SentinelCallbackHandler(client=client)]}
+        try:
+            if asynchronous:
+                asyncio.run(local_action.ainvoke({"value": 7}, config=config))
+            else:
+                local_action.invoke({"value": 7}, config=config)
+        except (ApprovalRejected, ApprovalTimeout, ConnectionError):
+            pass
+        client.create_approval.assert_called_once()
+>       assert calls == []
+E       assert [7] == []
+E
+E         Left contains one more item: 7
+E         Use -v to get more diff
+
+tests/test_qa_adapters.py:199: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  langchain_core.callbacks.manager:manager.py:341 Error in SentinelCallbackHandler.on_tool_start callback: ApprovalRejected('qa denied')
+__ test_real_langchain_tool_does_not_run_after_gate_failure[rejected-ainvoke] __
+
+asynchronous = True, failure = 'rejected'
+
+    @pytest.mark.xfail(
+        strict=True,
+        raises=AssertionError,
+        reason="FE-001: LangChain swallows callback rejection and runs tool",
+    )
+    @pytest.mark.parametrize("asynchronous", [False, True], ids=["invoke", "ainvoke"])
+    @pytest.mark.parametrize("failure", ["rejected", "timeout", "transport_error"])
+    def test_real_langchain_tool_does_not_run_after_gate_failure(asynchronous, failure):
+        pytest.importorskip("langchain_core")
+        from langchain_core.tools import tool
+
+        from sentinel.adapters.langchain import SentinelCallbackHandler
+
+        calls = []
+
+        @tool
+        def local_action(value: int) -> str:
+            """Record a local action without contacting any external service."""
+            calls.append(value)
+            return "executed"
+
+        client = _client({"status": "rejected", "reason": "qa denied"})
+        if failure == "timeout":
+            client.wait_for_decision.side_effect = ApprovalTimeout("qa-action", 1)
+        elif failure == "transport_error":
+            client.create_approval.side_effect = ConnectionError("qa local connection failure")
+        config = {"callbacks": [SentinelCallbackHandler(client=client)]}
+        try:
+            if asynchronous:
+                asyncio.run(local_action.ainvoke({"value": 7}, config=config))
+            else:
+                local_action.invoke({"value": 7}, config=config)
+        except (ApprovalRejected, ApprovalTimeout, ConnectionError):
+            pass
+        client.create_approval.assert_called_once()
+>       assert calls == []
+E       assert [7] == []
+E
+E         Left contains one more item: 7
+E         Use -v to get more diff
+
+tests/test_qa_adapters.py:199: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  langchain_core.callbacks.manager:manager.py:341 Error in SentinelCallbackHandler.on_tool_start callback: ApprovalRejected('qa denied')
+___ test_real_langchain_tool_does_not_run_after_gate_failure[timeout-invoke] ___
+
+asynchronous = False, failure = 'timeout'
+
+    @pytest.mark.xfail(
+        strict=True,
+        raises=AssertionError,
+        reason="FE-001: LangChain swallows callback rejection and runs tool",
+    )
+    @pytest.mark.parametrize("asynchronous", [False, True], ids=["invoke", "ainvoke"])
+    @pytest.mark.parametrize("failure", ["rejected", "timeout", "transport_error"])
+    def test_real_langchain_tool_does_not_run_after_gate_failure(asynchronous, failure):
+        pytest.importorskip("langchain_core")
+        from langchain_core.tools import tool
+
+        from sentinel.adapters.langchain import SentinelCallbackHandler
+
+        calls = []
+
+        @tool
+        def local_action(value: int) -> str:
+            """Record a local action without contacting any external service."""
+            calls.append(value)
+            return "executed"
+
+        client = _client({"status": "rejected", "reason": "qa denied"})
+        if failure == "timeout":
+            client.wait_for_decision.side_effect = ApprovalTimeout("qa-action", 1)
+        elif failure == "transport_error":
+            client.create_approval.side_effect = ConnectionError("qa local connection failure")
+        config = {"callbacks": [SentinelCallbackHandler(client=client)]}
+        try:
+            if asynchronous:
+                asyncio.run(local_action.ainvoke({"value": 7}, config=config))
+            else:
+                local_action.invoke({"value": 7}, config=config)
+        except (ApprovalRejected, ApprovalTimeout, ConnectionError):
+            pass
+        client.create_approval.assert_called_once()
+>       assert calls == []
+E       assert [7] == []
+E
+E         Left contains one more item: 7
+E         Use -v to get more diff
+
+tests/test_qa_adapters.py:199: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  langchain_core.callbacks.manager:manager.py:341 Error in SentinelCallbackHandler.on_tool_start callback: ApprovalTimeout('Approval timed out after 1s')
+__ test_real_langchain_tool_does_not_run_after_gate_failure[timeout-ainvoke] ___
+
+asynchronous = True, failure = 'timeout'
+
+    @pytest.mark.xfail(
+        strict=True,
+        raises=AssertionError,
+        reason="FE-001: LangChain swallows callback rejection and runs tool",
+    )
+    @pytest.mark.parametrize("asynchronous", [False, True], ids=["invoke", "ainvoke"])
+    @pytest.mark.parametrize("failure", ["rejected", "timeout", "transport_error"])
+    def test_real_langchain_tool_does_not_run_after_gate_failure(asynchronous, failure):
+        pytest.importorskip("langchain_core")
+        from langchain_core.tools import tool
+
+        from sentinel.adapters.langchain import SentinelCallbackHandler
+
+        calls = []
+
+        @tool
+        def local_action(value: int) -> str:
+            """Record a local action without contacting any external service."""
+            calls.append(value)
+            return "executed"
+
+        client = _client({"status": "rejected", "reason": "qa denied"})
+        if failure == "timeout":
+            client.wait_for_decision.side_effect = ApprovalTimeout("qa-action", 1)
+        elif failure == "transport_error":
+            client.create_approval.side_effect = ConnectionError("qa local connection failure")
+        config = {"callbacks": [SentinelCallbackHandler(client=client)]}
+        try:
+            if asynchronous:
+                asyncio.run(local_action.ainvoke({"value": 7}, config=config))
+            else:
+                local_action.invoke({"value": 7}, config=config)
+        except (ApprovalRejected, ApprovalTimeout, ConnectionError):
+            pass
+        client.create_approval.assert_called_once()
+>       assert calls == []
+E       assert [7] == []
+E
+E         Left contains one more item: 7
+E         Use -v to get more diff
+
+tests/test_qa_adapters.py:199: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  langchain_core.callbacks.manager:manager.py:341 Error in SentinelCallbackHandler.on_tool_start callback: ApprovalTimeout('Approval timed out after 1s')
+_ test_real_langchain_tool_does_not_run_after_gate_failure[transport_error-invoke] _
+
+asynchronous = False, failure = 'transport_error'
+
+    @pytest.mark.xfail(
+        strict=True,
+        raises=AssertionError,
+        reason="FE-001: LangChain swallows callback rejection and runs tool",
+    )
+    @pytest.mark.parametrize("asynchronous", [False, True], ids=["invoke", "ainvoke"])
+    @pytest.mark.parametrize("failure", ["rejected", "timeout", "transport_error"])
+    def test_real_langchain_tool_does_not_run_after_gate_failure(asynchronous, failure):
+        pytest.importorskip("langchain_core")
+        from langchain_core.tools import tool
+
+        from sentinel.adapters.langchain import SentinelCallbackHandler
+
+        calls = []
+
+        @tool
+        def local_action(value: int) -> str:
+            """Record a local action without contacting any external service."""
+            calls.append(value)
+            return "executed"
+
+        client = _client({"status": "rejected", "reason": "qa denied"})
+        if failure == "timeout":
+            client.wait_for_decision.side_effect = ApprovalTimeout("qa-action", 1)
+        elif failure == "transport_error":
+            client.create_approval.side_effect = ConnectionError("qa local connection failure")
+        config = {"callbacks": [SentinelCallbackHandler(client=client)]}
+        try:
+            if asynchronous:
+                asyncio.run(local_action.ainvoke({"value": 7}, config=config))
+            else:
+                local_action.invoke({"value": 7}, config=config)
+        except (ApprovalRejected, ApprovalTimeout, ConnectionError):
+            pass
+        client.create_approval.assert_called_once()
+>       assert calls == []
+E       assert [7] == []
+E
+E         Left contains one more item: 7
+E         Use -v to get more diff
+
+tests/test_qa_adapters.py:199: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  langchain_core.callbacks.manager:manager.py:341 Error in SentinelCallbackHandler.on_tool_start callback: ConnectionError('qa local connection failure')
+_ test_real_langchain_tool_does_not_run_after_gate_failure[transport_error-ainvoke] _
+
+asynchronous = True, failure = 'transport_error'
+
+    @pytest.mark.xfail(
+        strict=True,
+        raises=AssertionError,
+        reason="FE-001: LangChain swallows callback rejection and runs tool",
+    )
+    @pytest.mark.parametrize("asynchronous", [False, True], ids=["invoke", "ainvoke"])
+    @pytest.mark.parametrize("failure", ["rejected", "timeout", "transport_error"])
+    def test_real_langchain_tool_does_not_run_after_gate_failure(asynchronous, failure):
+        pytest.importorskip("langchain_core")
+        from langchain_core.tools import tool
+
+        from sentinel.adapters.langchain import SentinelCallbackHandler
+
+        calls = []
+
+        @tool
+        def local_action(value: int) -> str:
+            """Record a local action without contacting any external service."""
+            calls.append(value)
+            return "executed"
+
+        client = _client({"status": "rejected", "reason": "qa denied"})
+        if failure == "timeout":
+            client.wait_for_decision.side_effect = ApprovalTimeout("qa-action", 1)
+        elif failure == "transport_error":
+            client.create_approval.side_effect = ConnectionError("qa local connection failure")
+        config = {"callbacks": [SentinelCallbackHandler(client=client)]}
+        try:
+            if asynchronous:
+                asyncio.run(local_action.ainvoke({"value": 7}, config=config))
+            else:
+                local_action.invoke({"value": 7}, config=config)
+        except (ApprovalRejected, ApprovalTimeout, ConnectionError):
+            pass
+        client.create_approval.assert_called_once()
+>       assert calls == []
+E       assert [7] == []
+E
+E         Left contains one more item: 7
+E         Use -v to get more diff
+
+tests/test_qa_adapters.py:199: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  langchain_core.callbacks.manager:manager.py:341 Error in SentinelCallbackHandler.on_tool_start callback: ConnectionError('qa local connection failure')
+=========================== short test summary info ============================
+FAILED tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[rejected-invoke]
+FAILED tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[rejected-ainvoke]
+FAILED tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[timeout-invoke]
+FAILED tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[timeout-ainvoke]
+FAILED tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[transport_error-invoke]
+FAILED tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[transport_error-ainvoke]
+6 failed, 61 deselected in 0.14s

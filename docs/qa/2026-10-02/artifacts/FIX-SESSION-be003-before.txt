@@ -1,0 +1,82 @@
+UTC start: 2026-10-03T02:45:10+00:00
+Command: .venv/bin/python -m pytest -q tests/test_qa_backend.py -k timeout_fallback
+Exit: 1
+
+FF..                                                                     [100%]
+=================================== FAILURES ===================================
+_______________ test_timeout_fallback_exception_is_audited[sync] _______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c3f1f10>
+mode = 'sync'
+
+    @pytest.mark.parametrize("mode", ["sync", "async"])
+    def test_timeout_fallback_exception_is_audited(monkeypatch, mode):
+        """BE-003: failed explicit fallback must preserve the error and audit attempt."""
+        client = decorator_client(monkeypatch, mode, failure=ApprovalTimeout("action", 1))
+        original_error = ValueError("synthetic operation error")
+        operation = MagicMock(side_effect=original_error)
+
+        with pytest.raises(ValueError, match="synthetic operation error") as raised:
+            wrap_call(mode, operation, fallback="execute")()
+        assert raised.value is original_error
+        operation.assert_called_once_with()
+        audit = client.aemit_audit_event if mode == "async" else client.emit_audit_event
+>       audit.assert_called_once()
+
+tests/test_qa_backend.py:322:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='mock.emit_audit_event' id='4500594512'>
+
+    def assert_called_once(self):
+        """assert that the mock was called only once.
+        """
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to have been called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'emit_audit_event' to have been called once. Called 0 times.
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:918: AssertionError
+______________ test_timeout_fallback_exception_is_audited[async] _______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c3f1890>
+mode = 'async'
+
+    @pytest.mark.parametrize("mode", ["sync", "async"])
+    def test_timeout_fallback_exception_is_audited(monkeypatch, mode):
+        """BE-003: failed explicit fallback must preserve the error and audit attempt."""
+        client = decorator_client(monkeypatch, mode, failure=ApprovalTimeout("action", 1))
+        original_error = ValueError("synthetic operation error")
+        operation = MagicMock(side_effect=original_error)
+
+        with pytest.raises(ValueError, match="synthetic operation error") as raised:
+            wrap_call(mode, operation, fallback="execute")()
+        assert raised.value is original_error
+        operation.assert_called_once_with()
+        audit = client.aemit_audit_event if mode == "async" else client.emit_audit_event
+>       audit.assert_called_once()
+
+tests/test_qa_backend.py:322:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <AsyncMock name='mock.aemit_audit_event' id='4502141776'>
+
+    def assert_called_once(self):
+        """assert that the mock was called only once.
+        """
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to have been called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'aemit_audit_event' to have been called once. Called 0 times.
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:918: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_qa_backend.py::test_timeout_fallback_exception_is_audited[sync]
+FAILED tests/test_qa_backend.py::test_timeout_fallback_exception_is_audited[async]
+2 failed, 2 passed, 86 deselected in 0.15s

@@ -1,0 +1,98 @@
+UTC start: 2026-10-03T02:45:42+00:00
+Command: git diff -- sentinel/decorator.py tests/test_qa_backend.py
+Exit: 0
+
+diff --git a/sentinel/decorator.py b/sentinel/decorator.py
+index 0962bf6..6f83286 100644
+--- a/sentinel/decorator.py
++++ b/sentinel/decorator.py
+@@ -78,7 +78,15 @@ def oversight(
+                     decision = await client.await_for_decision(action_id, timeout=timeout_seconds)
+                 except ApprovalTimeout:
+                     if fb == "execute":
+-                        result = await fn(*args, **kwargs)
++                        try:
++                            result = await fn(*args, **kwargs)
++                        except Exception as e:
++                            await client.aemit_audit_event(
++                                action_id,
++                                execution_result=None,
++                                error=f"timeout-fallback-execute: {_truncate_repr(e)}",
++                            )
++                            raise
+                         await client.aemit_audit_event(
+                             action_id,
+                             execution_result=_truncate_repr(result),
+@@ -127,7 +135,15 @@ def oversight(
+                 decision = client.wait_for_decision(action_id, timeout=timeout_seconds)
+             except ApprovalTimeout:
+                 if fb == "execute":
+-                    result = fn(*args, **kwargs)
++                    try:
++                        result = fn(*args, **kwargs)
++                    except Exception as e:
++                        client.emit_audit_event(
++                            action_id,
++                            execution_result=None,
++                            error=f"timeout-fallback-execute: {_truncate_repr(e)}",
++                        )
++                        raise
+                     client.emit_audit_event(
+                         action_id,
+                         execution_result=_truncate_repr(result),
+diff --git a/tests/test_qa_backend.py b/tests/test_qa_backend.py
+index 34adf40..f434eaf 100644
+--- a/tests/test_qa_backend.py
++++ b/tests/test_qa_backend.py
+@@ -308,25 +308,42 @@ def test_decorator_closes_client_on_every_exit(monkeypatch, mode, outcome):
+
+
+ @pytest.mark.parametrize("mode", ["sync", "async"])
+-@pytest.mark.xfail(
+-    strict=True,
+-    raises=AssertionError,
+-    reason="BE-003: failing timeout fallback does not emit audit evidence",
+-)
+ def test_timeout_fallback_exception_is_audited(monkeypatch, mode):
++    """BE-003: failed explicit fallback must preserve the error and audit attempt."""
+     client = decorator_client(monkeypatch, mode, failure=ApprovalTimeout("action", 1))
++    original_error = ValueError("synthetic operation error")
++    operation = MagicMock(side_effect=original_error)
+
+-    def operation():
+-        raise ValueError("synthetic operation error")
+-
+-    with pytest.raises(ValueError, match="synthetic operation error"):
++    with pytest.raises(ValueError, match="synthetic operation error") as raised:
+         wrap_call(mode, operation, fallback="execute")()
++    assert raised.value is original_error
++    operation.assert_called_once_with()
+     audit = client.aemit_audit_event if mode == "async" else client.emit_audit_event
+     audit.assert_called_once()
++    if mode == "async":
++        audit.assert_awaited_once()
+     assert audit.call_args.args[0] == "action"
++    assert audit.call_args.kwargs["execution_result"] is None
++    assert "timeout-fallback-execute" in audit.call_args.kwargs["error"]
+     assert "synthetic operation error" in audit.call_args.kwargs["error"]
+
+
++@pytest.mark.parametrize("mode", ["sync", "async"])
++def test_timeout_fallback_success_is_audited(monkeypatch, mode):
++    """BE-003: successful explicit fallback keeps its existing result and audit."""
++    client = decorator_client(monkeypatch, mode, failure=ApprovalTimeout("action", 1))
++    operation = MagicMock(return_value="success")
++
++    assert wrap_call(mode, operation, fallback="execute")() == "success"
++    operation.assert_called_once_with()
++    audit = client.aemit_audit_event if mode == "async" else client.emit_audit_event
++    audit.assert_called_once_with(
++        "action", execution_result="'success'", error="timeout-fallback-execute"
++    )
++    if mode == "async":
++        audit.assert_awaited_once()
++
++
+ @pytest.mark.asyncio
+ @pytest.mark.xfail(
+     strict=True,

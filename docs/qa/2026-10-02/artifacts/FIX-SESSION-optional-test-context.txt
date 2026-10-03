@@ -1,0 +1,214 @@
+UTC start: 2026-10-03T02:42:58+00:00
+Command: python3 -c 'from pathlib import Path; ranges={"tests/test_qa_backend.py":(210,335),"tests/test_qa_dx.py":(125,185),"tests/test_decorator.py":(1,150)}; [(print("FILE",p),print("\n".join(Path(p).read_text().splitlines()[start-1:end]))) for p,(start,end) in ranges.items()]'
+Exit: 0
+
+FILE tests/test_qa_backend.py
+    assert {result["action_id"] for result in results} == {"one-request", "two-request"}
+    assert set(seen) == {
+        ("one.invalid", "Bearer [REDACTED]", "one-request"),
+        ("two.invalid", "Bearer [REDACTED]", "two-request"),
+    }
+
+
+def decorator_client(monkeypatch, mode, *, decision=None, failure=None):
+    client = MagicMock()
+    client.create_approval.return_value = {"action_id": "action"}
+    client.acreate_approval = AsyncMock(return_value={"action_id": "action"})
+    client.wait_for_decision.return_value = decision
+    client.wait_for_decision.side_effect = failure
+    client.await_for_decision = AsyncMock(return_value=decision, side_effect=failure)
+    client.aemit_audit_event = AsyncMock()
+    client.aclose = AsyncMock()
+    monkeypatch.setattr(decorator_module, "SentinelClient", lambda config: client)
+    monkeypatch.setattr(decorator_module, "get_config", lambda: SentinelConfig(fallback="reject"))
+    return client
+
+
+def wrap_call(mode, function, **kwargs):
+    if mode == "async":
+
+        async def operation():
+            return function()
+
+        return lambda: asyncio.run(oversight(**kwargs)(operation)())
+
+    def operation():
+        return function()
+
+    return oversight(**kwargs)(operation)
+
+
+@pytest.mark.parametrize("mode", ["sync", "async"])
+@pytest.mark.parametrize(
+    "decision",
+    [
+        {"status": "rejected"},
+        {"status": "unknown"},
+        {},
+        {"status": "rejected", "decision": "approved"},
+    ],
+)
+def test_unapproved_decisions_never_execute(monkeypatch, mode, decision):
+    decorator_client(monkeypatch, mode, decision=decision)
+    operation = MagicMock()
+    with pytest.raises(ApprovalRejected):
+        wrap_call(mode, operation)()
+    operation.assert_not_called()
+
+
+@pytest.mark.parametrize("mode", ["sync", "async"])
+def test_default_timeout_never_executes(monkeypatch, mode):
+    decorator_client(monkeypatch, mode, failure=ApprovalTimeout("action", 1))
+    operation = MagicMock()
+    with pytest.raises(ApprovalTimeout):
+        wrap_call(mode, operation)()
+    operation.assert_not_called()
+
+
+@pytest.mark.parametrize("mode", ["sync", "async"])
+@pytest.mark.parametrize(
+    "failure", [SentinelAPIError(403, "denied"), httpx.ReadTimeout("synthetic")]
+)
+def test_execute_fallback_does_not_bypass_api_or_network_failures(monkeypatch, mode, failure):
+    decorator_client(monkeypatch, mode, failure=failure)
+    operation = MagicMock()
+    with pytest.raises(type(failure)):
+        wrap_call(mode, operation, fallback="execute")()
+    operation.assert_not_called()
+
+
+@pytest.mark.parametrize("mode", ["sync", "async"])
+@pytest.mark.parametrize("outcome", ["approved", "rejected", "timeout", "operation-error"])
+@pytest.mark.xfail(
+    strict=True, raises=AssertionError, reason="BE-002: decorator-owned clients are never closed"
+)
+def test_decorator_closes_client_on_every_exit(monkeypatch, mode, outcome):
+    client = decorator_client(
+        monkeypatch,
+        mode,
+        decision={"status": "rejected" if outcome == "rejected" else "approved"},
+        failure=ApprovalTimeout("action", 1) if outcome == "timeout" else None,
+    )
+
+    def operation():
+        if outcome == "operation-error":
+            raise ValueError("synthetic operation error")
+        return "ok"
+
+    with contextlib.suppress(ApprovalRejected, ApprovalTimeout, ValueError):
+        wrap_call(mode, operation)()
+    if mode == "async":
+        client.aclose.assert_awaited_once()
+    else:
+        client.close.assert_called_once()
+
+
+@pytest.mark.parametrize("mode", ["sync", "async"])
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason="BE-003: failing timeout fallback does not emit audit evidence",
+)
+def test_timeout_fallback_exception_is_audited(monkeypatch, mode):
+    client = decorator_client(monkeypatch, mode, failure=ApprovalTimeout("action", 1))
+
+    def operation():
+        raise ValueError("synthetic operation error")
+
+    with pytest.raises(ValueError, match="synthetic operation error"):
+        wrap_call(mode, operation, fallback="execute")()
+    audit = client.aemit_audit_event if mode == "async" else client.emit_audit_event
+    audit.assert_called_once()
+    assert audit.call_args.args[0] == "action"
+    assert "synthetic operation error" in audit.call_args.kwargs["error"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason="BE-004: mutable arguments can change while approval is pending",
+)
+FILE tests/test_qa_dx.py
+def test_oversight_preserves_discoverable_function_signature():
+    import inspect
+
+    @sentinel.oversight()
+    def action(amount: int, recipient: str = "qa-recipient") -> str:
+        """Example operation visible to Python help and agent frameworks."""
+        return recipient
+
+    assert action.__name__ == "action"
+    assert action.__doc__ == "Example operation visible to Python help and agent frameworks."
+    assert list(inspect.signature(action).parameters) == ["amount", "recipient"]
+
+
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason="UX-003: missing required function argument requests approval before raising TypeError",
+)
+def test_missing_required_argument_fails_before_requesting_human_approval(quickstart):
+    namespace, client = quickstart
+    with pytest.raises(TypeError, match="required positional argument"):
+        namespace["transfer_funds"](1000)
+    client.create_approval.assert_not_called()
+FILE tests/test_decorator.py
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from sentinel import ApprovalRejected, SentinelClient, SentinelConfigError, configure, oversight
+
+
+@patch("sentinel.decorator.SentinelClient")
+def test_approval_success(mock_client_cls):
+    mock_client = MagicMock()
+    mock_client.create_approval.return_value = {"action_id": "act_1"}
+    mock_client.wait_for_decision.return_value = {"status": "approved"}
+    mock_client_cls.return_value = mock_client
+
+    @oversight(risk_level="high")
+    def transfer_funds(amount, to):
+        return {"amount": amount, "to": to}
+
+    result = transfer_funds(100, to="alice")
+    assert result == {"amount": 100, "to": "alice"}
+    mock_client.create_approval.assert_called_once_with(
+        function_name="transfer_funds",
+        arguments={"amount": 100, "to": "alice"},
+        risk_level="high",
+        approvers=None,
+        timeout_seconds=None,
+    )
+    mock_client.wait_for_decision.assert_called_once_with("act_1", timeout=None)
+    mock_client.emit_audit_event.assert_called_once()
+
+
+@patch("sentinel.decorator.SentinelClient")
+def test_rejection(mock_client_cls):
+    mock_client = MagicMock()
+    mock_client.create_approval.return_value = {"action_id": "act_2"}
+    mock_client.wait_for_decision.return_value = {
+        "status": "rejected",
+        "reason": "too risky",
+    }
+    mock_client_cls.return_value = mock_client
+
+    ran = {"v": False}
+
+    @oversight()
+    def dangerous():
+        ran["v"] = True
+        return "done"
+
+    with pytest.raises(ApprovalRejected) as exc:
+        dangerous()
+    assert "too risky" in str(exc.value)
+    assert ran["v"] is False
+
+
+def test_requires_api_key_before_network_calls():
+    configure(api_key=None)
+    with pytest.raises(SentinelConfigError):
+        SentinelClient().create_approval(function_name="dangerous", arguments={})

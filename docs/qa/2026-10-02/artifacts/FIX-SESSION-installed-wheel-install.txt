@@ -1,0 +1,16 @@
+UTC start: 2026-10-03T02:48:03+00:00
+Command: uv pip install --target /private/tmp/sentinel-fix-wheel-check /private/tmp/sentinel-fix-dist/sentinel_oversight-0.1.9-py3-none-any.whl
+Exit: 0
+
+Using CPython 3.11.15 interpreter at: .venv/bin/python3
+Resolved 8 packages in 18ms
+Prepared 1 package in 5ms
+Installed 8 packages in 14ms
+ + anyio==4.15.1
+ + certifi==2026.7.22
+ + h11==0.16.0
+ + httpcore==1.0.9
+ + httpx==0.28.1
+ + idna==3.20
+ + sentinel-oversight==0.1.9 (from file:///private/tmp/sentinel-fix-dist/sentinel_oversight-0.1.9-py3-none-any.whl)
+ + typing-extensions==4.16.0

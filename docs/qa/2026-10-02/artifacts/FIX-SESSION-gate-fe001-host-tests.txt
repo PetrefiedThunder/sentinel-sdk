@@ -1,0 +1,6 @@
+UTC start: 2026-10-03T02:40:13+00:00
+Command: .venv/bin/python -m pytest tests/test_qa_adapters.py -q -k real_langchain
+Exit: 0
+
+....................................                                     [100%]
+36 passed, 59 deselected in 0.16s

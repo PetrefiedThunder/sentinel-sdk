@@ -1,0 +1,3 @@
+UTC start: 2026-10-03T02:44:19+00:00
+Command: git add -- sentinel/adapters/_arguments.py tests/test_adapter_arguments.py
+Exit: 0

@@ -135,13 +135,9 @@ def test_oversight_preserves_discoverable_function_signature():
     assert list(inspect.signature(action).parameters) == ["amount", "recipient"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="UX-003: missing required function argument requests approval before raising TypeError",
-)
 def test_missing_required_argument_fails_before_requesting_human_approval(quickstart):
+    """UX-003: validate complete arguments before involving an approver."""
     namespace, client = quickstart
-    with pytest.raises(TypeError, match="required positional argument"):
+    with pytest.raises(TypeError, match="required.*argument"):
         namespace["transfer_funds"](1000)
     client.create_approval.assert_not_called()

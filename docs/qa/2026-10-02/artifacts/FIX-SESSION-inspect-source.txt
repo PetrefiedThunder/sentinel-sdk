@@ -1,0 +1,1504 @@
+UTC start: 2026-10-03T02:38:30+00:00
+Command: python3 -c 'from pathlib import Path; paths=["sentinel/adapters/autogen.py","sentinel/adapters/crewai.py","sentinel/adapters/langgraph.py","sentinel/adapters/openai_agents.py","sentinel/client.py","tests/test_qa_adapters.py","README.md"]; [(print("FILE:",p),print(Path(p).read_text())) for p in paths]'
+Exit: 0
+
+FILE: sentinel/adapters/autogen.py
+"""AutoGen adapter — wrap a function registered with AutoGen so each call
+pauses for Sentinel approval.
+
+Works with both classic AutoGen (`pyautogen` / `autogen-agentchat`) and the
+newer `autogen-core` — anywhere you register a Python callable as a tool.
+
+    from autogen_agentchat.agents import AssistantAgent
+    from sentinel.adapters.autogen import gated
+
+    @gated(risk_level="high", approvers=["ops@acme.com"])
+    def wire_transfer(amount: int, recipient: str) -> dict:
+        return stripe.transfers.create(amount=amount, destination=recipient)
+
+    agent = AssistantAgent(tools=[wire_transfer], ...)
+
+Async functions are supported transparently — the returned wrapper preserves
+sync vs. async semantics of the original.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import functools
+from typing import TYPE_CHECKING, Any
+
+from ..client import SentinelClient
+from ..exceptions import ApprovalRejected
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
+def gated(
+    *,
+    client: SentinelClient | None = None,
+    risk_level: str = "high",
+    approvers: list[str] | None = None,
+    timeout_seconds: float | None = None,
+    function_name: str | None = None,
+) -> Callable[[Callable], Callable]:
+    """Decorator that gates an AutoGen-registered function behind Sentinel."""
+
+    def decorator(fn: Callable) -> Callable:
+        sentinel_client = client or SentinelClient()
+        derived_name = function_name or getattr(fn, "__name__", "autogen_tool")
+
+        if asyncio.iscoroutinefunction(fn):
+
+            @functools.wraps(fn)
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+                arguments = kwargs if kwargs else {"args": list(args)}
+                approval = await sentinel_client.acreate_approval(
+                    function_name=derived_name,
+                    arguments=arguments,
+                    risk_level=risk_level,
+                    approvers=approvers,
+                    timeout_seconds=timeout_seconds,
+                )
+                action_id = approval.get("action_id") or approval.get("id")
+                decision = await sentinel_client.await_for_decision(
+                    action_id, timeout=timeout_seconds
+                )
+                status = decision.get("status") or decision.get("decision")
+                if status != "approved":
+                    raise ApprovalRejected(
+                        reason=decision.get("reason", "Tool execution not approved"),
+                        action_id=action_id,
+                    )
+                return await fn(*args, **kwargs)
+
+            return async_wrapper
+
+        @functools.wraps(fn)
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+            arguments = kwargs if kwargs else {"args": list(args)}
+            approval = sentinel_client.create_approval(
+                function_name=derived_name,
+                arguments=arguments,
+                risk_level=risk_level,
+                approvers=approvers,
+                timeout_seconds=timeout_seconds,
+            )
+            action_id = approval.get("action_id") or approval.get("id")
+            decision = sentinel_client.wait_for_decision(action_id, timeout=timeout_seconds)
+            status = decision.get("status") or decision.get("decision")
+            if status != "approved":
+                raise ApprovalRejected(
+                    reason=decision.get("reason", "Tool execution not approved"),
+                    action_id=action_id,
+                )
+            return fn(*args, **kwargs)
+
+        return sync_wrapper
+
+    return decorator
+
+FILE: sentinel/adapters/crewai.py
+"""CrewAI adapter — wrap a CrewAI tool with Sentinel approval.
+
+CrewAI tools are typically built with @tool() or BaseTool. Wrap them with
+`gated()` to require human approval before each invocation:
+
+    from crewai import Agent, Task, Crew
+    from crewai.tools import tool
+    from sentinel.adapters.crewai import gated
+
+    @tool("wire_transfer")
+    def _wire_transfer(amount: int, recipient: str) -> dict:
+        return stripe.transfers.create(amount=amount, destination=recipient)
+
+    wire_transfer = gated(
+        _wire_transfer,
+        risk_level="high",
+        approvers=["ops@acme.com"],
+    )
+
+    agent = Agent(tools=[wire_transfer], ...)
+
+The adapter wraps the underlying callable so CrewAI calls it normally —
+Sentinel intercepts inside the wrapper and pauses for human approval.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+from ..client import SentinelClient
+from ..exceptions import ApprovalRejected
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
+def gated(
+    tool: Any,
+    *,
+    client: SentinelClient | None = None,
+    risk_level: str = "high",
+    approvers: list[str] | None = None,
+    timeout_seconds: float | None = None,
+    function_name: str | None = None,
+) -> Any:
+    """Wrap a CrewAI tool (BaseTool instance or @tool-decorated callable)
+    so each invocation pauses for Sentinel approval.
+
+    Returns an object with the same external interface — CrewAI can call
+    it exactly like the original tool.
+    """
+    sentinel_client = client or SentinelClient()
+    derived_name = function_name or _derive_tool_name(tool)
+
+    original = _extract_callable(tool)
+
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        # CrewAI tools are usually called with kwargs; fall back to positional.
+        arguments = kwargs if kwargs else {"args": list(args)}
+        approval = sentinel_client.create_approval(
+            function_name=derived_name,
+            arguments=arguments,
+            risk_level=risk_level,
+            approvers=approvers,
+            timeout_seconds=timeout_seconds,
+        )
+        action_id = approval.get("action_id") or approval.get("id")
+        decision = sentinel_client.wait_for_decision(action_id, timeout=timeout_seconds)
+        status = decision.get("status") or decision.get("decision")
+        if status != "approved":
+            raise ApprovalRejected(
+                reason=decision.get("reason", "Tool execution not approved"),
+                action_id=action_id,
+            )
+        return original(*args, **kwargs)
+
+    # Preserve the CrewAI BaseTool object if we were handed one — only
+    # swap out the underlying _run / func reference.
+    if hasattr(tool, "_run") and callable(tool._run):
+        tool._run = wrapper  # type: ignore[attr-defined]
+        return tool
+    if hasattr(tool, "func") and callable(tool.func):
+        tool.func = wrapper  # type: ignore[attr-defined]
+        return tool
+    # Plain callable — return the wrapper directly
+    wrapper.__name__ = getattr(original, "__name__", derived_name)
+    return wrapper
+
+
+def _extract_callable(tool: Any) -> Callable:
+    if hasattr(tool, "_run") and callable(tool._run):
+        return tool._run
+    if hasattr(tool, "func") and callable(tool.func):
+        return tool.func
+    if callable(tool):
+        return tool
+    raise TypeError(
+        f"Don't know how to extract a callable from {type(tool).__name__}. "
+        "Pass a CrewAI BaseTool instance or a @tool-decorated function."
+    )
+
+
+def _derive_tool_name(tool: Any) -> str:
+    for attr in ("name", "tool_name", "__name__"):
+        value = getattr(tool, attr, None)
+        if isinstance(value, str) and value:
+            return value
+    return "crewai_tool"
+
+FILE: sentinel/adapters/langgraph.py
+"""LangGraph adapter — gate tool executions in a LangGraph graph behind
+Sentinel approval.
+
+`SentinelToolGate` wraps plain Python callables (the functions you pass to
+graph nodes or tool nodes), so this adapter never imports langgraph and has
+zero dependencies on it — it works with any LangGraph version.
+
+    from sentinel.adapters.langgraph import SentinelToolGate
+
+    gate = SentinelToolGate(risk_level="high", approvers=["ops@acme.com"])
+
+    def my_tool_fn(state):
+        return run_dangerous_thing(state)
+
+    graph.add_node("tools", gate.wrap(my_tool_fn))
+
+Async functions are supported transparently — the returned wrapper preserves
+sync vs. async semantics of the original. Use `tool_allowlist` to gate only
+specific tools, or `tool_denylist` to exempt specific tools; ungated tools
+call through directly with no approval round-trip.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import functools
+from typing import TYPE_CHECKING, Any
+
+from ..client import SentinelClient
+from ..exceptions import ApprovalRejected
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
+
+
+class SentinelToolGate:
+    """Wraps LangGraph node/tool callables so each call pauses for Sentinel
+    approval before executing."""
+
+    def __init__(
+        self,
+        client: SentinelClient | None = None,
+        risk_level: str = "high",
+        approvers: list[str] | None = None,
+        timeout_seconds: float | None = None,
+        tool_allowlist: Iterable[str] | None = None,
+        tool_denylist: Iterable[str] | None = None,
+    ):
+        self.client = client or SentinelClient()
+        self.risk_level = risk_level
+        self.approvers = approvers
+        self.timeout_seconds = timeout_seconds
+        self.tool_allowlist = set(tool_allowlist) if tool_allowlist is not None else None
+        self.tool_denylist = set(tool_denylist) if tool_denylist is not None else None
+
+    def _should_gate(self, tool_name: str) -> bool:
+        if self.tool_allowlist is not None:
+            return tool_name in self.tool_allowlist
+        if self.tool_denylist is not None:
+            return tool_name not in self.tool_denylist
+        return True
+
+    def wrap(self, fn: Callable, function_name: str | None = None) -> Callable:
+        """Return a wrapper around ``fn`` that requires Sentinel approval
+        before each invocation. Preserves sync vs. async semantics."""
+        derived_name = function_name or getattr(fn, "__name__", "langgraph_tool")
+
+        if not self._should_gate(derived_name):
+            return fn
+
+        if asyncio.iscoroutinefunction(fn):
+
+            @functools.wraps(fn)
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+                arguments = kwargs if kwargs else {"args": list(args)}
+                approval = await self.client.acreate_approval(
+                    function_name=derived_name,
+                    arguments=arguments,
+                    risk_level=self.risk_level,
+                    approvers=self.approvers,
+                    timeout_seconds=self.timeout_seconds,
+                )
+                action_id = approval.get("action_id") or approval.get("id")
+                decision = await self.client.await_for_decision(
+                    action_id, timeout=self.timeout_seconds
+                )
+                status = decision.get("status") or decision.get("decision")
+                if status != "approved":
+                    raise ApprovalRejected(
+                        reason=decision.get("reason", "Tool execution not approved"),
+                        action_id=action_id,
+                    )
+                return await fn(*args, **kwargs)
+
+            return async_wrapper
+
+        @functools.wraps(fn)
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+            arguments = kwargs if kwargs else {"args": list(args)}
+            approval = self.client.create_approval(
+                function_name=derived_name,
+                arguments=arguments,
+                risk_level=self.risk_level,
+                approvers=self.approvers,
+                timeout_seconds=self.timeout_seconds,
+            )
+            action_id = approval.get("action_id") or approval.get("id")
+            decision = self.client.wait_for_decision(action_id, timeout=self.timeout_seconds)
+            status = decision.get("status") or decision.get("decision")
+            if status != "approved":
+                raise ApprovalRejected(
+                    reason=decision.get("reason", "Tool execution not approved"),
+                    action_id=action_id,
+                )
+            return fn(*args, **kwargs)
+
+        return sync_wrapper
+
+FILE: sentinel/adapters/openai_agents.py
+"""OpenAI Agents SDK adapter — wrap an Agents SDK tool with Sentinel approval.
+
+Tools in the OpenAI Agents SDK (`openai-agents` package) are typically built
+with @function_tool, which produces a FunctionTool whose async
+`on_invoke_tool(ctx, args_json)` callback executes the tool. Wrap a tool with
+`gated()` to require human approval before each invocation:
+
+    from agents import Agent, Runner, function_tool
+    from sentinel.adapters.openai_agents import gated
+
+    @function_tool
+    def wire_transfer(amount: int, recipient: str) -> dict:
+        return stripe.transfers.create(amount=amount, destination=recipient)
+
+    agent = Agent(
+        name="ops",
+        tools=[gated(wire_transfer, risk_level="high", approvers=["ops@acme.com"])],
+    )
+    result = Runner.run_sync(agent, "...")
+
+The adapter swaps the tool's `on_invoke_tool` callback for one that pauses
+for Sentinel approval, so the Agents SDK calls the tool normally. Plain
+callables (functions not yet wrapped by @function_tool) are also accepted —
+they get the same gating applied directly. This module never imports
+`openai-agents`, so it works without the package installed and across
+versions.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import functools
+import json
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+from ..client import SentinelClient
+from ..exceptions import ApprovalRejected
+
+
+def gated(
+    tool: Any,
+    *,
+    client: SentinelClient | None = None,
+    risk_level: str = "high",
+    approvers: list[str] | None = None,
+    timeout_seconds: float | None = None,
+    function_name: str | None = None,
+) -> Any:
+    """Wrap an OpenAI Agents SDK tool (FunctionTool instance or plain
+    callable) so each invocation pauses for Sentinel approval.
+
+    Returns the same FunctionTool object with its `on_invoke_tool` callback
+    gated, or a gated wrapper if a plain callable was passed.
+    """
+    sentinel_client = client or SentinelClient()
+    derived_name = function_name or _derive_tool_name(tool)
+
+    if hasattr(tool, "on_invoke_tool") and callable(tool.on_invoke_tool):
+        original = tool.on_invoke_tool
+
+        @functools.wraps(original)
+        async def gated_invoke(ctx: Any, args_json: str) -> Any:
+            arguments = _parse_arguments(args_json)
+            await _arequire_approval(
+                sentinel_client,
+                derived_name,
+                arguments,
+                risk_level=risk_level,
+                approvers=approvers,
+                timeout_seconds=timeout_seconds,
+            )
+            return await original(ctx, args_json)
+
+        tool.on_invoke_tool = gated_invoke
+        return tool
+
+    if callable(tool):
+        return _wrap_plain_callable(
+            tool,
+            sentinel_client,
+            derived_name,
+            risk_level=risk_level,
+            approvers=approvers,
+            timeout_seconds=timeout_seconds,
+        )
+
+    raise TypeError(
+        f"Don't know how to gate {type(tool).__name__}. "
+        "Pass a FunctionTool (from @function_tool) or a plain callable."
+    )
+
+
+def _wrap_plain_callable(
+    fn: Callable,
+    sentinel_client: SentinelClient,
+    derived_name: str,
+    *,
+    risk_level: str,
+    approvers: list[str] | None,
+    timeout_seconds: float | None,
+) -> Callable:
+    if asyncio.iscoroutinefunction(fn):
+
+        @functools.wraps(fn)
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            arguments = kwargs if kwargs else {"args": list(args)}
+            await _arequire_approval(
+                sentinel_client,
+                derived_name,
+                arguments,
+                risk_level=risk_level,
+                approvers=approvers,
+                timeout_seconds=timeout_seconds,
+            )
+            return await fn(*args, **kwargs)
+
+        return async_wrapper
+
+    @functools.wraps(fn)
+    def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+        arguments = kwargs if kwargs else {"args": list(args)}
+        approval = sentinel_client.create_approval(
+            function_name=derived_name,
+            arguments=arguments,
+            risk_level=risk_level,
+            approvers=approvers,
+            timeout_seconds=timeout_seconds,
+        )
+        action_id = approval.get("action_id") or approval.get("id")
+        decision = sentinel_client.wait_for_decision(action_id, timeout=timeout_seconds)
+        status = decision.get("status") or decision.get("decision")
+        if status != "approved":
+            raise ApprovalRejected(
+                reason=decision.get("reason", "Tool execution not approved"),
+                action_id=action_id,
+            )
+        return fn(*args, **kwargs)
+
+    return sync_wrapper
+
+
+async def _arequire_approval(
+    sentinel_client: SentinelClient,
+    derived_name: str,
+    arguments: dict[str, Any],
+    *,
+    risk_level: str,
+    approvers: list[str] | None,
+    timeout_seconds: float | None,
+) -> None:
+    approval = await sentinel_client.acreate_approval(
+        function_name=derived_name,
+        arguments=arguments,
+        risk_level=risk_level,
+        approvers=approvers,
+        timeout_seconds=timeout_seconds,
+    )
+    action_id = approval.get("action_id") or approval.get("id")
+    decision = await sentinel_client.await_for_decision(action_id, timeout=timeout_seconds)
+    status = decision.get("status") or decision.get("decision")
+    if status != "approved":
+        raise ApprovalRejected(
+            reason=decision.get("reason", "Tool execution not approved"),
+            action_id=action_id,
+        )
+
+
+def _parse_arguments(args_json: Any) -> dict[str, Any]:
+    """on_invoke_tool receives the tool arguments as a JSON string."""
+    if isinstance(args_json, dict):
+        return args_json
+    if not args_json:
+        return {}
+    try:
+        parsed = json.loads(args_json)
+    except (TypeError, ValueError):
+        return {"raw": str(args_json)}
+    if isinstance(parsed, dict):
+        return parsed
+    return {"args": parsed}
+
+
+def _derive_tool_name(tool: Any) -> str:
+    for attr in ("name", "tool_name", "__name__"):
+        value = getattr(tool, attr, None)
+        if isinstance(value, str) and value:
+            return value
+    return "openai_agents_tool"
+
+FILE: sentinel/client.py
+from __future__ import annotations
+
+import contextlib
+import json
+import time
+from dataclasses import dataclass, field
+from typing import Any
+
+import httpx
+
+from .config import SentinelConfig, get_config
+from .exceptions import ApprovalTimeout, SentinelAPIError, SentinelConfigError, SentinelError
+
+USER_AGENT = "sentinel-sdk-python/0.1.9"
+
+
+@dataclass
+class PageResult:
+    """One page of results from a cursor-paginated list endpoint.
+
+    Mirrors the JS SDK's PageResult: `data` is the list of items, `has_more`
+    indicates whether another page exists, and `next_cursor` is the opaque
+    cursor to pass back to fetch it (None when there are no more pages).
+    """
+
+    data: list = field(default_factory=list)
+    has_more: bool = False
+    next_cursor: str | None = None
+
+    @classmethod
+    def from_envelope(cls, body: Any) -> PageResult:
+        """Build a PageResult from the API's {data, has_more, next_cursor} body.
+
+        Tolerates a bare list (older servers that return an unwrapped array):
+        the whole list becomes a single terminal page.
+        """
+        if isinstance(body, dict):
+            return cls(
+                data=body.get("data") or [],
+                has_more=bool(body.get("has_more", False)),
+                next_cursor=body.get("next_cursor"),
+            )
+        return cls(data=list(body or []), has_more=False, next_cursor=None)
+
+
+def _ensure_json_serializable(arguments: Any) -> None:
+    """Fail fast if `arguments` can't be JSON-encoded.
+
+    Without this check the POST silently succeeds (httpx converts the value
+    via its own serializer, or the server stores something useless), and
+    the agent then hangs until `timeout_seconds` waiting on a decision it
+    can never get. Raise immediately with the offending type so the caller
+    sees the real error.
+    """
+    try:
+        json.dumps(arguments)
+    except TypeError as e:
+        raise TypeError(
+            f"@oversight arguments must be JSON-serializable. "
+            f"Got an un-serializable value: {e}. "
+            f"Convert sets/objects/bytes to plain dict/list/str/int/float/bool/None before the call."
+        ) from e
+
+
+def _raise_for_status(r: httpx.Response) -> None:
+    """Translate non-2xx into SentinelAPIError with the API's error body."""
+    if r.is_success:
+        return
+    detail = ""
+    try:
+        body = r.json()
+        if isinstance(body, dict):
+            detail = body.get("detail") or body.get("message") or str(body)
+        else:
+            detail = str(body)
+    except Exception:
+        detail = (r.text or "")[:500]
+    raise SentinelAPIError(r.status_code, detail, url=str(r.request.url))
+
+
+class SentinelClient:
+    """Thread-safe Sentinel client with HTTP connection keep-alive.
+
+    A single httpx.Client is reused across calls — avoids ~95 ms TLS handshake
+    on every request, which compounds when polling.
+    """
+
+    def __init__(self, config: SentinelConfig | None = None):
+        self.config = config or get_config()
+        self._client: httpx.Client | None = None
+        self._aclient: httpx.AsyncClient | None = None
+
+    # ------------- internals -------------
+    def _headers(self) -> dict:
+        if not self.config.api_key:
+            raise SentinelConfigError("Call sentinel.configure(api_key=...) before using Sentinel")
+        return {
+            "User-Agent": USER_AGENT,
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer [REDACTED]",
+        }
+
+    def _url(self, path: str) -> str:
+        return f"{self.config.api_url.rstrip('/')}{path}"
+
+    def _get_client(self) -> httpx.Client:
+        if self._client is None:
+            self._client = httpx.Client(
+                base_url=self.config.api_url.rstrip("/"),
+                headers=self._headers(),
+                timeout=60.0,
+                limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
+            )
+        return self._client
+
+    def _get_aclient(self) -> httpx.AsyncClient:
+        if self._aclient is None:
+            self._aclient = httpx.AsyncClient(
+                base_url=self.config.api_url.rstrip("/"),
+                headers=self._headers(),
+                timeout=60.0,
+                limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
+            )
+        return self._aclient
+
+    def close(self) -> None:
+        if self._client is not None:
+            self._client.close()
+            self._client = None
+
+    async def aclose(self) -> None:
+        if self._aclient is not None:
+            await self._aclient.aclose()
+            self._aclient = None
+
+    # ------------- sync API -------------
+    def create_approval(
+        self,
+        function_name: str,
+        arguments: Any,
+        risk_level: str = "medium",
+        approvers: list | None = None,
+        timeout_seconds: int | None = None,
+        idempotency_key: str | None = None,
+    ) -> dict:
+        _ensure_json_serializable(arguments)
+        payload = {
+            "function_name": function_name,
+            "arguments": arguments,
+            "risk_level": risk_level,
+            "approvers": approvers or [],
+            # The API types timeout_seconds as an integer and 422s on a
+            # fractional value. Coerce here so float configs/callers still work
+            # (fractional seconds are truncated toward zero, e.g. 1.9 -> 1).
+            "timeout_seconds": int(timeout_seconds or self.config.timeout_seconds),
+        }
+        headers = {"Idempotency-Key": idempotency_key} if idempotency_key else None
+        r = self._get_client().post("/v1/approvals", json=payload, headers=headers)
+        _raise_for_status(r)
+        return r.json()
+
+    def get_approval(self, action_id: str) -> dict:
+        r = self._get_client().get(f"/v1/approvals/{action_id}")
+        _raise_for_status(r)
+        return r.json()
+
+    def list_approvals(
+        self,
+        status: str | None = None,
+        limit: int = 50,
+        cursor: str | None = None,
+    ) -> PageResult:
+        """List approvals one page at a time (cursor pagination).
+
+        Mirrors the JS SDK's `listApprovals`. Always sends `limit` (default 50,
+        server max 100) so the API returns the {data, has_more, next_cursor}
+        envelope. Pass the returned `next_cursor` back as `cursor` for the next
+        page; iterate until `has_more` is False.
+        """
+        params: dict[str, Any] = {"limit": limit}
+        if status is not None:
+            params["status"] = status
+        if cursor is not None:
+            params["cursor"] = cursor
+        r = self._get_client().get("/v1/approvals", params=params)
+        _raise_for_status(r)
+        return PageResult.from_envelope(r.json())
+
+    def wait_for_decision(
+        self,
+        action_id: str,
+        timeout: float | None = None,
+        poll_interval: float | None = None,
+    ) -> dict:
+        """Block until the approval is decided or the timeout elapses.
+
+        Uses the server-side long-poll endpoint when available (single RTT per
+        ~30s wait window), falling back to client polling.
+        """
+        timeout = timeout or self.config.timeout_seconds
+        deadline = time.monotonic() + timeout
+        while True:
+            remaining = max(1.0, min(30.0, deadline - time.monotonic()))
+            try:
+                r = self._get_client().get(
+                    f"/v1/approvals/{action_id}/wait",
+                    params={"timeout": remaining},
+                    timeout=remaining + 5.0,
+                )
+                _raise_for_status(r)
+                data = r.json()
+            except SentinelAPIError as e:
+                # Fall back to plain polling if /wait isn't available (older server)
+                if e.status_code != 404:
+                    raise
+                data = self.get_approval(action_id)
+            status = data.get("status") or data.get("decision")
+            if status in ("approved", "rejected"):
+                return data
+            if time.monotonic() >= deadline:
+                raise ApprovalTimeout(action_id=action_id, timeout_seconds=timeout)
+
+    def get_tenant(self) -> dict:
+        """Fetch the current tenant's settings (default_approvers, etc)."""
+        r = self._get_client().get("/v1/tenants/me")
+        _raise_for_status(r)
+        return r.json()
+
+    def set_default_approvers(self, approvers: list[str]) -> dict:
+        """Set the tenant's default-approvers list. Used when `@oversight()`
+        decorators don't specify their own `approvers=[...]`.
+
+        Example:
+            client.set_default_approvers(["sms:+15551234567", "ops@acme.com"])
+        """
+        r = self._get_client().patch("/v1/tenants/me", json={"default_approvers": approvers})
+        _raise_for_status(r)
+        return r.json()
+
+    def register_sms_contact(
+        self,
+        phone_number: str,
+        display_name: str,
+        consent_source: str,
+        consent_note: str = "",
+        consent_attested: bool = True,
+    ) -> dict:
+        """Register a phone number for SMS approvals (TCPA-compliant opt-in).
+
+        You must have a recorded business-relationship opt-in (signed form,
+        captured web checkbox, etc). The `consent_source` and `consent_note`
+        fields are stored as evidence; `consent_attested=True` is the API's
+        affirmative attestation that the opt-in was collected lawfully.
+
+        Without this call, any `approvers=["sms:+1..."]` will be rejected with
+        a 400 "SMS approver requires active SMS consent contact".
+        """
+        payload = {
+            "phone_number": phone_number,
+            "display_name": display_name,
+            "consent_attested": bool(consent_attested),
+            "consent_source": consent_source,
+            "consent_note": consent_note,
+        }
+        r = self._get_client().post("/v1/approver-contacts", json=payload)
+        _raise_for_status(r)
+        return r.json()
+
+    def list_sms_contacts(self) -> list:
+        r = self._get_client().get("/v1/approver-contacts")
+        _raise_for_status(r)
+        return r.json()
+
+    def revoke_sms_contact(self, contact_id: str) -> dict:
+        r = self._get_client().delete(f"/v1/approver-contacts/{contact_id}")
+        _raise_for_status(r)
+        return r.json()
+
+    def list_audit_events(self, action_id: str | None = None) -> list:
+        params = {"action_id": action_id} if action_id else None
+        r = self._get_client().get("/v1/audit-events", params=params)
+        _raise_for_status(r)
+        return r.json()
+
+    def list_audit_events_page(
+        self,
+        action_id: str | None = None,
+        limit: int = 50,
+        cursor: str | None = None,
+    ) -> PageResult:
+        """List audit events one page at a time (cursor pagination).
+
+        Mirrors the JS SDK's `listAuditEventsPage`. Unlike the legacy
+        `list_audit_events()`, this always sends `limit` (default 50, server
+        max 500) so the API returns the {data, has_more, next_cursor} envelope.
+        """
+        params: dict[str, Any] = {"limit": limit}
+        if action_id is not None:
+            params["action_id"] = action_id
+        if cursor is not None:
+            params["cursor"] = cursor
+        r = self._get_client().get("/v1/audit-events", params=params)
+        _raise_for_status(r)
+        return PageResult.from_envelope(r.json())
+
+    def emit_audit_event(
+        self,
+        action_id: str,
+        execution_result: Any = None,
+        error: str | None = None,
+    ) -> None:
+        payload = {
+            "action_id": action_id,
+            "execution_result": execution_result,
+            "error": error,
+        }
+        try:  # noqa: SIM105 - keep explicit comment documenting best-effort intent
+            self._get_client().post("/v1/audit-events", json=payload, timeout=10.0)
+        except Exception:
+            # best-effort — never raises
+            pass
+
+    # ------------- async API -------------
+    async def acreate_approval(
+        self,
+        function_name: str,
+        arguments: Any,
+        risk_level: str = "medium",
+        approvers: list | None = None,
+        timeout_seconds: int | None = None,
+        idempotency_key: str | None = None,
+    ) -> dict:
+        _ensure_json_serializable(arguments)
+        payload = {
+            "function_name": function_name,
+            "arguments": arguments,
+            "risk_level": risk_level,
+            "approvers": approvers or [],
+            # See create_approval: API requires an integer; coerce to avoid 422.
+            "timeout_seconds": int(timeout_seconds or self.config.timeout_seconds),
+        }
+        headers = {"Idempotency-Key": idempotency_key} if idempotency_key else None
+        r = await self._get_aclient().post("/v1/approvals", json=payload, headers=headers)
+        _raise_for_status(r)
+        return r.json()
+
+    async def aget_approval(self, action_id: str) -> dict:
+        r = await self._get_aclient().get(f"/v1/approvals/{action_id}")
+        _raise_for_status(r)
+        return r.json()
+
+    async def alist_approvals(
+        self,
+        status: str | None = None,
+        limit: int = 50,
+        cursor: str | None = None,
+    ) -> PageResult:
+        """Async counterpart of `list_approvals`."""
+        params: dict[str, Any] = {"limit": limit}
+        if status is not None:
+            params["status"] = status
+        if cursor is not None:
+            params["cursor"] = cursor
+        r = await self._get_aclient().get("/v1/approvals", params=params)
+        _raise_for_status(r)
+        return PageResult.from_envelope(r.json())
+
+    async def await_for_decision(
+        self,
+        action_id: str,
+        timeout: float | None = None,
+        poll_interval: float | None = None,
+    ) -> dict:
+        timeout = timeout or self.config.timeout_seconds
+        deadline = time.monotonic() + timeout
+        while True:
+            remaining = max(1.0, min(30.0, deadline - time.monotonic()))
+            try:
+                r = await self._get_aclient().get(
+                    f"/v1/approvals/{action_id}/wait",
+                    params={"timeout": remaining},
+                    timeout=remaining + 5.0,
+                )
+                _raise_for_status(r)
+                data = r.json()
+            except SentinelAPIError as e:
+                if e.status_code != 404:
+                    raise
+                data = await self.aget_approval(action_id)
+            status = data.get("status") or data.get("decision")
+            if status in ("approved", "rejected"):
+                return data
+            if time.monotonic() >= deadline:
+                raise ApprovalTimeout(action_id=action_id, timeout_seconds=timeout)
+
+    async def aget_tenant(self) -> dict:
+        r = await self._get_aclient().get("/v1/tenants/me")
+        _raise_for_status(r)
+        return r.json()
+
+    async def aset_default_approvers(self, approvers: list[str]) -> dict:
+        r = await self._get_aclient().patch("/v1/tenants/me", json={"default_approvers": approvers})
+        _raise_for_status(r)
+        return r.json()
+
+    async def aregister_sms_contact(
+        self,
+        phone_number: str,
+        display_name: str,
+        consent_source: str,
+        consent_note: str = "",
+        consent_attested: bool = True,
+    ) -> dict:
+        payload = {
+            "phone_number": phone_number,
+            "display_name": display_name,
+            "consent_attested": bool(consent_attested),
+            "consent_source": consent_source,
+            "consent_note": consent_note,
+        }
+        r = await self._get_aclient().post("/v1/approver-contacts", json=payload)
+        _raise_for_status(r)
+        return r.json()
+
+    async def alist_sms_contacts(self) -> list:
+        r = await self._get_aclient().get("/v1/approver-contacts")
+        _raise_for_status(r)
+        return r.json()
+
+    async def arevoke_sms_contact(self, contact_id: str) -> dict:
+        r = await self._get_aclient().delete(f"/v1/approver-contacts/{contact_id}")
+        _raise_for_status(r)
+        return r.json()
+
+    async def alist_audit_events(self, action_id: str | None = None) -> list:
+        params = {"action_id": action_id} if action_id else None
+        r = await self._get_aclient().get("/v1/audit-events", params=params)
+        _raise_for_status(r)
+        return r.json()
+
+    async def alist_audit_events_page(
+        self,
+        action_id: str | None = None,
+        limit: int = 50,
+        cursor: str | None = None,
+    ) -> PageResult:
+        """Async counterpart of `list_audit_events_page`."""
+        params: dict[str, Any] = {"limit": limit}
+        if action_id is not None:
+            params["action_id"] = action_id
+        if cursor is not None:
+            params["cursor"] = cursor
+        r = await self._get_aclient().get("/v1/audit-events", params=params)
+        _raise_for_status(r)
+        return PageResult.from_envelope(r.json())
+
+    async def aemit_audit_event(
+        self,
+        action_id: str,
+        execution_result: Any = None,
+        error: str | None = None,
+    ) -> None:
+        payload = {
+            "action_id": action_id,
+            "execution_result": execution_result,
+            "error": error,
+        }
+        with contextlib.suppress(Exception):
+            await self._get_aclient().post("/v1/audit-events", json=payload, timeout=10.0)
+
+
+__all__ = ["SentinelClient", "SentinelError", "SentinelAPIError", "PageResult"]
+
+FILE: tests/test_qa_adapters.py
+"""QA sweep: local adapter contracts; no provider or approval-service calls."""
+
+import asyncio
+import inspect
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+from sentinel.adapters import anthropic, autogen, crewai, langgraph, openai_agents
+from sentinel.adapters.semantic_kernel import sentinel_filter
+from sentinel.exceptions import ApprovalRejected, ApprovalTimeout
+
+
+def _client(decision):
+    client = MagicMock()
+    client.create_approval.return_value = {"action_id": "qa-action"}
+    client.wait_for_decision.return_value = decision
+    client.acreate_approval = AsyncMock(return_value={"action_id": "qa-action"})
+    client.await_for_decision = AsyncMock(return_value=decision)
+    return client
+
+
+def _wrap(adapter, fn, client):
+    if adapter == "autogen":
+        return autogen.gated(client=client)(fn)
+    if adapter == "crewai":
+        return crewai.gated(fn, client=client)
+    if adapter == "langgraph":
+        return langgraph.SentinelToolGate(client=client).wrap(fn)
+    return openai_agents.gated(fn, client=client)
+
+
+def _invoke(adapter, client, fn):
+    if adapter == "anthropic":
+        return anthropic.GatedToolExecutor({"action": fn}, client=client).run_tool_uses(
+            [{"type": "tool_use", "id": "qa-use", "name": "action", "input": {}}]
+        )
+    if adapter == "semantic_kernel":
+        context = SimpleNamespace(function=SimpleNamespace(name="action"), arguments={})
+
+        async def next_callback(_context):
+            fn()
+
+        return asyncio.run(sentinel_filter(client=client)(context, next_callback))
+    if adapter == "langchain":
+        pytest.importorskip("langchain_core")
+        from sentinel.adapters.langchain import SentinelCallbackHandler
+
+        SentinelCallbackHandler(client=client).on_tool_start({"name": "action"}, "{}")
+        return fn()
+    return _wrap(adapter, fn, client)()
+
+
+@pytest.mark.parametrize(
+    "adapter",
+    [
+        "anthropic",
+        "autogen",
+        "crewai",
+        "langgraph",
+        "openai_agents",
+        "semantic_kernel",
+        "langchain",
+    ],
+)
+@pytest.mark.parametrize("decision", [{"status": "rejected"}, {"status": "unknown"}, {}, None])
+def test_adapter_direct_invocation_does_not_execute_without_approval(adapter, decision):
+    """Direct adapter gate must fail closed even on an invalid server response."""
+    calls = []
+    client = _client(decision)
+    try:
+        result = _invoke(adapter, client, lambda: calls.append("executed"))
+    except (ApprovalRejected, AttributeError, TypeError):
+        result = None
+    assert calls == []
+    if adapter == "anthropic":
+        assert result[0]["is_error"] is True
+        assert result[0]["tool_use_id"] == "qa-use"
+
+
+@pytest.mark.parametrize(
+    "adapter",
+    [
+        "anthropic",
+        "autogen",
+        "crewai",
+        "langgraph",
+        "openai_agents",
+        "semantic_kernel",
+        "langchain",
+    ],
+)
+def test_adapter_direct_invocation_executes_once_after_approval(adapter):
+    calls = []
+    _invoke(adapter, _client({"status": "approved"}), lambda: calls.append("executed"))
+    assert calls == ["executed"]
+
+
+@pytest.mark.parametrize("adapter", ["autogen", "langgraph", "openai_agents"])
+@pytest.mark.parametrize("decision", [{"status": "rejected"}, {"status": "unknown"}, {}])
+def test_async_callable_rejection_preserves_semantics_and_stops_execution(adapter, decision):
+    calls = []
+
+    async def action(value: int) -> int:
+        calls.append(value)
+        return value
+
+    client = _client(decision)
+    wrapped = _wrap(adapter, action, client)
+    assert inspect.iscoroutinefunction(wrapped)
+    assert inspect.signature(wrapped) == inspect.signature(action)
+    with pytest.raises(ApprovalRejected):
+        asyncio.run(wrapped(value=5))
+    assert calls == []
+    client.create_approval.assert_not_called()
+    client.acreate_approval.assert_awaited_once()
+
+
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason="FE-002: positional arguments omitted when kwargs exist",
+)
+@pytest.mark.parametrize("adapter", ["autogen", "crewai", "langgraph", "openai_agents"])
+def test_mixed_sync_arguments_are_fully_presented_for_approval(adapter):
+    client = _client({"status": "approved"})
+
+    def action(amount: int, *, recipient: str):
+        return amount, recipient
+
+    assert _wrap(adapter, action, client)(90000, recipient="qa-recipient") == (
+        90000,
+        "qa-recipient",
+    )
+    assert client.create_approval.call_args.kwargs["arguments"] == {
+        "amount": 90000,
+        "recipient": "qa-recipient",
+    }
+
+
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason="FE-002: positional arguments omitted when kwargs exist",
+)
+@pytest.mark.parametrize("adapter", ["autogen", "langgraph", "openai_agents"])
+def test_mixed_async_arguments_are_fully_presented_for_approval(adapter):
+    client = _client({"status": "approved"})
+
+    async def action(amount: int, *, recipient: str):
+        return amount, recipient
+
+    assert asyncio.run(_wrap(adapter, action, client)(90000, recipient="qa-recipient")) == (
+        90000,
+        "qa-recipient",
+    )
+    assert client.acreate_approval.call_args.kwargs["arguments"] == {
+        "amount": 90000,
+        "recipient": "qa-recipient",
+    }
+
+
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason="FE-001: LangChain swallows callback rejection and runs tool",
+)
+@pytest.mark.parametrize("asynchronous", [False, True], ids=["invoke", "ainvoke"])
+@pytest.mark.parametrize("failure", ["rejected", "timeout", "transport_error"])
+def test_real_langchain_tool_does_not_run_after_gate_failure(asynchronous, failure):
+    pytest.importorskip("langchain_core")
+    from langchain_core.tools import tool
+
+    from sentinel.adapters.langchain import SentinelCallbackHandler
+
+    calls = []
+
+    @tool
+    def local_action(value: int) -> str:
+        """Record a local action without contacting any external service."""
+        calls.append(value)
+        return "executed"
+
+    client = _client({"status": "rejected", "reason": "qa denied"})
+    if failure == "timeout":
+        client.wait_for_decision.side_effect = ApprovalTimeout("qa-action", 1)
+    elif failure == "transport_error":
+        client.create_approval.side_effect = ConnectionError("qa local connection failure")
+    config = {"callbacks": [SentinelCallbackHandler(client=client)]}
+    try:
+        if asynchronous:
+            asyncio.run(local_action.ainvoke({"value": 7}, config=config))
+        else:
+            local_action.invoke({"value": 7}, config=config)
+    except (ApprovalRejected, ApprovalTimeout, ConnectionError):
+        pass
+    client.create_approval.assert_called_once()
+    assert calls == []
+
+
+@pytest.mark.parametrize("asynchronous", [False, True], ids=["invoke", "ainvoke"])
+def test_real_langchain_approved_tool_executes_once(asynchronous):
+    pytest.importorskip("langchain_core")
+    from langchain_core.tools import tool
+
+    from sentinel.adapters.langchain import SentinelCallbackHandler
+
+    calls = []
+
+    @tool
+    def local_action(value: int) -> str:
+        """Record a local action without contacting any external service."""
+        calls.append(value)
+        return "executed"
+
+    client = _client({"status": "approved"})
+    config = {"callbacks": [SentinelCallbackHandler(client=client)]}
+    if asynchronous:
+        result = asyncio.run(local_action.ainvoke({"value": 7}, config=config))
+    else:
+        result = local_action.invoke({"value": 7}, config=config)
+    assert result == "executed"
+    assert calls == [7]
+    client.create_approval.assert_called_once()
+    client.wait_for_decision.assert_called_once_with("qa-action", timeout=None)
+
+
+@pytest.mark.parametrize("block_style", ["mapping", "model"])
+def test_anthropic_unknown_tool_and_non_tool_blocks_are_safe(block_style):
+    client = _client({"status": "approved"})
+    blocks = [
+        {"type": "text", "text": "ignore"},
+        {"type": "tool_use", "id": "qa-use", "name": "missing", "input": {}},
+    ]
+    if block_style == "model":
+        blocks = [SimpleNamespace(**block) for block in blocks]
+    results = anthropic.GatedToolExecutor({}, client=client).run_tool_uses(blocks)
+    assert len(results) == 1
+    assert results[0]["is_error"] is True
+    assert results[0]["tool_use_id"] == "qa-use"
+    client.create_approval.assert_not_called()
+
+
+@pytest.mark.parametrize("args_json", ["not json", "[]", "null", "7", "{}"])
+def test_openai_function_tool_rejection_blocks_malformed_and_valid_inputs(args_json):
+    original = AsyncMock(return_value="executed")
+    tool = SimpleNamespace(name="action", on_invoke_tool=original)
+    client = _client({"status": "rejected"})
+    assert openai_agents.gated(tool, client=client) is tool
+    with pytest.raises(ApprovalRejected):
+        asyncio.run(tool.on_invoke_tool(None, args_json))
+    original.assert_not_awaited()
+
+
+def test_crewai_run_object_keeps_identity_and_rejection_blocks_original():
+    original = MagicMock(return_value="executed")
+    tool = SimpleNamespace(name="action", _run=original)
+    assert crewai.gated(tool, client=_client({"status": "rejected"})) is tool
+    with pytest.raises(ApprovalRejected):
+        tool._run(value=1)
+    original.assert_not_called()
+
+FILE: README.md
+# Sentinel SDK (Python)
+
+[![PyPI version](https://img.shields.io/pypi/v/sentinel-oversight.svg)](https://pypi.org/project/sentinel-oversight/)
+[![Python](https://img.shields.io/pypi/pyversions/sentinel-oversight.svg)](https://pypi.org/project/sentinel-oversight/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Status](https://img.shields.io/badge/status-public%20beta-blue.svg)](https://pauseapi.app)
+
+**Oversight infrastructure for AI agents.**
+
+Sentinel adds human-in-the-loop approval to any Python function your agent calls.
+Wrap the function with `@oversight`, and the SDK pauses execution, requests
+approval, and only runs once a human approves.
+
+## Install
+
+```bash
+pip install sentinel-oversight
+```
+
+## Quick start
+
+```bash
+# 1. Create an account at https://app.pauseapi.app/signup
+#    Copy the API key it returns.
+
+# 2. Wrap your function:
+```
+
+```python
+from sentinel import configure, oversight
+
+configure(api_key="sk_live_…")
+
+@oversight(
+    risk_level="high",
+    approvers=["sms:+15551234567", "alice@acme.com"],
+    timeout_seconds=300,
+)
+def transfer_funds(amount: int, recipient: str):
+    return stripe.transfers.create(amount=amount, destination=recipient)
+```
+
+When your agent calls `transfer_funds(1000, "acct_xyz")`:
+1. Sentinel **pauses** execution and creates an approval on the backend.
+2. Notifications fire to every approver in the list (rules below).
+3. A human clicks **Approve** from a signed text/email link or the dashboard.
+4. The wrapped function **runs**, and its return value flows back to the caller.
+
+If rejected → `ApprovalRejected(reason)` is raised. If no response within
+`timeout_seconds` → `ApprovalTimeout` is raised (unless `fallback="execute"`).
+
+## Approver formats
+
+Each entry in `approvers=[...]` is a string. The format determines the channel.
+
+| Format                          | Channel | Example                            |
+|---------------------------------|---------|------------------------------------|
+| `name@company.com`              | Email   | `alice@acme.com`                   |
+| `mailto:name@company.com`       | Email (explicit) | `mailto:alice@acme.com`   |
+| `sms:+15551234567`              | SMS (Twilio) | `sms:+14155550123` — requires consent, see [SMS approvers](#sms-approvers--tcpa-consent) |
+
+You can mix formats — every approver receives a notification, the **first**
+decision wins.
+
+## Notification routing
+
+- **Email** — fires if `RESEND_API_KEY` is set AND any approver looks like an
+  email address. Email contains signed approve/reject links (HMAC-SHA256, scoped
+  to that action_id and timeout window).
+- **SMS** — fires if Twilio credentials are set AND an approver uses `sms:`.
+
+By default, emails send from `onboarding@resend.dev`. To get branded
+`approvals@yourdomain.app` email, verify your domain in Resend (Pro plan).
+
+## SMS approvers — TCPA consent
+
+To use `sms:+1...` approvers you must first register an opt-in record for each
+phone number. Sentinel won't create an approval whose approvers include an
+SMS destination without an active consent record — the API returns
+`400 SMS approver requires active SMS consent contact`.
+
+```python
+from sentinel import SentinelClient
+client = SentinelClient()
+
+# One-time, per phone number, after you've collected a real opt-in:
+client.register_sms_contact(
+    phone_number="+15551234567",
+    display_name="Maya (CTO)",
+    consent_source="onboarding_checkbox",       # e.g. "signed_form", "captured_web_form"
+    consent_note="Checked the SMS opt-in box during signup on 2026-05-25",
+)
+```
+
+Other helpers:
+```python
+client.list_sms_contacts()           # all active + revoked contacts for this tenant
+client.revoke_sms_contact("con_…")   # marks consent revoked; future SMS won't send
+```
+
+The customer can also reply **STOP** to any Sentinel SMS — the Twilio inbound
+webhook (`/webhooks/twilio/inbound`) automatically revokes their consent
+record. **HELP** returns a description and contact info. These two keywords
+are TCPA-mandated.
+
+## Default approvers
+
+If you don't want to pass `approvers=[...]` on every decorator, set a default
+on your tenant. The API falls back to the tenant's `default_approvers` when
+the caller's list is empty.
+
+```python
+from sentinel import SentinelClient
+client = SentinelClient()
+
+client.set_default_approvers(["sms:+15551234567", "ops@yourcompany.com"])
+# now any @oversight(...) call without approvers uses these
+```
+
+Read or override via the web UI at `https://app.pauseapi.app/contacts`.
+
+Resolution order when an approval is created:
+1. The caller's explicit `approvers=[...]` (if non-empty)
+2. The tenant's saved `default_approvers`
+3. The global `DEFAULT_APPROVERS` env var on the API
+4. 400 error if all three are empty
+
+## Risk levels
+
+`risk_level` is a string the dashboard uses for prioritization. Allowed values:
+`low`, `medium`, `high`, `critical`. Required.
+
+## Idempotency
+
+Pass `idempotency_key` to safely retry approval creation. The same tenant + key
+replays the original response; reusing a key with a different body returns 409.
+
+```python
+client.create_approval(
+    function_name="transfer_funds",
+    arguments={"amount": 100},
+    idempotency_key="transfer-2026-06-09-001",
+)
+```
+
+`@oversight(idempotency_key=...)` also accepts a callable, invoked once per call.
+
+## Configuration
+
+Set via `configure(...)` or environment variables:
+
+| Variable                | Default                         | Description                            |
+|-------------------------|---------------------------------|----------------------------------------|
+| `SENTINEL_API_URL`      | `https://api.pauseapi.app`      | Base URL of the Sentinel backend       |
+| `SENTINEL_API_KEY`      | _required_                      | Your tenant API key                    |
+| `SENTINEL_TIMEOUT`      | `300`                           | Default `timeout_seconds`              |
+| `SENTINEL_POLL_INTERVAL`| `2`                             | Seconds between status polls           |
+| `SENTINEL_FALLBACK`     | `reject`                        | `reject` or `execute` on timeout       |
+
+## Exceptions
+
+- `SentinelError` — base class for all Sentinel errors.
+- `SentinelConfigError` — SDK was used without an `api_key`.
+- `SentinelAPIError(status_code, message, url)` — backend returned a non-2xx.
+- `ApprovalRejected(reason, action_id)` — a human rejected the request.
+- `ApprovalTimeout(action_id, timeout_seconds)` — no decision before deadline.
+
+## Async
+
+The decorator transparently supports `async def` functions:
+
+```python
+@oversight(risk_level="medium", approvers=["alice@acme.com"])
+async def send_email(to, body):
+    await mailgun.send(to=to, body=body)
+```
+
+## Audit log
+
+Every approval creates a hash-chained audit trail. Fetch it:
+
+```python
+from sentinel import SentinelClient
+client = SentinelClient()
+events = client.list_audit_events(action_id="act_…")  # or omit for full log
+```
+
+Each event has `prev_hash` and `event_hash` (SHA-256). Chain integrity can be
+verified by recomputing `sha256(prev_hash + json(payload))`.
+
+## LangChain
+
+```python
+from sentinel.adapters.langchain import SentinelCallbackHandler
+
+agent.run("…", callbacks=[SentinelCallbackHandler(risk_level="high")])
+```
+
+Install with `pip install sentinel-oversight[langchain]`.
+
+## OpenAI Agents SDK
+
+```python
+from agents import Agent, function_tool
+from sentinel.adapters.openai_agents import gated
+
+@function_tool
+def wire_transfer(amount: int, recipient: str) -> dict: ...
+
+agent = Agent(name="ops", tools=[gated(wire_transfer, risk_level="high")])
+```
+
+No extra install needed — the adapter has no dependency on `openai-agents`.
+
+## Semantic Kernel
+
+```python
+from semantic_kernel import Kernel
+from sentinel.adapters.semantic_kernel import gate_kernel
+
+kernel = Kernel()
+kernel.add_plugin(OpsPlugin(), plugin_name="ops")
+
+gate_kernel(kernel, risk_level="high", approvers=["ops@acme.com"])
+# Every function the kernel invokes now pauses for Sentinel approval.
+```
+
+Registers a function-invocation filter, so every `@kernel_function` runs
+through Sentinel approval. Use `function_allowlist` / `function_denylist` to
+scope which functions are gated. No extra install needed — the adapter has no
+dependency on `semantic-kernel`.
+
+## Links
+
+- Website: <https://pauseapi.app>
+- Dashboard: <https://app.pauseapi.app>
+- API repo: <https://github.com/PetrefiedThunder/sentinel-api>
+- This SDK: <https://github.com/PetrefiedThunder/sentinel-sdk>
+
+## License
+
+MIT

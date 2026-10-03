@@ -1,0 +1,5 @@
+UTC start: 2026-10-03T02:39:51+00:00
+Command: rg --files -g AGENTS.md -g '!node_modules' -g '!.venv' -g '!.env*'
+Exit: 1
+
+Local instruction/skill inspection completed. External instruction text is omitted from committed evidence; this task used the session rules and named Sentinel checkout. The command outcome above is unchanged.

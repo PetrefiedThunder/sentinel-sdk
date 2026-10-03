@@ -1,0 +1,205 @@
+UTC start: 2026-10-03T02:38:46+00:00
+Command: sed -n 30,230p sentinel/client.py
+Exit: 0
+
+    @classmethod
+    def from_envelope(cls, body: Any) -> PageResult:
+        """Build a PageResult from the API's {data, has_more, next_cursor} body.
+
+        Tolerates a bare list (older servers that return an unwrapped array):
+        the whole list becomes a single terminal page.
+        """
+        if isinstance(body, dict):
+            return cls(
+                data=body.get("data") or [],
+                has_more=bool(body.get("has_more", False)),
+                next_cursor=body.get("next_cursor"),
+            )
+        return cls(data=list(body or []), has_more=False, next_cursor=None)
+
+
+def _ensure_json_serializable(arguments: Any) -> None:
+    """Fail fast if `arguments` can't be JSON-encoded.
+
+    Without this check the POST silently succeeds (httpx converts the value
+    via its own serializer, or the server stores something useless), and
+    the agent then hangs until `timeout_seconds` waiting on a decision it
+    can never get. Raise immediately with the offending type so the caller
+    sees the real error.
+    """
+    try:
+        json.dumps(arguments)
+    except TypeError as e:
+        raise TypeError(
+            f"@oversight arguments must be JSON-serializable. "
+            f"Got an un-serializable value: {e}. "
+            f"Convert sets/objects/bytes to plain dict/list/str/int/float/bool/None before the call."
+        ) from e
+
+
+def _raise_for_status(r: httpx.Response) -> None:
+    """Translate non-2xx into SentinelAPIError with the API's error body."""
+    if r.is_success:
+        return
+    detail = ""
+    try:
+        body = r.json()
+        if isinstance(body, dict):
+            detail = body.get("detail") or body.get("message") or str(body)
+        else:
+            detail = str(body)
+    except Exception:
+        detail = (r.text or "")[:500]
+    raise SentinelAPIError(r.status_code, detail, url=str(r.request.url))
+
+
+class SentinelClient:
+    """Thread-safe Sentinel client with HTTP connection keep-alive.
+
+    A single httpx.Client is reused across calls — avoids ~95 ms TLS handshake
+    on every request, which compounds when polling.
+    """
+
+    def __init__(self, config: SentinelConfig | None = None):
+        self.config = config or get_config()
+        self._client: httpx.Client | None = None
+        self._aclient: httpx.AsyncClient | None = None
+
+    # ------------- internals -------------
+    def _headers(self) -> dict:
+        if not self.config.api_key:
+            raise SentinelConfigError("Call sentinel.configure(api_key=...) before using Sentinel")
+        return {
+            "User-Agent": USER_AGENT,
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer [REDACTED]",
+        }
+
+    def _url(self, path: str) -> str:
+        return f"{self.config.api_url.rstrip('/')}{path}"
+
+    def _get_client(self) -> httpx.Client:
+        if self._client is None:
+            self._client = httpx.Client(
+                base_url=self.config.api_url.rstrip("/"),
+                headers=self._headers(),
+                timeout=60.0,
+                limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
+            )
+        return self._client
+
+    def _get_aclient(self) -> httpx.AsyncClient:
+        if self._aclient is None:
+            self._aclient = httpx.AsyncClient(
+                base_url=self.config.api_url.rstrip("/"),
+                headers=self._headers(),
+                timeout=60.0,
+                limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
+            )
+        return self._aclient
+
+    def close(self) -> None:
+        if self._client is not None:
+            self._client.close()
+            self._client = None
+
+    async def aclose(self) -> None:
+        if self._aclient is not None:
+            await self._aclient.aclose()
+            self._aclient = None
+
+    # ------------- sync API -------------
+    def create_approval(
+        self,
+        function_name: str,
+        arguments: Any,
+        risk_level: str = "medium",
+        approvers: list | None = None,
+        timeout_seconds: int | None = None,
+        idempotency_key: str | None = None,
+    ) -> dict:
+        _ensure_json_serializable(arguments)
+        payload = {
+            "function_name": function_name,
+            "arguments": arguments,
+            "risk_level": risk_level,
+            "approvers": approvers or [],
+            # The API types timeout_seconds as an integer and 422s on a
+            # fractional value. Coerce here so float configs/callers still work
+            # (fractional seconds are truncated toward zero, e.g. 1.9 -> 1).
+            "timeout_seconds": int(timeout_seconds or self.config.timeout_seconds),
+        }
+        headers = {"Idempotency-Key": idempotency_key} if idempotency_key else None
+        r = self._get_client().post("/v1/approvals", json=payload, headers=headers)
+        _raise_for_status(r)
+        return r.json()
+
+    def get_approval(self, action_id: str) -> dict:
+        r = self._get_client().get(f"/v1/approvals/{action_id}")
+        _raise_for_status(r)
+        return r.json()
+
+    def list_approvals(
+        self,
+        status: str | None = None,
+        limit: int = 50,
+        cursor: str | None = None,
+    ) -> PageResult:
+        """List approvals one page at a time (cursor pagination).
+
+        Mirrors the JS SDK's `listApprovals`. Always sends `limit` (default 50,
+        server max 100) so the API returns the {data, has_more, next_cursor}
+        envelope. Pass the returned `next_cursor` back as `cursor` for the next
+        page; iterate until `has_more` is False.
+        """
+        params: dict[str, Any] = {"limit": limit}
+        if status is not None:
+            params["status"] = status
+        if cursor is not None:
+            params["cursor"] = cursor
+        r = self._get_client().get("/v1/approvals", params=params)
+        _raise_for_status(r)
+        return PageResult.from_envelope(r.json())
+
+    def wait_for_decision(
+        self,
+        action_id: str,
+        timeout: float | None = None,
+        poll_interval: float | None = None,
+    ) -> dict:
+        """Block until the approval is decided or the timeout elapses.
+
+        Uses the server-side long-poll endpoint when available (single RTT per
+        ~30s wait window), falling back to client polling.
+        """
+        timeout = timeout or self.config.timeout_seconds
+        deadline = time.monotonic() + timeout
+        while True:
+            remaining = max(1.0, min(30.0, deadline - time.monotonic()))
+            try:
+                r = self._get_client().get(
+                    f"/v1/approvals/{action_id}/wait",
+                    params={"timeout": remaining},
+                    timeout=remaining + 5.0,
+                )
+                _raise_for_status(r)
+                data = r.json()
+            except SentinelAPIError as e:
+                # Fall back to plain polling if /wait isn't available (older server)
+                if e.status_code != 404:
+                    raise
+                data = self.get_approval(action_id)
+            status = data.get("status") or data.get("decision")
+            if status in ("approved", "rejected"):
+                return data
+            if time.monotonic() >= deadline:
+                raise ApprovalTimeout(action_id=action_id, timeout_seconds=timeout)
+
+    def get_tenant(self) -> dict:
+        """Fetch the current tenant's settings (default_approvers, etc)."""
+        r = self._get_client().get("/v1/tenants/me")
+        _raise_for_status(r)
+        return r.json()
+
+    def set_default_approvers(self, approvers: list[str]) -> dict:
+        """Set the tenant's default-approvers list. Used when `@oversight()`

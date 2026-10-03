@@ -1,0 +1,5 @@
+UTC start: 2026-10-03T02:39:52+00:00
+Command: .venv/bin/ruff format tests/test_qa_adapters.py
+Exit: 0
+
+1 file reformatted

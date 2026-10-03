@@ -1,0 +1,70 @@
+UTC start: 2026-10-03T02:44:19+00:00
+Command: git diff -- sentinel/adapters/_arguments.py tests/test_adapter_arguments.py
+Exit: 0
+
+diff --git a/sentinel/adapters/_arguments.py b/sentinel/adapters/_arguments.py
+index aaf20ae..dfe8b38 100644
+--- a/sentinel/adapters/_arguments.py
++++ b/sentinel/adapters/_arguments.py
+@@ -18,5 +18,4 @@ def approval_arguments(fn: Callable, args: tuple, kwargs: dict) -> dict[str, Any
+         return {"args": list(args), "kwargs": kwargs}
+
+     bound = signature.bind(*args, **kwargs)
+-    bound.apply_defaults()
+     return dict(bound.arguments)
+diff --git a/tests/test_adapter_arguments.py b/tests/test_adapter_arguments.py
+index 7f9c3c6..279358b 100644
+--- a/tests/test_adapter_arguments.py
++++ b/tests/test_adapter_arguments.py
+@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
+ import pytest
+
+ from sentinel.adapters import autogen, crewai, langgraph, openai_agents
++from sentinel.client import _ensure_json_serializable
+
+ CASES = [(name, False) for name in ("autogen", "crewai", "langgraph", "openai_agents")]
+ CASES += [(name, True) for name in ("autogen", "langgraph", "openai_agents")]
+@@ -49,7 +50,7 @@ def gated_call(request):
+     return gate, client, approval
+
+
+-def test_mixed_inputs_include_defaults_and_variadics(gated_call):
++def test_mixed_inputs_include_variadics_without_omitted_defaults(gated_call):
+     gate, _, approval = gated_call
+
+     def action(amount, /, *items, recipient, note="ordinary", **metadata):
+@@ -66,7 +67,6 @@ def test_mixed_inputs_include_defaults_and_variadics(gated_call):
+         "amount": 10,
+         "items": ("extra",),
+         "recipient": "recipient",
+-        "note": "ordinary",
+         "metadata": {"currency": "USD"},
+     }
+
+@@ -143,3 +143,26 @@ def test_mixed_binding_preserves_raw_values(gated_call):
+
+     assert gate(action)(value, recipient="recipient") == "recipient"
+     assert approval.call_args.kwargs["arguments"]["payload"] is value
++
++
++def test_omitted_nonserializable_default_stays_out_of_approval(gated_call):
++    """FE-002 must not add an unpassed internal dependency to the JSON payload."""
++    gate, _, approval = gated_call
++    dependency = object()
++
++    def create_approval(**kwargs):
++        _ensure_json_serializable(kwargs["arguments"])
++        return {"action_id": "qa-action"}
++
++    approval.side_effect = create_approval
++
++    def action(amount, *, recipient, dependency=dependency):
++        return amount, recipient, dependency
++
++    result = gate(action)(10, recipient="recipient")
++    assert result == (10, "recipient", dependency)
++    assert result[2] is dependency
++    assert approval.call_args.kwargs["arguments"] == {
++        "amount": 10,
++        "recipient": "recipient",
++    }

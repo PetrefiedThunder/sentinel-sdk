@@ -1,0 +1,61 @@
+UTC start: 2026-10-03T02:46:13+00:00
+Command: rg -n 'default|serialize|oversight|async' tests/test_qa_dx.py tests/test_qa_backend.py
+Exit: 0
+
+tests/test_qa_backend.py:6:import asyncio
+tests/test_qa_backend.py:24:    oversight,
+tests/test_qa_backend.py:51:        asyncio.run(client.aclose())
+tests/test_qa_backend.py:55:    if mode == "async":
+tests/test_qa_backend.py:56:        return asyncio.run(getattr(client, "a" + method)(*args, **kwargs))
+tests/test_qa_backend.py:60:@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py:91:@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py:105:@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py:109:    monkeypatch.setattr(httpx, "AsyncClient" if mode == "async" else "Client", constructor)
+tests/test_qa_backend.py:116:@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py:132:@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py:139:    async_sleeper = AsyncMock()
+tests/test_qa_backend.py:143:    monkeypatch.setattr(asyncio, "sleep", async_sleeper)
+tests/test_qa_backend.py:152:    if mode == "async":
+tests/test_qa_backend.py:153:        async_sleeper.assert_awaited_once_with(2)
+tests/test_qa_backend.py:158:@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py:179:@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py:194:@pytest.mark.asyncio
+tests/test_qa_backend.py:195:async def test_concurrent_clients_keep_identity_and_idempotency_isolated(client_factory):
+tests/test_qa_backend.py:206:    results = await asyncio.gather(
+tests/test_qa_backend.py:232:    if mode == "async":
+tests/test_qa_backend.py:234:        async def operation():
+tests/test_qa_backend.py:237:        return lambda: asyncio.run(oversight(**kwargs)(operation)())
+tests/test_qa_backend.py:242:    return oversight(**kwargs)(operation)
+tests/test_qa_backend.py:245:@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py:263:@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py:264:def test_default_timeout_never_executes(monkeypatch, mode):
+tests/test_qa_backend.py:272:@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py:284:@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py:304:    if mode == "async":
+tests/test_qa_backend.py:310:@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py:321:    audit = client.aemit_audit_event if mode == "async" else client.emit_audit_event
+tests/test_qa_backend.py:323:    if mode == "async":
+tests/test_qa_backend.py:331:@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py:339:    audit = client.aemit_audit_event if mode == "async" else client.emit_audit_event
+tests/test_qa_backend.py:343:    if mode == "async":
+tests/test_qa_backend.py:347:@pytest.mark.asyncio
+tests/test_qa_backend.py:353:async def test_execution_arguments_match_approved_snapshot(client_factory, monkeypatch):
+tests/test_qa_backend.py:354:    approval_requested = asyncio.Event()
+tests/test_qa_backend.py:355:    mutation_done = asyncio.Event()
+tests/test_qa_backend.py:359:    async def handler(request):
+tests/test_qa_backend.py:372:    @oversight()
+tests/test_qa_backend.py:373:    async def operation(payload):
+tests/test_qa_backend.py:376:    async def concurrent_mutation():
+tests/test_qa_backend.py:381:    await asyncio.gather(operation(arguments), concurrent_mutation())
+tests/test_qa_backend.py:385:@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py:429:@pytest.mark.asyncio
+tests/test_qa_backend.py:430:async def test_shared_client_keeps_concurrent_request_keys_isolated(client_factory):
+tests/test_qa_backend.py:433:    async def handler(request):
+tests/test_qa_backend.py:434:        await asyncio.sleep(0)
+tests/test_qa_backend.py:440:    await asyncio.gather(
+tests/test_qa_backend.py:449:@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py:455:            "set_default_approvers",
+tests/test_qa_backend.py:459:            {"default_approvers": ["qa@example.invalid"]},
+tests/test_qa_backend.py:505:@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_dx.py:125:def test_oversight_preserves_discoverable_function_signature():
+tests/test_qa_dx.py:128:    @sentinel.oversight()

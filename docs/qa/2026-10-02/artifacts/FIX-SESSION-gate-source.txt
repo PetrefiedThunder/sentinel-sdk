@@ -1,0 +1,78 @@
+UTC start: 2026-10-03T02:39:51+00:00
+Command: nl -ba sentinel/adapters/langchain.py
+Exit: 0
+
+     1	"""LangChain adapter for Sentinel.
+     2
+     3	Provides a callback handler that creates an approval request when a tool starts
+     4	and blocks until a decision is reached.
+     5	"""
+     6
+     7	from __future__ import annotations
+     8
+     9	from typing import Any
+    10
+    11	from ..client import SentinelClient
+    12	from ..exceptions import ApprovalRejected
+    13
+    14
+    15	class SentinelCallbackHandler:
+    16	    """LangChain callback handler that gates tool execution behind Sentinel approvals.
+    17
+    18	    Inherits from langchain_core.callbacks.BaseCallbackHandler at instantiation
+    19	    time so the langchain dependency stays optional.
+    20	    """
+    21
+    22	    # Approval is an execution gate: LangChain must not swallow its errors.
+    23	    raise_error = True
+    24
+    25	    def __new__(cls, *args, **kwargs):
+    26	        try:
+    27	            from langchain_core.callbacks import BaseCallbackHandler  # type: ignore
+    28	        except ImportError as e:
+    29	            raise ImportError(
+    30	                "langchain-core is required for SentinelCallbackHandler. "
+    31	                "Install with: pip install sentinel-oversight[langchain]"
+    32	            ) from e
+    33
+    34	        # Dynamically create a subclass mixing in BaseCallbackHandler.
+    35	        if not issubclass(cls, BaseCallbackHandler):
+    36	            new_cls = type(cls.__name__, (cls, BaseCallbackHandler), {})
+    37	            instance = object.__new__(new_cls)
+    38	            return instance
+    39	        return object.__new__(cls)
+    40
+    41	    def __init__(
+    42	        self,
+    43	        client: SentinelClient | None = None,
+    44	        risk_level: str = "medium",
+    45	        approvers: list | None = None,
+    46	        timeout_seconds: float | None = None,
+    47	    ):
+    48	        self.client = client or SentinelClient()
+    49	        self.risk_level = risk_level
+    50	        self.approvers = approvers
+    51	        self.timeout_seconds = timeout_seconds
+    52
+    53	    def on_tool_start(
+    54	        self,
+    55	        serialized: dict,
+    56	        input_str: str,
+    57	        **kwargs: Any,
+    58	    ) -> None:
+    59	        tool_name = (serialized or {}).get("name", "unknown_tool")
+    60	        approval = self.client.create_approval(
+    61	            function_name=tool_name,
+    62	            arguments={"input": input_str},
+    63	            risk_level=self.risk_level,
+    64	            approvers=self.approvers,
+    65	            timeout_seconds=self.timeout_seconds,
+    66	        )
+    67	        action_id = approval.get("action_id") or approval.get("id")
+    68	        decision = self.client.wait_for_decision(action_id, timeout=self.timeout_seconds)
+    69	        status = decision.get("status") or decision.get("decision")
+    70	        if status != "approved":
+    71	            raise ApprovalRejected(
+    72	                reason=decision.get("reason", "Tool execution not approved"),
+    73	                action_id=action_id,
+    74	            )

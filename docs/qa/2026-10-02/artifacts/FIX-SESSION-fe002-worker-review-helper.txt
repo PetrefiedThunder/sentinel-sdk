@@ -1,0 +1,171 @@
+UTC start: 2026-10-03T02:43:42+00:00
+Command: cat sentinel/adapters/_arguments.py tests/test_adapter_arguments.py
+Exit: 0
+
+from __future__ import annotations
+
+import inspect
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
+def approval_arguments(fn: Callable, args: tuple, kwargs: dict) -> dict[str, Any]:
+    """Include both argument sets while preserving existing nonmixed payloads."""
+    if not args or not kwargs:
+        return kwargs if kwargs else {"args": list(args)}
+
+    try:
+        signature = inspect.signature(fn)
+    except (TypeError, ValueError):
+        return {"args": list(args), "kwargs": kwargs}
+
+    bound = signature.bind(*args, **kwargs)
+    bound.apply_defaults()
+    return dict(bound.arguments)
+"""FE-002: mixed-call approval inputs and existing payload compatibility."""
+
+import asyncio
+import functools
+import inspect
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+from sentinel.adapters import autogen, crewai, langgraph, openai_agents
+
+CASES = [(name, False) for name in ("autogen", "crewai", "langgraph", "openai_agents")]
+CASES += [(name, True) for name in ("autogen", "langgraph", "openai_agents")]
+
+
+@pytest.fixture(params=CASES, ids=[f"{name}-{'async' if mode else 'sync'}" for name, mode in CASES])
+def gated_call(request):
+    adapter, asynchronous = request.param
+    client = MagicMock()
+    client.create_approval.return_value = {"action_id": "qa-action"}
+    client.wait_for_decision.return_value = {"status": "approved"}
+    client.acreate_approval = AsyncMock(return_value={"action_id": "qa-action"})
+    client.await_for_decision = AsyncMock(return_value={"status": "approved"})
+
+    def gate(fn):
+        if asynchronous:
+            original = fn
+
+            @functools.wraps(original)
+            async def fn(*args, **kwargs):
+                return original(*args, **kwargs)
+
+        if adapter == "autogen":
+            wrapped = autogen.gated(client=client)(fn)
+        elif adapter == "crewai":
+            wrapped = crewai.gated(fn, client=client)
+        elif adapter == "langgraph":
+            wrapped = langgraph.SentinelToolGate(client=client).wrap(fn)
+        else:
+            wrapped = openai_agents.gated(fn, client=client)
+
+        def invoke(*args, **kwargs):
+            result = wrapped(*args, **kwargs)
+            return asyncio.run(result) if asynchronous else result
+
+        return invoke
+
+    approval = client.acreate_approval if asynchronous else client.create_approval
+    return gate, client, approval
+
+
+def test_mixed_inputs_include_defaults_and_variadics(gated_call):
+    gate, _, approval = gated_call
+
+    def action(amount, /, *items, recipient, note="ordinary", **metadata):
+        return amount, items, recipient, note, metadata
+
+    assert gate(action)(10, "extra", recipient="recipient", currency="USD") == (
+        10,
+        ("extra",),
+        "recipient",
+        "ordinary",
+        {"currency": "USD"},
+    )
+    assert approval.call_args.kwargs["arguments"] == {
+        "amount": 10,
+        "items": ("extra",),
+        "recipient": "recipient",
+        "note": "ordinary",
+        "metadata": {"currency": "USD"},
+    }
+
+
+@pytest.mark.parametrize("error", [TypeError, ValueError])
+def test_unavailable_signature_preserves_keyword_collisions(gated_call, monkeypatch, error):
+    gate, _, approval = gated_call
+
+    def action(amount, **metadata):
+        return amount, metadata
+
+    wrapped = gate(action)
+
+    def unavailable(_fn):
+        raise error("signature unavailable")
+
+    monkeypatch.setattr(inspect, "signature", unavailable)
+    metadata = {"args": "keyword value", "kwargs": "other keyword value"}
+    assert wrapped(10, **metadata) == (10, metadata)
+    assert approval.call_args.kwargs["arguments"] == {"args": [10], "kwargs": metadata}
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"amount": 20, "recipient": "recipient"},
+        {"unexpected": "value"},
+        {"recipient": "recipient", "unexpected": "value"},
+    ],
+    ids=["duplicate", "missing-required", "unexpected"],
+)
+def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+    gate, client, _ = gated_call
+    calls = []
+
+    def action(amount, *, recipient):
+        calls.append((amount, recipient))
+
+    with pytest.raises(TypeError):
+        gate(action)(10, **kwargs)
+    assert calls == []
+    client.create_approval.assert_not_called()
+    client.acreate_approval.assert_not_called()
+    client.wait_for_decision.assert_not_called()
+    client.await_for_decision.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "args, kwargs, expected",
+    [
+        ((10, "recipient"), {}, {"args": [10, "recipient"]}),
+        ((), {"amount": 10, "recipient": "recipient"}, {"amount": 10, "recipient": "recipient"}),
+        ((), {}, {"args": []}),
+    ],
+    ids=["positional", "keyword", "empty"],
+)
+def test_nonmixed_payload_shape_remains_compatible(gated_call, args, kwargs, expected):
+    gate, _, approval = gated_call
+
+    def action(amount=10, recipient="recipient"):
+        return amount, recipient
+
+    assert gate(action)(*args, **kwargs) == (10, "recipient")
+    assert approval.call_args.kwargs["arguments"] == expected
+
+
+def test_mixed_binding_preserves_raw_values(gated_call):
+    gate, _, approval = gated_call
+    value = object()
+
+    def action(payload, *, recipient):
+        assert payload is value
+        return recipient
+
+    assert gate(action)(value, recipient="recipient") == "recipient"
+    assert approval.call_args.kwargs["arguments"]["payload"] is value

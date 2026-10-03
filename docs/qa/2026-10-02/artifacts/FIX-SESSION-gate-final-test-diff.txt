@@ -1,0 +1,448 @@
+UTC start: 2026-10-03T02:47:11+00:00
+Command: git diff ede988f -- tests
+Exit: 0
+
+diff --git a/tests/test_adapter_arguments.py b/tests/test_adapter_arguments.py
+new file mode 100644
+index 0000000..279358b
+--- /dev/null
++++ b/tests/test_adapter_arguments.py
+@@ -0,0 +1,168 @@
++"""FE-002: mixed-call approval inputs and existing payload compatibility."""
++
++import asyncio
++import functools
++import inspect
++from unittest.mock import AsyncMock, MagicMock
++
++import pytest
++
++from sentinel.adapters import autogen, crewai, langgraph, openai_agents
++from sentinel.client import _ensure_json_serializable
++
++CASES = [(name, False) for name in ("autogen", "crewai", "langgraph", "openai_agents")]
++CASES += [(name, True) for name in ("autogen", "langgraph", "openai_agents")]
++
++
++@pytest.fixture(params=CASES, ids=[f"{name}-{'async' if mode else 'sync'}" for name, mode in CASES])
++def gated_call(request):
++    adapter, asynchronous = request.param
++    client = MagicMock()
++    client.create_approval.return_value = {"action_id": "qa-action"}
++    client.wait_for_decision.return_value = {"status": "approved"}
++    client.acreate_approval = AsyncMock(return_value={"action_id": "qa-action"})
++    client.await_for_decision = AsyncMock(return_value={"status": "approved"})
++
++    def gate(fn):
++        if asynchronous:
++            original = fn
++
++            @functools.wraps(original)
++            async def fn(*args, **kwargs):
++                return original(*args, **kwargs)
++
++        if adapter == "autogen":
++            wrapped = autogen.gated(client=client)(fn)
++        elif adapter == "crewai":
++            wrapped = crewai.gated(fn, client=client)
++        elif adapter == "langgraph":
++            wrapped = langgraph.SentinelToolGate(client=client).wrap(fn)
++        else:
++            wrapped = openai_agents.gated(fn, client=client)
++
++        def invoke(*args, **kwargs):
++            result = wrapped(*args, **kwargs)
++            return asyncio.run(result) if asynchronous else result
++
++        return invoke
++
++    approval = client.acreate_approval if asynchronous else client.create_approval
++    return gate, client, approval
++
++
++def test_mixed_inputs_include_variadics_without_omitted_defaults(gated_call):
++    gate, _, approval = gated_call
++
++    def action(amount, /, *items, recipient, note="ordinary", **metadata):
++        return amount, items, recipient, note, metadata
++
++    assert gate(action)(10, "extra", recipient="recipient", currency="USD") == (
++        10,
++        ("extra",),
++        "recipient",
++        "ordinary",
++        {"currency": "USD"},
++    )
++    assert approval.call_args.kwargs["arguments"] == {
++        "amount": 10,
++        "items": ("extra",),
++        "recipient": "recipient",
++        "metadata": {"currency": "USD"},
++    }
++
++
++@pytest.mark.parametrize("error", [TypeError, ValueError])
++def test_unavailable_signature_preserves_keyword_collisions(gated_call, monkeypatch, error):
++    gate, _, approval = gated_call
++
++    def action(amount, **metadata):
++        return amount, metadata
++
++    wrapped = gate(action)
++
++    def unavailable(_fn):
++        raise error("signature unavailable")
++
++    monkeypatch.setattr(inspect, "signature", unavailable)
++    metadata = {"args": "keyword value", "kwargs": "other keyword value"}
++    assert wrapped(10, **metadata) == (10, metadata)
++    assert approval.call_args.kwargs["arguments"] == {"args": [10], "kwargs": metadata}
++
++
++@pytest.mark.parametrize(
++    "kwargs",
++    [
++        {"amount": 20, "recipient": "recipient"},
++        {"unexpected": "value"},
++        {"recipient": "recipient", "unexpected": "value"},
++    ],
++    ids=["duplicate", "missing-required", "unexpected"],
++)
++def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
++    gate, client, _ = gated_call
++    calls = []
++
++    def action(amount, *, recipient):
++        calls.append((amount, recipient))
++
++    with pytest.raises(TypeError):
++        gate(action)(10, **kwargs)
++    assert calls == []
++    client.create_approval.assert_not_called()
++    client.acreate_approval.assert_not_called()
++    client.wait_for_decision.assert_not_called()
++    client.await_for_decision.assert_not_called()
++
++
++@pytest.mark.parametrize(
++    "args, kwargs, expected",
++    [
++        ((10, "recipient"), {}, {"args": [10, "recipient"]}),
++        ((), {"amount": 10, "recipient": "recipient"}, {"amount": 10, "recipient": "recipient"}),
++        ((), {}, {"args": []}),
++    ],
++    ids=["positional", "keyword", "empty"],
++)
++def test_nonmixed_payload_shape_remains_compatible(gated_call, args, kwargs, expected):
++    gate, _, approval = gated_call
++
++    def action(amount=10, recipient="recipient"):
++        return amount, recipient
++
++    assert gate(action)(*args, **kwargs) == (10, "recipient")
++    assert approval.call_args.kwargs["arguments"] == expected
++
++
++def test_mixed_binding_preserves_raw_values(gated_call):
++    gate, _, approval = gated_call
++    value = object()
++
++    def action(payload, *, recipient):
++        assert payload is value
++        return recipient
++
++    assert gate(action)(value, recipient="recipient") == "recipient"
++    assert approval.call_args.kwargs["arguments"]["payload"] is value
++
++
++def test_omitted_nonserializable_default_stays_out_of_approval(gated_call):
++    """FE-002 must not add an unpassed internal dependency to the JSON payload."""
++    gate, _, approval = gated_call
++    dependency = object()
++
++    def create_approval(**kwargs):
++        _ensure_json_serializable(kwargs["arguments"])
++        return {"action_id": "qa-action"}
++
++    approval.side_effect = create_approval
++
++    def action(amount, *, recipient, dependency=dependency):
++        return amount, recipient, dependency
++
++    result = gate(action)(10, recipient="recipient")
++    assert result == (10, "recipient", dependency)
++    assert result[2] is dependency
++    assert approval.call_args.kwargs["arguments"] == {
++        "amount": 10,
++        "recipient": "recipient",
++    }
+diff --git a/tests/test_qa_adapters.py b/tests/test_qa_adapters.py
+index e370312..64e1690 100644
+--- a/tests/test_qa_adapters.py
++++ b/tests/test_qa_adapters.py
+@@ -5,11 +5,14 @@ import inspect
+ from types import SimpleNamespace
+ from unittest.mock import AsyncMock, MagicMock
+
++import httpx
+ import pytest
+
+ from sentinel.adapters import anthropic, autogen, crewai, langgraph, openai_agents
+ from sentinel.adapters.semantic_kernel import sentinel_filter
+-from sentinel.exceptions import ApprovalRejected, ApprovalTimeout
++from sentinel.client import SentinelClient
++from sentinel.config import SentinelConfig
++from sentinel.exceptions import ApprovalRejected, ApprovalTimeout, SentinelAPIError
+
+
+ def _client(decision):
+@@ -117,13 +120,9 @@ def test_async_callable_rejection_preserves_semantics_and_stops_execution(adapte
+     client.acreate_approval.assert_awaited_once()
+
+
+-@pytest.mark.xfail(
+-    strict=True,
+-    raises=AssertionError,
+-    reason="FE-002: positional arguments omitted when kwargs exist",
+-)
+ @pytest.mark.parametrize("adapter", ["autogen", "crewai", "langgraph", "openai_agents"])
+ def test_mixed_sync_arguments_are_fully_presented_for_approval(adapter):
++    """FE-002: approval must include both positional and keyword inputs."""
+     client = _client({"status": "approved"})
+
+     def action(amount: int, *, recipient: str):
+@@ -139,13 +138,9 @@ def test_mixed_sync_arguments_are_fully_presented_for_approval(adapter):
+     }
+
+
+-@pytest.mark.xfail(
+-    strict=True,
+-    raises=AssertionError,
+-    reason="FE-002: positional arguments omitted when kwargs exist",
+-)
+ @pytest.mark.parametrize("adapter", ["autogen", "langgraph", "openai_agents"])
+ def test_mixed_async_arguments_are_fully_presented_for_approval(adapter):
++    """FE-002: async approval must include positional and keyword inputs."""
+     client = _client({"status": "approved"})
+
+     async def action(amount: int, *, recipient: str):
+@@ -161,14 +156,10 @@ def test_mixed_async_arguments_are_fully_presented_for_approval(adapter):
+     }
+
+
+-@pytest.mark.xfail(
+-    strict=True,
+-    raises=AssertionError,
+-    reason="FE-001: LangChain swallows callback rejection and runs tool",
+-)
+ @pytest.mark.parametrize("asynchronous", [False, True], ids=["invoke", "ainvoke"])
+ @pytest.mark.parametrize("failure", ["rejected", "timeout", "transport_error"])
+ def test_real_langchain_tool_does_not_run_after_gate_failure(asynchronous, failure):
++    """FE-001: a gate error must propagate through the host without execution."""
+     pytest.importorskip("langchain_core")
+     from langchain_core.tools import tool
+
+@@ -183,22 +174,90 @@ def test_real_langchain_tool_does_not_run_after_gate_failure(asynchronous, failu
+         return "executed"
+
+     client = _client({"status": "rejected", "reason": "qa denied"})
++    error = ApprovalRejected
+     if failure == "timeout":
+         client.wait_for_decision.side_effect = ApprovalTimeout("qa-action", 1)
++        error = ApprovalTimeout
+     elif failure == "transport_error":
+         client.create_approval.side_effect = ConnectionError("qa local connection failure")
++        error = ConnectionError
+     config = {"callbacks": [SentinelCallbackHandler(client=client)]}
+-    try:
++    with pytest.raises(error):
+         if asynchronous:
+             asyncio.run(local_action.ainvoke({"value": 7}, config=config))
+         else:
+             local_action.invoke({"value": 7}, config=config)
+-    except (ApprovalRejected, ApprovalTimeout, ConnectionError):
+-        pass
+     client.create_approval.assert_called_once()
+     assert calls == []
+
+
++@pytest.mark.parametrize("asynchronous", [False, True], ids=["invoke", "ainvoke"])
++@pytest.mark.parametrize("stage", ["create", "wait"])
++@pytest.mark.parametrize(
++    "failure, error",
++    [
++        ("network", httpx.ConnectError),
++        ("timeout", httpx.ReadTimeout),
++        ("invalid_json", ValueError),
++        ("null", AttributeError),
++        ("array", AttributeError),
++        ("http_403", SentinelAPIError),
++        ("http_503", SentinelAPIError),
++    ],
++)
++def test_real_langchain_http_gate_failures_block_execution(asynchronous, stage, failure, error):
++    """FE-001: use the real HTTP client and host with an offline transport."""
++    pytest.importorskip("langchain_core")
++    from langchain_core.tools import tool
++
++    from sentinel.adapters.langchain import SentinelCallbackHandler
++
++    calls = []
++    requests = []
++
++    @tool
++    def local_action(value: int) -> str:
++        """Record a local action without contacting any external service."""
++        calls.append(value)
++        return "executed"
++
++    def transport(request):
++        requests.append(request.url.path)
++        if stage == "wait" and request.method == "POST":
++            return httpx.Response(201, json={"action_id": "qa-action"})
++        if failure == "network":
++            raise httpx.ConnectError("synthetic connection failure", request=request)
++        if failure == "timeout":
++            raise httpx.ReadTimeout("synthetic timeout", request=request)
++        if failure == "invalid_json":
++            return httpx.Response(200, content=b"not JSON")
++        if failure == "null":
++            return httpx.Response(200, content=b"null")
++        if failure == "array":
++            return httpx.Response(200, json=[])
++        return httpx.Response(int(failure.removeprefix("http_")), json={"detail": "denied"})
++
++    client = SentinelClient(SentinelConfig(api_url="https://sentinel.invalid"))
++    with httpx.Client(
++        base_url="https://sentinel.invalid", transport=httpx.MockTransport(transport)
++    ) as http_client:
++        client._client = http_client
++        handler = SentinelCallbackHandler(client=client)
++        assert handler.raise_error is True
++        config = {"callbacks": [handler]}
++        with pytest.raises(error):
++            if asynchronous:
++                asyncio.run(local_action.ainvoke({"value": 7}, config=config))
++            else:
++                local_action.invoke({"value": 7}, config=config)
++    assert requests == (
++        ["/v1/approvals"]
++        if stage == "create"
++        else ["/v1/approvals", "/v1/approvals/qa-action/wait"]
++    )
++    assert calls == []
++
++
+ @pytest.mark.parametrize("asynchronous", [False, True], ids=["invoke", "ainvoke"])
+ def test_real_langchain_approved_tool_executes_once(asynchronous):
+     pytest.importorskip("langchain_core")
+diff --git a/tests/test_qa_backend.py b/tests/test_qa_backend.py
+index 34adf40..6c79774 100644
+--- a/tests/test_qa_backend.py
++++ b/tests/test_qa_backend.py
+@@ -242,6 +242,33 @@ def wrap_call(mode, function, **kwargs):
+     return oversight(**kwargs)(operation)
+
+
++@pytest.mark.parametrize("mode", ["sync", "async"])
++@pytest.mark.parametrize("missing", ["positional", "keyword-only"])
++def test_missing_arguments_never_request_approval(monkeypatch, mode, missing):
++    """UX-003: required arguments fail before either sync or async approval."""
++    client = decorator_client(monkeypatch, mode, decision={"status": "approved"})
++    calls = []
++
++    def operation(amount, recipient, *, memo):
++        calls.append((amount, recipient, memo))
++
++    async def async_operation(amount, recipient, *, memo):
++        operation(amount, recipient, memo=memo)
++
++    wrapped = oversight()(async_operation if mode == "async" else operation)
++    args, kwargs = ((10,), {"memo": "test"}) if missing == "positional" else ((10, "recipient"), {})
++    with pytest.raises(TypeError, match="required.*argument"):
++        if mode == "async":
++            asyncio.run(wrapped(*args, **kwargs))
++        else:
++            wrapped(*args, **kwargs)
++    assert calls == []
++    client.create_approval.assert_not_called()
++    client.acreate_approval.assert_not_called()
++    client.wait_for_decision.assert_not_called()
++    client.await_for_decision.assert_not_called()
++
++
+ @pytest.mark.parametrize("mode", ["sync", "async"])
+ @pytest.mark.parametrize(
+     "decision",
+@@ -308,25 +335,42 @@ def test_decorator_closes_client_on_every_exit(monkeypatch, mode, outcome):
+
+
+ @pytest.mark.parametrize("mode", ["sync", "async"])
+-@pytest.mark.xfail(
+-    strict=True,
+-    raises=AssertionError,
+-    reason="BE-003: failing timeout fallback does not emit audit evidence",
+-)
+ def test_timeout_fallback_exception_is_audited(monkeypatch, mode):
++    """BE-003: failed explicit fallback must preserve the error and audit attempt."""
+     client = decorator_client(monkeypatch, mode, failure=ApprovalTimeout("action", 1))
++    original_error = ValueError("synthetic operation error")
++    operation = MagicMock(side_effect=original_error)
+
+-    def operation():
+-        raise ValueError("synthetic operation error")
+-
+-    with pytest.raises(ValueError, match="synthetic operation error"):
++    with pytest.raises(ValueError, match="synthetic operation error") as raised:
+         wrap_call(mode, operation, fallback="execute")()
++    assert raised.value is original_error
++    operation.assert_called_once_with()
+     audit = client.aemit_audit_event if mode == "async" else client.emit_audit_event
+     audit.assert_called_once()
++    if mode == "async":
++        audit.assert_awaited_once()
+     assert audit.call_args.args[0] == "action"
++    assert audit.call_args.kwargs["execution_result"] is None
++    assert "timeout-fallback-execute" in audit.call_args.kwargs["error"]
+     assert "synthetic operation error" in audit.call_args.kwargs["error"]
+
+
++@pytest.mark.parametrize("mode", ["sync", "async"])
++def test_timeout_fallback_success_is_audited(monkeypatch, mode):
++    """BE-003: successful explicit fallback keeps its existing result and audit."""
++    client = decorator_client(monkeypatch, mode, failure=ApprovalTimeout("action", 1))
++    operation = MagicMock(return_value="success")
++
++    assert wrap_call(mode, operation, fallback="execute")() == "success"
++    operation.assert_called_once_with()
++    audit = client.aemit_audit_event if mode == "async" else client.emit_audit_event
++    audit.assert_called_once_with(
++        "action", execution_result="'success'", error="timeout-fallback-execute"
++    )
++    if mode == "async":
++        audit.assert_awaited_once()
++
++
+ @pytest.mark.asyncio
+ @pytest.mark.xfail(
+     strict=True,
+diff --git a/tests/test_qa_dx.py b/tests/test_qa_dx.py
+index 58d09ee..898a12a 100644
+--- a/tests/test_qa_dx.py
++++ b/tests/test_qa_dx.py
+@@ -135,13 +135,9 @@ def test_oversight_preserves_discoverable_function_signature():
+     assert list(inspect.signature(action).parameters) == ["amount", "recipient"]
+
+
+-@pytest.mark.xfail(
+-    strict=True,
+-    raises=AssertionError,
+-    reason="UX-003: missing required function argument requests approval before raising TypeError",
+-)
+ def test_missing_required_argument_fails_before_requesting_human_approval(quickstart):
++    """UX-003: validate complete arguments before involving an approver."""
+     namespace, client = quickstart
+-    with pytest.raises(TypeError, match="required positional argument"):
++    with pytest.raises(TypeError, match="required.*argument"):
+         namespace["transfer_funds"](1000)
+     client.create_approval.assert_not_called()

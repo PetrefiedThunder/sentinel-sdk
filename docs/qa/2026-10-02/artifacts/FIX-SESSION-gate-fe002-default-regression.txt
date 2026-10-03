@@ -1,0 +1,30 @@
+UTC start: 2026-10-03T02:42:53+00:00
+Command: .venv/bin/python -c 'from sentinel.adapters._arguments import approval_arguments; from sentinel.client import _ensure_json_serializable; dependency=object(); exec("def action(amount, *, recipient, dependency=dependency):\n    return amount, recipient\n"); old_payload={"recipient":"qa"}; new_payload=approval_arguments(action,(10,),old_payload); _ensure_json_serializable(old_payload); print("Original approval payload serializable: yes"); print("Actual caller inputs: amount=10 recipient=qa"); print("Added unpassed default fields:", sorted(set(new_payload)-{"amount","recipient"})); _ensure_json_serializable(new_payload)'
+Exit: 1
+
+Traceback (most recent call last):
+  File "/Users/sellers/Projects/qa-sweep-2026-10-02/sentinel-sdk/sentinel/client.py", line 56, in _ensure_json_serializable
+    json.dumps(arguments)
+  File "/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/__init__.py", line 231, in dumps
+    return _default_encoder.encode(obj)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py", line 200, in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py", line 258, in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+  File "/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py", line 180, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type object is not JSON serializable
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "/Users/sellers/Projects/qa-sweep-2026-10-02/sentinel-sdk/sentinel/client.py", line 58, in _ensure_json_serializable
+    raise TypeError(
+TypeError: @oversight arguments must be JSON-serializable. Got an un-serializable value: Object of type object is not JSON serializable. Convert sets/objects/bytes to plain dict/list/str/int/float/bool/None before the call.
+Original approval payload serializable: yes
+Actual caller inputs: amount=10 recipient=qa
+Added unpassed default fields: ['dependency']

@@ -1,0 +1,19 @@
+UTC start: 2026-10-03T02:47:14+00:00
+Command: git commit -m 'fix(UX-003): reject incomplete calls before approval' -m 'Root cause: partial signature binding allowed missing required parameters to create and wait for human approval before raising TypeError.' -m 'Fix: fully bind the shared decorator call before requesting approval in both sync and async wrappers.' -m 'Proof: tests/test_qa_dx.py::test_missing_required_argument_fails_before_requesting_human_approval passes normally; tests/test_qa_backend.py::test_missing_arguments_never_request_approval covers required positional and keyword-only inputs in sync/async modes. Five negative controls failed before; related suite: 102 passed, 16 unrelated xfailed.'
+Exit: 0
+
+[qa/2026-10-02-fixes d470fa9] fix(UX-003): reject incomplete calls before approval
+ Committer: Christopher L Sellers <sellers@Christophers-MacBook-Pro.local>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly. Run the
+following command and follow the instructions in your editor to edit
+your configuration file:
+
+    git config --global --edit
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 3 files changed, 30 insertions(+), 7 deletions(-)

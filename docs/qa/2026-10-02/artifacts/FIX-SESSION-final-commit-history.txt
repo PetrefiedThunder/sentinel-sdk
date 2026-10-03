@@ -1,0 +1,8 @@
+UTC start: 2026-10-03T02:48:03+00:00
+Command: git log --oneline ede988f..HEAD
+Exit: 0
+
+d470fa9 fix(UX-003): reject incomplete calls before approval
+c94bea6 fix(BE-003): audit failed timeout fallback executions
+b1a9a1d fix(FE-002): include mixed adapter call arguments in approvals
+ca17f70 fix(FE-001): propagate LangChain approval gate errors

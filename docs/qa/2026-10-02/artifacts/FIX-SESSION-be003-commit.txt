@@ -1,0 +1,19 @@
+UTC start: 2026-10-03T02:46:22+00:00
+Command: git commit -m 'fix(BE-003): audit failed timeout fallback executions' -m 'Root cause: explicit timeout fallback executed the function outside exception audit handling, so failures left no execution audit attempt.' -m 'Fix: mirror approved-execution exception auditing in sync and async fallback paths, include the timeout fallback reason, and re-raise the original exception.' -m 'Proof: tests/test_qa_backend.py::test_timeout_fallback_exception_is_audited now passes normally and checks original exception identity, single execution and one audit call/await. ::test_timeout_fallback_success_is_audited preserves successful behavior. Related suite: 88 passed, 14 unrelated xfailed.'
+Exit: 0
+
+[qa/2026-10-02-fixes c94bea6] fix(BE-003): audit failed timeout fallback executions
+ Committer: Christopher L Sellers <sellers@Christophers-MacBook-Pro.local>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly. Run the
+following command and follow the instructions in your editor to edit
+your configuration file:
+
+    git config --global --edit
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 2 files changed, 44 insertions(+), 11 deletions(-)

@@ -1,0 +1,5 @@
+UTC start: 2026-10-03T02:42:11+00:00
+Command: python3 -c 'print("Added helper sentinel/adapters/_arguments.py and wired seven sync/async paths across AutoGen, CrewAI, LangGraph and OpenAI plain callable adapters. Converted FE-002 QA markers to normal tests. Expanded pre-fix negative control: 49 failed and 21 passed; passing cases are unchanged nonmixed compatibility. Product change now ready for targeted validation.")'
+Exit: 0
+
+Added helper sentinel/adapters/_arguments.py and wired seven sync/async paths across AutoGen, CrewAI, LangGraph and OpenAI plain callable adapters. Converted FE-002 QA markers to normal tests. Expanded pre-fix negative control: 49 failed and 21 passed; passing cases are unchanged nonmixed compatibility. Product change now ready for targeted validation.

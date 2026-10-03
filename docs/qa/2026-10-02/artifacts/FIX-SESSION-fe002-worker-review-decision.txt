@@ -1,0 +1,5 @@
+UTC start: 2026-10-03T02:43:54+00:00
+Command: python3 -c 'print("Gate review identified a pre-commit regression: apply_defaults adds omitted dependency objects to approval JSON, making previously valid mixed calls fail serialization and exposing unpassed defaults. Correction: bind supplied arguments only, retain Python defaults at execution, and add seven-path regression that validates approval JSON with the real client validator. No commit exists to revert; root will restage corrected explicit files.")'
+Exit: 0
+
+Gate review identified a pre-commit regression: apply_defaults adds omitted dependency objects to approval JSON, making previously valid mixed calls fail serialization and exposing unpassed defaults. Correction: bind supplied arguments only, retain Python defaults at execution, and add seven-path regression that validates approval JSON with the real client validator. No commit exists to revert; root will restage corrected explicit files.

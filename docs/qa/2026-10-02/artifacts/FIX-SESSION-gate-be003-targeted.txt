@@ -1,0 +1,6 @@
+UTC start: 2026-10-03T02:45:57+00:00
+Command: .venv/bin/python -m pytest tests/test_qa_backend.py -q -k 'fallback or api_or_network'
+Exit: 0
+
+............                                                             [100%]
+12 passed, 78 deselected in 0.07s

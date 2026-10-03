@@ -1,0 +1,5 @@
+UTC start: 2026-10-03T02:44:09+00:00
+Command: python3 -c 'print("FE-002 pre-commit review correction complete: removed apply_defaults, so only supplied inputs enter approval; omitted defaults remain Python execution behavior. Seven omitted-object-default tests failed before correction via real client JSON validation. Corrected related adapter suite: 190 passed. Ruff and format checks passed. No staging or commits performed; root must restage sentinel/adapters/_arguments.py and tests/test_adapter_arguments.py. This supersedes the earlier apply_defaults design/handoff.")'
+Exit: 0
+
+FE-002 pre-commit review correction complete: removed apply_defaults, so only supplied inputs enter approval; omitted defaults remain Python execution behavior. Seven omitted-object-default tests failed before correction via real client JSON validation. Corrected related adapter suite: 190 passed. Ruff and format checks passed. No staging or commits performed; root must restage sentinel/adapters/_arguments.py and tests/test_adapter_arguments.py. This supersedes the earlier apply_defaults design/handoff.

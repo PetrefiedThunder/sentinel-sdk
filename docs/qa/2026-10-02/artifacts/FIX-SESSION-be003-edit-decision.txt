@@ -1,0 +1,5 @@
+UTC start: 2026-10-03T02:45:21+00:00
+Command: python3 -c 'print("BE-003 product patch applied only to two fallback execution blocks, adding Exception audit parity and bare re-raise. Negative control proved the two failures are zero audit calls; successful fallback controls already pass. QA xfails converted and finding IDs retained in test docstrings.")'
+Exit: 0
+
+BE-003 product patch applied only to two fallback execution blocks, adding Exception audit parity and bare re-raise. Negative control proved the two failures are zero audit calls; successful fallback controls already pass. QA xfails converted and finding IDs retained in test docstrings.

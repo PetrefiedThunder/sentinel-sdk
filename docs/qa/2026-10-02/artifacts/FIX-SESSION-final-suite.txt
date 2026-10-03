@@ -1,0 +1,32 @@
+UTC start: 2026-10-03T02:47:30+00:00
+Command: .venv/bin/python -m pytest tests -q --cov=sentinel --cov-branch --cov-report=term --cov-report=json:/private/tmp/sentinel-fix-coverage.json --junitxml=/private/tmp/sentinel-fix-final-junit.xml
+Exit: 0
+
+........................................................................ [ 21%]
+........................................................................ [ 42%]
+........................................................................ [ 64%]
+............................xxxx.....................xxxxxxxx....x...... [ 85%]
+..................xx......x....................                          [100%]
+================================ tests coverage ================================
+______________ coverage: platform darwin, python 3.11.15-final-0 _______________
+
+Name                                   Stmts   Miss Branch BrPart  Cover
+------------------------------------------------------------------------
+sentinel/__init__.py                       6      0      0      0   100%
+sentinel/adapters/__init__.py              0      0      0      0   100%
+sentinel/adapters/_arguments.py           12      0      2      0   100%
+sentinel/adapters/anthropic.py            57      4     16      3    90%
+sentinel/adapters/autogen.py              35      0      6      0   100%
+sentinel/adapters/crewai.py               40      5     16      4    84%
+sentinel/adapters/langchain.py            29      3      4      1    88%
+sentinel/adapters/langgraph.py            48      0     12      0   100%
+sentinel/adapters/openai_agents.py        67      1     20      1    98%
+sentinel/adapters/semantic_kernel.py      54      4     14      2    91%
+sentinel/client.py                       221      4     44      7    96%
+sentinel/config.py                        26      2      0      0    92%
+sentinel/decorator.py                    103      3     24      3    95%
+sentinel/exceptions.py                    23      0      4      1    96%
+------------------------------------------------------------------------
+TOTAL                                    721     26    162     22    95%
+Coverage JSON written to file /private/tmp/sentinel-fix-coverage.json
+319 passed, 16 xfailed in 1.68s

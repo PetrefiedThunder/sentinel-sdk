@@ -1,0 +1,5 @@
+UTC start: 2026-10-03T02:45:10+00:00
+Command: python3 -c 'print("BE-003 smallest parity fix: catch Exception only around explicit timeout-fallback execution, attempt matching sync/async audit with execution_result=None and timeout-fallback-execute plus original exception repr, then re-raise. Keep timeout defaults/policy, approved path and client lifecycle unchanged. Strengthen two QA cases for same exception identity, operation once and audit await/call once; add two success controls.")'
+Exit: 0
+
+BE-003 smallest parity fix: catch Exception only around explicit timeout-fallback execution, attempt matching sync/async audit with execution_result=None and timeout-fallback-execute plus original exception repr, then re-raise. Keep timeout defaults/policy, approved path and client lifecycle unchanged. Strengthen two QA cases for same exception identity, operation once and audit await/call once; add two success controls.

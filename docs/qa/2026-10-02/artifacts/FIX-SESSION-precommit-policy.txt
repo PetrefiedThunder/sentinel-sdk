@@ -1,0 +1,15 @@
+UTC start: 2026-10-03T02:44:01+00:00
+Command: python3 -c 'from pathlib import Path; print("Sentinel .pre-commit-config.yaml contains gitleaks and Ruff, no detect-secrets hook:"); print("\n".join(f"{i}: {l}" for i,l in enumerate(Path(".pre-commit-config.yaml").read_text().splitlines(),1) if "id:" in l)); import shutil; print("gitleaks installed:",bool(shutil.which("gitleaks")))'
+Exit: 0
+
+Sentinel .pre-commit-config.yaml contains gitleaks and Ruff, no detect-secrets hook:
+6:       - id: ruff
+8:       - id: ruff-format
+14:       - id: trailing-whitespace
+15:       - id: end-of-file-fixer
+16:       - id: check-yaml
+17:       - id: check-toml
+18:       - id: check-merge-conflict
+19:       - id: check-added-large-files
+26:       - id: gitleaks
+gitleaks installed: True

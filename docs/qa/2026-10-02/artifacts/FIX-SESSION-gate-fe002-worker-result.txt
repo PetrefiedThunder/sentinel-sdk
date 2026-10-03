@@ -1,0 +1,57 @@
+UTC start: 2026-10-03T02:43:05+00:00
+Command: cat docs/qa/2026-10-02/artifacts/FIX-SESSION-fe002-related-tests.txt
+Exit: 0
+
+UTC start: 2026-10-03T02:39:39+00:00
+Command: rg -n 'arguments|args|bind|fallback|serialize' tests/test_langgraph_adapter.py tests/test_openai_agents_adapter.py tests/test_decorator.py tests/test_qa_dx.py tests/test_qa_backend.py
+Exit: 0
+
+tests/test_decorator.py:23:        arguments={"amount": 100, "to": "alice"},
+tests/test_decorator.py:58:        SentinelClient().create_approval(function_name="dangerous", arguments={})
+tests/test_qa_backend.py:54:def invoke(client, mode, method, *args, **kwargs):
+tests/test_qa_backend.py:56:        return asyncio.run(getattr(client, "a" + method)(*args, **kwargs))
+tests/test_qa_backend.py:57:    return getattr(client, method)(*args, **kwargs)
+tests/test_qa_backend.py:108:    # Header validation occurs while evaluating the constructor arguments.
+tests/test_qa_backend.py:118:def test_legacy_wait_fallback_returns_terminal_decision(client_factory, mode, status):
+tests/test_qa_backend.py:227:    monkeypatch.setattr(decorator_module, "get_config", lambda: SentinelConfig(fallback="reject"))
+tests/test_qa_backend.py:231:def wrap_call(mode, function, **kwargs):
+tests/test_qa_backend.py:237:        return lambda: asyncio.run(oversight(**kwargs)(operation)())
+tests/test_qa_backend.py:242:    return oversight(**kwargs)(operation)
+tests/test_qa_backend.py:276:def test_execute_fallback_does_not_bypass_api_or_network_failures(monkeypatch, mode, failure):
+tests/test_qa_backend.py:280:        wrap_call(mode, operation, fallback="execute")()
+tests/test_qa_backend.py:314:    reason="BE-003: failing timeout fallback does not emit audit evidence",
+tests/test_qa_backend.py:316:def test_timeout_fallback_exception_is_audited(monkeypatch, mode):
+tests/test_qa_backend.py:323:        wrap_call(mode, operation, fallback="execute")()
+tests/test_qa_backend.py:326:    assert audit.call_args.args[0] == "action"
+tests/test_qa_backend.py:327:    assert "synthetic operation error" in audit.call_args.kwargs["error"]
+tests/test_qa_backend.py:334:    reason="BE-004: mutable arguments can change while approval is pending",
+tests/test_qa_backend.py:336:async def test_execution_arguments_match_approved_snapshot(client_factory, monkeypatch):
+tests/test_qa_backend.py:340:    arguments = {"amount": 10}
+tests/test_qa_backend.py:344:            observed["approved"] = json.loads(request.content)["arguments"]["payload"]["amount"]
+tests/test_qa_backend.py:361:        arguments["amount"] = 999
+tests/test_qa_backend.py:364:    await asyncio.gather(operation(arguments), concurrent_mutation())
+tests/test_qa_backend.py:384:        received.append(json.loads(request.content)["arguments"])
+tests/test_qa_backend.py:405:    def check(arguments):
+tests/test_qa_backend.py:406:        client.create_approval("task", arguments)
+tests/test_qa_backend.py:407:        assert received[-1] == arguments
+tests/test_qa_backend.py:419:        received[key] = json.loads(request.content)["arguments"]["request"]
+tests/test_qa_backend.py:434:    ("method", "args", "verb", "path", "payload"),
+tests/test_qa_backend.py:473:def test_supporting_endpoint_contracts(client_factory, mode, method, args, verb, path, payload):
+tests/test_qa_backend.py:480:    invoke(client_factory(handler), mode, method, *args)
+tests/test_qa_dx.py:22:        fallback="reject",
+tests/test_qa_dx.py:59:    assert client.create_approval.call_args.kwargs["arguments"] == {
+tests/test_qa_dx.py:82:        ("SENTINEL_FALLBACK", "execute", "fallback", "execute"),
+tests/test_openai_agents_adapter.py:12:    """Mimics agents.FunctionTool: name + async on_invoke_tool(ctx, args_json)."""
+tests/test_openai_agents_adapter.py:18:        async def on_invoke_tool(ctx, args_json):
+tests/test_openai_agents_adapter.py:19:            return self._fn(**json.loads(args_json or "{}"))
+tests/test_openai_agents_adapter.py:53:        arguments={"query": "cats", "limit": 3},
+tests/test_openai_agents_adapter.py:84:def test_function_tool_empty_args_json():
+tests/test_openai_agents_adapter.py:90:    assert client.acreate_approval.call_args.kwargs["arguments"] == {}
+tests/test_openai_agents_adapter.py:105:        arguments={"amount": 100, "recipient": "acct_9"},
+tests/test_openai_agents_adapter.py:145:    assert client.acreate_approval.call_args.kwargs["function_name"] == "custom_name"
+tests/test_langgraph_adapter.py:30:        arguments={"query": "cats", "limit": 3},
+tests/test_langgraph_adapter.py:38:def test_positional_args_use_args_convention():
+tests/test_langgraph_adapter.py:46:    arguments = client.create_approval.call_args.kwargs["arguments"]
+tests/test_langgraph_adapter.py:47:    assert arguments == {"args": [1, 2]}
+tests/test_langgraph_adapter.py:114:    assert client.create_approval.call_args.kwargs["function_name"] == "custom_name"
+tests/test_langgraph_adapter.py:133:        arguments={"x": 21},

@@ -243,6 +243,33 @@ def wrap_call(mode, function, **kwargs):
 
 
 @pytest.mark.parametrize("mode", ["sync", "async"])
+@pytest.mark.parametrize("missing", ["positional", "keyword-only"])
+def test_missing_arguments_never_request_approval(monkeypatch, mode, missing):
+    """UX-003: required arguments fail before either sync or async approval."""
+    client = decorator_client(monkeypatch, mode, decision={"status": "approved"})
+    calls = []
+
+    def operation(amount, recipient, *, memo):
+        calls.append((amount, recipient, memo))
+
+    async def async_operation(amount, recipient, *, memo):
+        operation(amount, recipient, memo=memo)
+
+    wrapped = oversight()(async_operation if mode == "async" else operation)
+    args, kwargs = ((10,), {"memo": "test"}) if missing == "positional" else ((10, "recipient"), {})
+    with pytest.raises(TypeError, match="required.*argument"):
+        if mode == "async":
+            asyncio.run(wrapped(*args, **kwargs))
+        else:
+            wrapped(*args, **kwargs)
+    assert calls == []
+    client.create_approval.assert_not_called()
+    client.acreate_approval.assert_not_called()
+    client.wait_for_decision.assert_not_called()
+    client.await_for_decision.assert_not_called()
+
+
+@pytest.mark.parametrize("mode", ["sync", "async"])
 @pytest.mark.parametrize(
     "decision",
     [
@@ -308,23 +335,40 @@ def test_decorator_closes_client_on_every_exit(monkeypatch, mode, outcome):
 
 
 @pytest.mark.parametrize("mode", ["sync", "async"])
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="BE-003: failing timeout fallback does not emit audit evidence",
-)
 def test_timeout_fallback_exception_is_audited(monkeypatch, mode):
+    """BE-003: failed explicit fallback must preserve the error and audit attempt."""
     client = decorator_client(monkeypatch, mode, failure=ApprovalTimeout("action", 1))
+    original_error = ValueError("synthetic operation error")
+    operation = MagicMock(side_effect=original_error)
 
-    def operation():
-        raise ValueError("synthetic operation error")
-
-    with pytest.raises(ValueError, match="synthetic operation error"):
+    with pytest.raises(ValueError, match="synthetic operation error") as raised:
         wrap_call(mode, operation, fallback="execute")()
+    assert raised.value is original_error
+    operation.assert_called_once_with()
     audit = client.aemit_audit_event if mode == "async" else client.emit_audit_event
     audit.assert_called_once()
+    if mode == "async":
+        audit.assert_awaited_once()
     assert audit.call_args.args[0] == "action"
+    assert audit.call_args.kwargs["execution_result"] == "None"
+    assert "timeout-fallback-execute" in audit.call_args.kwargs["error"]
     assert "synthetic operation error" in audit.call_args.kwargs["error"]
+
+
+@pytest.mark.parametrize("mode", ["sync", "async"])
+def test_timeout_fallback_success_is_audited(monkeypatch, mode):
+    """BE-003: successful explicit fallback keeps its existing result and audit."""
+    client = decorator_client(monkeypatch, mode, failure=ApprovalTimeout("action", 1))
+    operation = MagicMock(return_value="success")
+
+    assert wrap_call(mode, operation, fallback="execute")() == "success"
+    operation.assert_called_once_with()
+    audit = client.aemit_audit_event if mode == "async" else client.emit_audit_event
+    audit.assert_called_once_with(
+        "action", execution_result="'success'", error="timeout-fallback-execute"
+    )
+    if mode == "async":
+        audit.assert_awaited_once()
 
 
 @pytest.mark.asyncio

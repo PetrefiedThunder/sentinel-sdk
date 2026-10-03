@@ -1,0 +1,26 @@
+UTC start: 2026-10-03T02:46:04+00:00
+Command: sed -n 300,322p sentinel/client.py
+Exit: 0
+
+        if cursor is not None:
+            params["cursor"] = cursor
+        r = self._get_client().get("/v1/audit-events", params=params)
+        _raise_for_status(r)
+        return PageResult.from_envelope(r.json())
+
+    def emit_audit_event(
+        self,
+        action_id: str,
+        execution_result: Any = None,
+        error: str | None = None,
+    ) -> None:
+        payload = {
+            "action_id": action_id,
+            "execution_result": execution_result,
+            "error": error,
+        }
+        try:  # noqa: SIM105 - keep explicit comment documenting best-effort intent
+            self._get_client().post("/v1/audit-events", json=payload, timeout=10.0)
+        except Exception:
+            # best-effort — never raises
+            pass

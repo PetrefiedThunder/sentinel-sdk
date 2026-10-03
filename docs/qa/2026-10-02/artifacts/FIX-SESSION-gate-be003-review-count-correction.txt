@@ -1,0 +1,5 @@
+UTC start: 2026-10-03T02:46:19+00:00
+Command: python3 -c 'print("Correction to gate-be003-review-decision: default-timeout/unapproved selection was 10 passed, 80 deselected, not 14 passed. Fallback/API/network selection remains 12 passed, 78 deselected. Review PASS unchanged; both actual artifacts contain correct counts.")'
+Exit: 0
+
+Correction to gate-be003-review-decision: default-timeout/unapproved selection was 10 passed, 80 deselected, not 14 passed. Fallback/API/network selection remains 12 passed, 78 deselected. Review PASS unchanged; both actual artifacts contain correct counts.

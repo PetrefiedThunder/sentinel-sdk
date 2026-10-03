@@ -1,0 +1,5 @@
+UTC start: 2026-10-03T02:47:43+00:00
+Command: python3 -c 'from pathlib import Path; import re; from collections import Counter; p=Path("docs/qa/2026-10-02/artifacts"); norm=lambda f: Counter(re.sub(r":\d+: error:", ": error:",s) for s in (p/f).read_text().splitlines() if ": error:" in s); before=norm("COORD-mypy.txt"); after=norm("FIX-SESSION-final-types.txt"); assert before==after,(before-after,after-before); print("All 25 advisory mypy diagnostics match sweep baseline by path/message/count; line offsets ignored.")'
+Exit: 0
+
+All 25 advisory mypy diagnostics match sweep baseline by path/message/count; line offsets ignored.

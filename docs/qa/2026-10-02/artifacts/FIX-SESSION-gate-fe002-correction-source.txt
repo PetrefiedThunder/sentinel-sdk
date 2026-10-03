@@ -1,0 +1,25 @@
+UTC start: 2026-10-03T02:44:20+00:00
+Command: nl -ba sentinel/adapters/_arguments.py
+Exit: 0
+
+     1	from __future__ import annotations
+     2
+     3	import inspect
+     4	from typing import TYPE_CHECKING, Any
+     5
+     6	if TYPE_CHECKING:
+     7	    from collections.abc import Callable
+     8
+     9
+    10	def approval_arguments(fn: Callable, args: tuple, kwargs: dict) -> dict[str, Any]:
+    11	    """Include both argument sets while preserving existing nonmixed payloads."""
+    12	    if not args or not kwargs:
+    13	        return kwargs if kwargs else {"args": list(args)}
+    14
+    15	    try:
+    16	        signature = inspect.signature(fn)
+    17	    except (TypeError, ValueError):
+    18	        return {"args": list(args), "kwargs": kwargs}
+    19
+    20	    bound = signature.bind(*args, **kwargs)
+    21	    return dict(bound.arguments)

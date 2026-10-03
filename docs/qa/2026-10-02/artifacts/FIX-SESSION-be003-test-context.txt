@@ -1,0 +1,148 @@
+UTC start: 2026-10-03T02:44:52+00:00
+Command: sed -n 196,339p tests/test_qa_backend.py
+Exit: 0
+
+    seen = []
+
+    def handler(request):
+        seen.append(
+            (request.url.host, request.headers["Authorization"], request.headers["Idempotency-Key"])
+        )
+        return httpx.Response(200, json={"action_id": request.headers["Idempotency-Key"]})
+
+    one = client_factory(handler, label="one")
+    two = client_factory(handler, label="two")
+    results = await asyncio.gather(
+        one.acreate_approval("task", {}, idempotency_key="one-request"),
+        two.acreate_approval("task", {}, idempotency_key="two-request"),
+    )
+    assert {result["action_id"] for result in results} == {"one-request", "two-request"}
+    assert set(seen) == {
+        ("one.invalid", "Bearer [REDACTED]", "one-request"),
+        ("two.invalid", "Bearer [REDACTED]", "two-request"),
+    }
+
+
+def decorator_client(monkeypatch, mode, *, decision=None, failure=None):
+    client = MagicMock()
+    client.create_approval.return_value = {"action_id": "action"}
+    client.acreate_approval = AsyncMock(return_value={"action_id": "action"})
+    client.wait_for_decision.return_value = decision
+    client.wait_for_decision.side_effect = failure
+    client.await_for_decision = AsyncMock(return_value=decision, side_effect=failure)
+    client.aemit_audit_event = AsyncMock()
+    client.aclose = AsyncMock()
+    monkeypatch.setattr(decorator_module, "SentinelClient", lambda config: client)
+    monkeypatch.setattr(decorator_module, "get_config", lambda: SentinelConfig(fallback="reject"))
+    return client
+
+
+def wrap_call(mode, function, **kwargs):
+    if mode == "async":
+
+        async def operation():
+            return function()
+
+        return lambda: asyncio.run(oversight(**kwargs)(operation)())
+
+    def operation():
+        return function()
+
+    return oversight(**kwargs)(operation)
+
+
+@pytest.mark.parametrize("mode", ["sync", "async"])
+@pytest.mark.parametrize(
+    "decision",
+    [
+        {"status": "rejected"},
+        {"status": "unknown"},
+        {},
+        {"status": "rejected", "decision": "approved"},
+    ],
+)
+def test_unapproved_decisions_never_execute(monkeypatch, mode, decision):
+    decorator_client(monkeypatch, mode, decision=decision)
+    operation = MagicMock()
+    with pytest.raises(ApprovalRejected):
+        wrap_call(mode, operation)()
+    operation.assert_not_called()
+
+
+@pytest.mark.parametrize("mode", ["sync", "async"])
+def test_default_timeout_never_executes(monkeypatch, mode):
+    decorator_client(monkeypatch, mode, failure=ApprovalTimeout("action", 1))
+    operation = MagicMock()
+    with pytest.raises(ApprovalTimeout):
+        wrap_call(mode, operation)()
+    operation.assert_not_called()
+
+
+@pytest.mark.parametrize("mode", ["sync", "async"])
+@pytest.mark.parametrize(
+    "failure", [SentinelAPIError(403, "denied"), httpx.ReadTimeout("synthetic")]
+)
+def test_execute_fallback_does_not_bypass_api_or_network_failures(monkeypatch, mode, failure):
+    decorator_client(monkeypatch, mode, failure=failure)
+    operation = MagicMock()
+    with pytest.raises(type(failure)):
+        wrap_call(mode, operation, fallback="execute")()
+    operation.assert_not_called()
+
+
+@pytest.mark.parametrize("mode", ["sync", "async"])
+@pytest.mark.parametrize("outcome", ["approved", "rejected", "timeout", "operation-error"])
+@pytest.mark.xfail(
+    strict=True, raises=AssertionError, reason="BE-002: decorator-owned clients are never closed"
+)
+def test_decorator_closes_client_on_every_exit(monkeypatch, mode, outcome):
+    client = decorator_client(
+        monkeypatch,
+        mode,
+        decision={"status": "rejected" if outcome == "rejected" else "approved"},
+        failure=ApprovalTimeout("action", 1) if outcome == "timeout" else None,
+    )
+
+    def operation():
+        if outcome == "operation-error":
+            raise ValueError("synthetic operation error")
+        return "ok"
+
+    with contextlib.suppress(ApprovalRejected, ApprovalTimeout, ValueError):
+        wrap_call(mode, operation)()
+    if mode == "async":
+        client.aclose.assert_awaited_once()
+    else:
+        client.close.assert_called_once()
+
+
+@pytest.mark.parametrize("mode", ["sync", "async"])
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason="BE-003: failing timeout fallback does not emit audit evidence",
+)
+def test_timeout_fallback_exception_is_audited(monkeypatch, mode):
+    client = decorator_client(monkeypatch, mode, failure=ApprovalTimeout("action", 1))
+
+    def operation():
+        raise ValueError("synthetic operation error")
+
+    with pytest.raises(ValueError, match="synthetic operation error"):
+        wrap_call(mode, operation, fallback="execute")()
+    audit = client.aemit_audit_event if mode == "async" else client.emit_audit_event
+    audit.assert_called_once()
+    assert audit.call_args.args[0] == "action"
+    assert "synthetic operation error" in audit.call_args.kwargs["error"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason="BE-004: mutable arguments can change while approval is pending",
+)
+async def test_execution_arguments_match_approved_snapshot(client_factory, monkeypatch):
+    approval_requested = asyncio.Event()
+    mutation_done = asyncio.Event()
+    observed = {}
