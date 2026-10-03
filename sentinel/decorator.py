@@ -34,7 +34,7 @@ def _serialize_arguments(value: Any) -> Any:
 
 def _bound_arguments(fn: Callable, args: tuple, kwargs: dict) -> dict:
     signature = inspect.signature(fn)
-    bound = signature.bind_partial(*args, **kwargs)
+    bound = signature.bind(*args, **kwargs)
     bound.apply_defaults()
     return _serialize_arguments(dict(bound.arguments))
 

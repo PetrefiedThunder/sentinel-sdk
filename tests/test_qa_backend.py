@@ -243,6 +243,33 @@ def wrap_call(mode, function, **kwargs):
 
 
 @pytest.mark.parametrize("mode", ["sync", "async"])
+@pytest.mark.parametrize("missing", ["positional", "keyword-only"])
+def test_missing_arguments_never_request_approval(monkeypatch, mode, missing):
+    """UX-003: required arguments fail before either sync or async approval."""
+    client = decorator_client(monkeypatch, mode, decision={"status": "approved"})
+    calls = []
+
+    def operation(amount, recipient, *, memo):
+        calls.append((amount, recipient, memo))
+
+    async def async_operation(amount, recipient, *, memo):
+        operation(amount, recipient, memo=memo)
+
+    wrapped = oversight()(async_operation if mode == "async" else operation)
+    args, kwargs = ((10,), {"memo": "test"}) if missing == "positional" else ((10, "recipient"), {})
+    with pytest.raises(TypeError, match="required.*argument"):
+        if mode == "async":
+            asyncio.run(wrapped(*args, **kwargs))
+        else:
+            wrapped(*args, **kwargs)
+    assert calls == []
+    client.create_approval.assert_not_called()
+    client.acreate_approval.assert_not_called()
+    client.wait_for_decision.assert_not_called()
+    client.await_for_decision.assert_not_called()
+
+
+@pytest.mark.parametrize("mode", ["sync", "async"])
 @pytest.mark.parametrize(
     "decision",
     [
