@@ -198,6 +198,12 @@ agent.run("…", callbacks=[SentinelCallbackHandler(risk_level="high")])
 
 Install with `pip install sentinel-oversight[langchain]`.
 
+The handler fails closed: rejection, timeout, network errors, malformed responses,
+and HTTP errors propagate to LangChain and prevent tool execution. Keep its
+`raise_error=True` setting enabled. The decorator's explicit `fallback="execute"`
+(or `SENTINEL_FALLBACK=execute`) applies only to `@oversight` timeouts; the
+LangChain handler does not use that fallback.
+
 ## OpenAI Agents SDK
 
 ```python

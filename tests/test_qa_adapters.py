@@ -5,11 +5,14 @@ import inspect
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
+import httpx
 import pytest
 
 from sentinel.adapters import anthropic, autogen, crewai, langgraph, openai_agents
 from sentinel.adapters.semantic_kernel import sentinel_filter
-from sentinel.exceptions import ApprovalRejected, ApprovalTimeout
+from sentinel.client import SentinelClient
+from sentinel.config import SentinelConfig
+from sentinel.exceptions import ApprovalRejected, ApprovalTimeout, SentinelAPIError
 
 
 def _client(decision):
@@ -161,14 +164,10 @@ def test_mixed_async_arguments_are_fully_presented_for_approval(adapter):
     }
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="FE-001: LangChain swallows callback rejection and runs tool",
-)
 @pytest.mark.parametrize("asynchronous", [False, True], ids=["invoke", "ainvoke"])
 @pytest.mark.parametrize("failure", ["rejected", "timeout", "transport_error"])
 def test_real_langchain_tool_does_not_run_after_gate_failure(asynchronous, failure):
+    """FE-001: a gate error must propagate through the host without execution."""
     pytest.importorskip("langchain_core")
     from langchain_core.tools import tool
 
@@ -183,19 +182,87 @@ def test_real_langchain_tool_does_not_run_after_gate_failure(asynchronous, failu
         return "executed"
 
     client = _client({"status": "rejected", "reason": "qa denied"})
+    error = ApprovalRejected
     if failure == "timeout":
         client.wait_for_decision.side_effect = ApprovalTimeout("qa-action", 1)
+        error = ApprovalTimeout
     elif failure == "transport_error":
         client.create_approval.side_effect = ConnectionError("qa local connection failure")
+        error = ConnectionError
     config = {"callbacks": [SentinelCallbackHandler(client=client)]}
-    try:
+    with pytest.raises(error):
         if asynchronous:
             asyncio.run(local_action.ainvoke({"value": 7}, config=config))
         else:
             local_action.invoke({"value": 7}, config=config)
-    except (ApprovalRejected, ApprovalTimeout, ConnectionError):
-        pass
     client.create_approval.assert_called_once()
+    assert calls == []
+
+
+@pytest.mark.parametrize("asynchronous", [False, True], ids=["invoke", "ainvoke"])
+@pytest.mark.parametrize("stage", ["create", "wait"])
+@pytest.mark.parametrize(
+    "failure, error",
+    [
+        ("network", httpx.ConnectError),
+        ("timeout", httpx.ReadTimeout),
+        ("invalid_json", ValueError),
+        ("null", AttributeError),
+        ("array", AttributeError),
+        ("http_403", SentinelAPIError),
+        ("http_503", SentinelAPIError),
+    ],
+)
+def test_real_langchain_http_gate_failures_block_execution(asynchronous, stage, failure, error):
+    """FE-001: use the real HTTP client and host with an offline transport."""
+    pytest.importorskip("langchain_core")
+    from langchain_core.tools import tool
+
+    from sentinel.adapters.langchain import SentinelCallbackHandler
+
+    calls = []
+    requests = []
+
+    @tool
+    def local_action(value: int) -> str:
+        """Record a local action without contacting any external service."""
+        calls.append(value)
+        return "executed"
+
+    def transport(request):
+        requests.append(request.url.path)
+        if stage == "wait" and request.method == "POST":
+            return httpx.Response(201, json={"action_id": "qa-action"})
+        if failure == "network":
+            raise httpx.ConnectError("synthetic connection failure", request=request)
+        if failure == "timeout":
+            raise httpx.ReadTimeout("synthetic timeout", request=request)
+        if failure == "invalid_json":
+            return httpx.Response(200, content=b"not JSON")
+        if failure == "null":
+            return httpx.Response(200, content=b"null")
+        if failure == "array":
+            return httpx.Response(200, json=[])
+        return httpx.Response(int(failure.removeprefix("http_")), json={"detail": "denied"})
+
+    client = SentinelClient(SentinelConfig(api_url="https://sentinel.invalid"))
+    with httpx.Client(
+        base_url="https://sentinel.invalid", transport=httpx.MockTransport(transport)
+    ) as http_client:
+        client._client = http_client
+        handler = SentinelCallbackHandler(client=client)
+        assert handler.raise_error is True
+        config = {"callbacks": [handler]}
+        with pytest.raises(error):
+            if asynchronous:
+                asyncio.run(local_action.ainvoke({"value": 7}, config=config))
+            else:
+                local_action.invoke({"value": 7}, config=config)
+    assert requests == (
+        ["/v1/approvals"]
+        if stage == "create"
+        else ["/v1/approvals", "/v1/approvals/qa-action/wait"]
+    )
     assert calls == []
 
 
