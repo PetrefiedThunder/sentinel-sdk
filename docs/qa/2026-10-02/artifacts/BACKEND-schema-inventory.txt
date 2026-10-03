@@ -1,0 +1,5 @@
+UTC start: 2026-10-03T01:54:55+00:00
+Command: rg --files -g '*openapi*' -g '*swagger*' -g '*schema*' -g '*.json' -g '*.yaml' -g '*.yml' -g '!docs/qa/**'
+Exit: 0
+
+.pre-commit-config.yaml

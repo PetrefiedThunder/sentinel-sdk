@@ -1,0 +1,160 @@
+UTC start: 2026-10-03T01:51:14+00:00
+Command: nl -ba sentinel/decorator.py
+Exit: 0
+
+     1	from __future__ import annotations
+     2	
+     3	import functools
+     4	import inspect
+     5	from typing import TYPE_CHECKING, Any
+     6	
+     7	from .client import SentinelClient
+     8	from .config import get_config
+     9	from .exceptions import ApprovalRejected, ApprovalTimeout
+    10	
+    11	if TYPE_CHECKING:
+    12	    from collections.abc import Callable
+    13	
+    14	_PRIMITIVES = (str, int, float, bool, type(None))
+    15	_MAX_REPR = 500
+    16	
+    17	
+    18	def _truncate_repr(obj: Any) -> str:
+    19	    s = repr(obj)
+    20	    if len(s) > _MAX_REPR:
+    21	        return s[:_MAX_REPR] + "...<truncated>"
+    22	    return s
+    23	
+    24	
+    25	def _serialize_arguments(value: Any) -> Any:
+    26	    if isinstance(value, _PRIMITIVES):
+    27	        return value
+    28	    if isinstance(value, list | tuple):
+    29	        return [_serialize_arguments(v) for v in value]
+    30	    if isinstance(value, dict):
+    31	        return {str(k): _serialize_arguments(v) for k, v in value.items()}
+    32	    return _truncate_repr(value)
+    33	
+    34	
+    35	def _bound_arguments(fn: Callable, args: tuple, kwargs: dict) -> dict:
+    36	    signature = inspect.signature(fn)
+    37	    bound = signature.bind_partial(*args, **kwargs)
+    38	    bound.apply_defaults()
+    39	    return _serialize_arguments(dict(bound.arguments))
+    40	
+    41	
+    42	def oversight(
+    43	    risk_level: str = "medium",
+    44	    approvers: list | None = None,
+    45	    timeout_seconds: float | None = None,
+    46	    fallback: str | None = None,
+    47	    idempotency_key: str | Callable[[], str] | None = None,
+    48	) -> Callable:
+    49	    def decorator(fn: Callable) -> Callable:
+    50	        is_async = inspect.iscoroutinefunction(fn)
+    51	
+    52	        def _approval_kwargs() -> dict:
+    53	            """Extra kwargs for create_approval. Callable keys are invoked
+    54	            once per wrapped-function invocation."""
+    55	            if idempotency_key is None:
+    56	                return {}
+    57	            key = idempotency_key() if callable(idempotency_key) else idempotency_key
+    58	            return {"idempotency_key": key}
+    59	
+    60	        if is_async:
+    61	
+    62	            @functools.wraps(fn)
+    63	            async def awrapper(*args, **kwargs):
+    64	                cfg = get_config()
+    65	                client = SentinelClient(cfg)
+    66	                fb = fallback or cfg.fallback
+    67	                arguments = _bound_arguments(fn, args, kwargs)
+    68	                approval = await client.acreate_approval(
+    69	                    function_name=fn.__name__,
+    70	                    arguments=arguments,
+    71	                    risk_level=risk_level,
+    72	                    approvers=approvers,
+    73	                    timeout_seconds=timeout_seconds,
+    74	                    **_approval_kwargs(),
+    75	                )
+    76	                action_id = approval.get("action_id") or approval.get("id")
+    77	                try:
+    78	                    decision = await client.await_for_decision(action_id, timeout=timeout_seconds)
+    79	                except ApprovalTimeout:
+    80	                    if fb == "execute":
+    81	                        result = await fn(*args, **kwargs)
+    82	                        await client.aemit_audit_event(
+    83	                            action_id,
+    84	                            execution_result=_truncate_repr(result),
+    85	                            error="timeout-fallback-execute",
+    86	                        )
+    87	                        return result
+    88	                    raise
+    89	
+    90	                status = decision.get("status") or decision.get("decision")
+    91	                if status == "approved":
+    92	                    try:
+    93	                        result = await fn(*args, **kwargs)
+    94	                    except Exception as e:
+    95	                        await client.aemit_audit_event(
+    96	                            action_id, execution_result=None, error=_truncate_repr(e)
+    97	                        )
+    98	                        raise
+    99	                    await client.aemit_audit_event(
+   100	                        action_id, execution_result=_truncate_repr(result)
+   101	                    )
+   102	                    return result
+   103	                if status == "rejected":
+   104	                    raise ApprovalRejected(reason=decision.get("reason", ""), action_id=action_id)
+   105	                raise ApprovalRejected(
+   106	                    reason=f"Unknown decision status: {status}", action_id=action_id
+   107	                )
+   108	
+   109	            return awrapper
+   110	
+   111	        @functools.wraps(fn)
+   112	        def wrapper(*args, **kwargs):
+   113	            cfg = get_config()
+   114	            client = SentinelClient(cfg)
+   115	            fb = fallback or cfg.fallback
+   116	            arguments = _bound_arguments(fn, args, kwargs)
+   117	            approval = client.create_approval(
+   118	                function_name=fn.__name__,
+   119	                arguments=arguments,
+   120	                risk_level=risk_level,
+   121	                approvers=approvers,
+   122	                timeout_seconds=timeout_seconds,
+   123	                **_approval_kwargs(),
+   124	            )
+   125	            action_id = approval.get("action_id") or approval.get("id")
+   126	            try:
+   127	                decision = client.wait_for_decision(action_id, timeout=timeout_seconds)
+   128	            except ApprovalTimeout:
+   129	                if fb == "execute":
+   130	                    result = fn(*args, **kwargs)
+   131	                    client.emit_audit_event(
+   132	                        action_id,
+   133	                        execution_result=_truncate_repr(result),
+   134	                        error="timeout-fallback-execute",
+   135	                    )
+   136	                    return result
+   137	                raise
+   138	
+   139	            status = decision.get("status") or decision.get("decision")
+   140	            if status == "approved":
+   141	                try:
+   142	                    result = fn(*args, **kwargs)
+   143	                except Exception as e:
+   144	                    client.emit_audit_event(
+   145	                        action_id, execution_result=None, error=_truncate_repr(e)
+   146	                    )
+   147	                    raise
+   148	                client.emit_audit_event(action_id, execution_result=_truncate_repr(result))
+   149	                return result
+   150	            if status == "rejected":
+   151	                raise ApprovalRejected(reason=decision.get("reason", ""), action_id=action_id)
+   152	            raise ApprovalRejected(reason=f"Unknown decision status: {status}", action_id=action_id)
+   153	
+   154	        return wrapper
+   155	
+   156	    return decorator

@@ -1,0 +1,164 @@
+UTC start: 2026-10-03T01:54:55+00:00
+Command: python3 -c 'from pathlib import Path; selections={"sentinel/client.py":[(189,221),(368,394)],"sentinel/decorator.py":[(60,107),(111,152)],"sentinel/config.py":[(24,30)]}; [(print("FILE",name),[(print(f"{i}: {lines[i-1]}")) for lo,hi in ranges for i in range(lo,hi+1)]) for name,ranges in selections.items() for lines in [Path(name).read_text().splitlines()]]'
+Exit: 0
+
+FILE sentinel/client.py
+189:     def wait_for_decision(
+190:         self,
+191:         action_id: str,
+192:         timeout: float | None = None,
+193:         poll_interval: float | None = None,
+194:     ) -> dict:
+195:         """Block until the approval is decided or the timeout elapses.
+196: 
+197:         Uses the server-side long-poll endpoint when available (single RTT per
+198:         ~30s wait window), falling back to client polling.
+199:         """
+200:         timeout = timeout or self.config.timeout_seconds
+201:         deadline = time.monotonic() + timeout
+202:         while True:
+203:             remaining = max(1.0, min(30.0, deadline - time.monotonic()))
+204:             try:
+205:                 r = self._get_client().get(
+206:                     f"/v1/approvals/{action_id}/wait",
+207:                     params={"timeout": remaining},
+208:                     timeout=remaining + 5.0,
+209:                 )
+210:                 _raise_for_status(r)
+211:                 data = r.json()
+212:             except SentinelAPIError as e:
+213:                 # Fall back to plain polling if /wait isn't available (older server)
+214:                 if e.status_code != 404:
+215:                     raise
+216:                 data = self.get_approval(action_id)
+217:             status = data.get("status") or data.get("decision")
+218:             if status in ("approved", "rejected"):
+219:                 return data
+220:             if time.monotonic() >= deadline:
+221:                 raise ApprovalTimeout(action_id=action_id, timeout_seconds=timeout)
+368:     async def await_for_decision(
+369:         self,
+370:         action_id: str,
+371:         timeout: float | None = None,
+372:         poll_interval: float | None = None,
+373:     ) -> dict:
+374:         timeout = timeout or self.config.timeout_seconds
+375:         deadline = time.monotonic() + timeout
+376:         while True:
+377:             remaining = max(1.0, min(30.0, deadline - time.monotonic()))
+378:             try:
+379:                 r = await self._get_aclient().get(
+380:                     f"/v1/approvals/{action_id}/wait",
+381:                     params={"timeout": remaining},
+382:                     timeout=remaining + 5.0,
+383:                 )
+384:                 _raise_for_status(r)
+385:                 data = r.json()
+386:             except SentinelAPIError as e:
+387:                 if e.status_code != 404:
+388:                     raise
+389:                 data = await self.aget_approval(action_id)
+390:             status = data.get("status") or data.get("decision")
+391:             if status in ("approved", "rejected"):
+392:                 return data
+393:             if time.monotonic() >= deadline:
+394:                 raise ApprovalTimeout(action_id=action_id, timeout_seconds=timeout)
+FILE sentinel/decorator.py
+60:         if is_async:
+61: 
+62:             @functools.wraps(fn)
+63:             async def awrapper(*args, **kwargs):
+64:                 cfg = get_config()
+65:                 client = SentinelClient(cfg)
+66:                 fb = fallback or cfg.fallback
+67:                 arguments = _bound_arguments(fn, args, kwargs)
+68:                 approval = await client.acreate_approval(
+69:                     function_name=fn.__name__,
+70:                     arguments=arguments,
+71:                     risk_level=risk_level,
+72:                     approvers=approvers,
+73:                     timeout_seconds=timeout_seconds,
+74:                     **_approval_kwargs(),
+75:                 )
+76:                 action_id = approval.get("action_id") or approval.get("id")
+77:                 try:
+78:                     decision = await client.await_for_decision(action_id, timeout=timeout_seconds)
+79:                 except ApprovalTimeout:
+80:                     if fb == "execute":
+81:                         result = await fn(*args, **kwargs)
+82:                         await client.aemit_audit_event(
+83:                             action_id,
+84:                             execution_result=_truncate_repr(result),
+85:                             error="timeout-fallback-execute",
+86:                         )
+87:                         return result
+88:                     raise
+89: 
+90:                 status = decision.get("status") or decision.get("decision")
+91:                 if status == "approved":
+92:                     try:
+93:                         result = await fn(*args, **kwargs)
+94:                     except Exception as e:
+95:                         await client.aemit_audit_event(
+96:                             action_id, execution_result=None, error=_truncate_repr(e)
+97:                         )
+98:                         raise
+99:                     await client.aemit_audit_event(
+100:                         action_id, execution_result=_truncate_repr(result)
+101:                     )
+102:                     return result
+103:                 if status == "rejected":
+104:                     raise ApprovalRejected(reason=decision.get("reason", ""), action_id=action_id)
+105:                 raise ApprovalRejected(
+106:                     reason=f"Unknown decision status: {status}", action_id=action_id
+107:                 )
+111:         @functools.wraps(fn)
+112:         def wrapper(*args, **kwargs):
+113:             cfg = get_config()
+114:             client = SentinelClient(cfg)
+115:             fb = fallback or cfg.fallback
+116:             arguments = _bound_arguments(fn, args, kwargs)
+117:             approval = client.create_approval(
+118:                 function_name=fn.__name__,
+119:                 arguments=arguments,
+120:                 risk_level=risk_level,
+121:                 approvers=approvers,
+122:                 timeout_seconds=timeout_seconds,
+123:                 **_approval_kwargs(),
+124:             )
+125:             action_id = approval.get("action_id") or approval.get("id")
+126:             try:
+127:                 decision = client.wait_for_decision(action_id, timeout=timeout_seconds)
+128:             except ApprovalTimeout:
+129:                 if fb == "execute":
+130:                     result = fn(*args, **kwargs)
+131:                     client.emit_audit_event(
+132:                         action_id,
+133:                         execution_result=_truncate_repr(result),
+134:                         error="timeout-fallback-execute",
+135:                     )
+136:                     return result
+137:                 raise
+138: 
+139:             status = decision.get("status") or decision.get("decision")
+140:             if status == "approved":
+141:                 try:
+142:                     result = fn(*args, **kwargs)
+143:                 except Exception as e:
+144:                     client.emit_audit_event(
+145:                         action_id, execution_result=None, error=_truncate_repr(e)
+146:                     )
+147:                     raise
+148:                 client.emit_audit_event(action_id, execution_result=_truncate_repr(result))
+149:                 return result
+150:             if status == "rejected":
+151:                 raise ApprovalRejected(reason=decision.get("reason", ""), action_id=action_id)
+152:             raise ApprovalRejected(reason=f"Unknown decision status: {status}", action_id=action_id)
+FILE sentinel/config.py
+24: @dataclass
+25: class SentinelConfig:
+26:     api_url: str = field(default_factory=_default_api_url)
+27:     api_key: str | None = field(default_factory=_default_api_key)
+28:     timeout_seconds: float = field(default_factory=_default_timeout)
+29:     poll_interval: float = 2.0
+30:     fallback: str = field(default_factory=_default_fallback)

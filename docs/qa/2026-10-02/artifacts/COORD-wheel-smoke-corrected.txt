@@ -1,0 +1,9 @@
+UTC start: 2026-10-03T01:53:31+00:00
+Command: /private/tmp/sentinel-qa-wheel-env/bin/python -I -c 'import importlib,importlib.metadata as m; import sentinel; assert "site-packages" in sentinel.__file__; assert sentinel.__version__==m.version("sentinel-oversight"); [getattr(sentinel,n) for n in sentinel.__all__]; [importlib.import_module("sentinel.adapters."+n) for n in ("anthropic","autogen","crewai","langgraph","openai_agents","semantic_kernel","langchain")]; print("Installed wheel exports and all seven lazy adapters import: PASS"); from sentinel.adapters.langchain import SentinelCallbackHandler;
+try: SentinelCallbackHandler()
+except ImportError as exc: assert "sentinel-oversight[langchain]" in str(exc); print("Without extra, handler instantiation reports install guidance: PASS")
+else: raise AssertionError("Expected missing optional dependency")'
+Exit: 0
+
+Installed wheel exports and all seven lazy adapters import: PASS
+Without extra, handler instantiation reports install guidance: PASS

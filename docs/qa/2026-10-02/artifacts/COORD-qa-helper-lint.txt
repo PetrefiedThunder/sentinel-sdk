@@ -1,0 +1,70 @@
+UTC start: 2026-10-03T01:54:52+00:00
+Command: .venv/bin/ruff check docs/qa/2026-10-02/artifacts/qa_run.py tests/conftest.py
+Exit: 1
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> docs/qa/2026-10-02/artifacts/qa_run.py:3:1
+   |
+ 1 |   #!/usr/bin/env python3
+ 2 |   """Run a QA command with sanitized output, isolated environment and UTC logging."""
+ 3 | / import datetime
+ 4 | | import os
+ 5 | | from pathlib import Path
+ 6 | | import re
+ 7 | | import shlex
+ 8 | | import subprocess
+ 9 | | import sys
+   | |__________^
+10 |
+11 |   ROOT = Path(__file__).resolve().parents[4]
+   |
+help: Organize imports
+   |
+4  | import os
+   - from pathlib import Path
+5  | import re
+6  | import shlex
+7  | import subprocess
+8  | import sys
+9  + from pathlib import Path
+10 |
+   |
+
+UP017 [*] Use `datetime.UTC` alias
+  --> docs/qa/2026-10-02/artifacts/qa_run.py:21:35
+   |
+19 | def main():
+20 |     group, label, *command = sys.argv[1:]
+21 |     stamp = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')
+   |                                   ^^^^^^^^^^^^^^^^^^^^^
+22 |     target = QA / 'artifacts' / f'{group}-{label}.txt'
+23 |     env = {key: value for key, value in os.environ.items() if key in {
+   |
+help: Convert to `datetime.UTC` alias
+   |
+20 |     group, label, *command = sys.argv[1:]
+   -     stamp = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')
+21 +     stamp = datetime.datetime.now(datetime.UTC).isoformat(timespec='seconds')
+22 |     target = QA / 'artifacts' / f'{group}-{label}.txt'
+   |
+
+UP017 [*] Use `datetime.UTC` alias
+  --> docs/qa/2026-10-02/artifacts/qa_run.py:35:33
+   |
+33 |     output = redact(outcome.stdout)
+34 |     target.write_text(f'UTC start: {stamp}\nCommand: {redact(shlex.join(command))}\nExit: {outcome.returncode}\n\n{output}')
+35 |     end = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')
+   |                                 ^^^^^^^^^^^^^^^^^^^^^
+36 |     with (QA / f'{group}-LOG.md').open('a') as log:
+37 |         log.write(f'\n- **{stamp} → {end}** `{redact(shlex.join(command))}` — exit **{outcome.returncode}**; [output](artifacts/{targe…
+   |
+help: Convert to `datetime.UTC` alias
+   |
+34 |     target.write_text(f'UTC start: {stamp}\nCommand: {redact(shlex.join(command))}\nExit: {outcome.returncode}\n\n{output}')
+   -     end = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')
+35 +     end = datetime.datetime.now(datetime.UTC).isoformat(timespec='seconds')
+36 |     with (QA / f'{group}-LOG.md').open('a') as log:
+   |
+
+Found 3 errors.
+[*] 3 fixable with the `--fix` option.

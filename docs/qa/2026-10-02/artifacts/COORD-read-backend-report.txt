@@ -1,0 +1,65 @@
+UTC start: 2026-10-03T01:56:16+00:00
+Command: cat docs/qa/2026-10-02/BACKEND-REPORT.md
+Exit: 0
+
+# Backend QA report
+
+Scope: Python SDK HTTP client, configuration and `@oversight` decorator. This repository contains a client library, not a backend server. All requests were intercepted by `httpx.MockTransport`; the root QA fixture additionally blocks real sockets. No production service, credentials, tenant, SMS destination or database was used.
+
+Backend counts: **Critical=0 High=1 Medium=5 Low=0**. Product code is unchanged. The new module has **72 passing cases and 16 strict expected failures** representing six findings. The property test additionally checks 75 deterministic recursive JSON examples. Findings remain unfixed; expected-failure markers keep these regressions visible without turning normal CI red.
+
+## Findings
+
+Run the exact reproduction selectors with `.venv/bin/python -m pytest tests/test_qa_backend.py --runxfail -q -k '<selector>'`. The normal run omits `--runxfail`. [Negative-control output](artifacts/BACKEND-negative-controls.txt) proves all 16 assertions fail without their expected-failure markers; [normal output](artifacts/BACKEND-focused-final.txt) records the green marked run.
+
+| ID | Severity | Group | Title | Exact reproduction | Expected vs actual | Evidence | Suggested fix |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| BE-001 | Medium | Backend | Legacy-server polling ignores its interval | Select `legacy_wait_paces_pending_requests`; mock `/wait` as 404 and the ordinary approval endpoint as pending, then approved; request `poll_interval=2`. | Expected: wait between pending fallback polls. Actual: zero sleeps/awaited sleeps, and `/wait` is retried on every iteration. Fast legacy responses create an unbounded request rate relative to the requested interval. | `sentinel/client.py:193`, `:202`, `:212`, `:372`, `:376`, `:386`; sync/async test assertions. | Use configured or explicit poll interval for legacy polling, bounded by remaining deadline; remember unsupported long polling during that wait operation. |
+| BE-002 | Medium | Backend | Decorator never closes clients it owns | Select `decorator_closes_client_on_every_exit`; invoke approved, rejected, timeout and protected-operation exception paths in both modes. | Expected: exactly one `close()` or awaited `aclose()` on every exit. Actual: zero cleanup calls for all eight paths. Repeated calls can retain HTTP connections and rely on garbage collection for cleanup. Descriptor exhaustion was not load-tested. | `sentinel/decorator.py:65`, `:114`; `test_decorator_closes_client_on_every_exit`. | Put each decorator-owned client behind `try/finally`, closing in the matching sync/async mode, including approval-creation failures. |
+| BE-003 | Medium | Backend | Failing timeout fallback leaves no execution audit event | Select `timeout_fallback_exception_is_audited`; set `fallback='execute'`, make waiting raise `ApprovalTimeout`, and make the protected function raise `ValueError`. | Expected: propagate the operation error and attempt an audit event for the attempted execution. Actual: exception propagates before any audit call. A function may have partial side effects before raising, leaving the oversight record incomplete. | `sentinel/decorator.py:80`, `:81`, `:129`, `:130`; sync/async test. | Give fallback execution the same exception audit handling as approved execution, preserving the original exception and fallback reason. |
+| BE-004 | High | Backend | Mutable arguments may differ from the approved payload | Select `execution_arguments_match_approved_snapshot`; call an async protected operation with `{'amount': 10}`, pause in mocked wait, mutate that same dictionary from a second task to `999`, then approve. | Expected: execute the approved snapshot or reject a changed argument set. Actual: approval request contains amount 10; protected function receives 999. Requires shared mutable input in the same process; this is not a claim of remote unauthenticated access. | `sentinel/decorator.py:67`, `:78`, `:93` (sync analogue `:116`, `:127`, `:142`); assertion `999 == 10` in negative control. | Establish an immutable execution snapshot for supported inputs and bind approval to it; document unsupported mutable objects and reject unsafe changes before execution. Avoid merely comparing a digest and then executing an externally mutable reference. |
+| BE-005 | Medium | Backend | An approval arriving after the caller deadline is accepted | Select `late_approval_does_not_bypass_deadline`; use timeout 1, start monotonic time at 100, advance to 102 inside the mocked HTTP response, then return approved. | Expected: the elapsed caller deadline produces `ApprovalTimeout`. Actual: approved is returned before the deadline check; the HTTP request also receives a timeout greater than the remaining caller budget. No real-time latency or production response claim is made. | `sentinel/client.py:203`, `:208`, `:218`, `:220`, `:377`, `:382`, `:391`, `:393`; sync/async test. | Check the monotonic deadline before requests and before accepting returned decisions; cap request waits to the remaining budget and define whether late rejection has different semantics. |
+| BE-006 | Medium | Backend | Configuration repr discloses the credential value | Select `config_repr_omits_credential`; construct `SentinelConfig` with the test's clearly synthetic credential marker and inspect `repr(config)`. | Expected: diagnostic representation omits the API credential. Actual: default dataclass repr includes `api_key='[REDACTED]'`. Logging the object can disclose a real caller credential. No real secret was found or used. | `sentinel/config.py:24`, `:27`; `test_config_repr_omits_credential`. | Define the field with `repr=False`; retain a synthetic regression ensuring diagnostic output excludes its value. |
+
+## Passing checks and local auth matrix
+
+| Scenario | Local evidence | Scope of conclusion |
+| --- | --- | --- |
+| No configured API key | Two sync/async cases raise `SentinelConfigError` before constructing a transport. | SDK rejects missing configuration. |
+| Server rejects unauthorized or forbidden request | 401 and 403 are included in the 18 HTTP-status cases; status/detail are preserved and there is one POST only. | SDK propagates denial; actual server authorization is untested. |
+| Distinct synthetic tenants/clients | Two concurrent clients send their own host and authorization header. | SDK clients do not overwrite each other's captured credentials. This does not prove server tenant isolation. |
+| Same client, concurrent operations | Ten async requests retain their distinct idempotency keys and request data. | Header/body isolation is verified under cooperative async concurrency. |
+| Rejected, unknown, absent or conflicting decision | Eight cases never invoke protected function; explicit rejection takes precedence over secondary approved decision. | Local decorator fails closed on these decision shapes. |
+| Approval timeout | Default reject fallback does not execute. Explicit execute fallback does not apply to 403 or transport timeouts. | Fallback permission is limited to `ApprovalTimeout`; the explicit execute mode remains intentionally fail-open. |
+| 400/401/403/404/409/422/429/500/503 and transport failures | Exact status retained; no SDK retry of approval POST; text/list/message error bodies remain visible. | Retry amplification of non-idempotent POST is absent in these paths. Server replay deduplication is untested. |
+| Legacy `/wait` support | Both approved and rejected fallback decisions return correctly. | Compatibility works for terminal decisions; pacing defect remains BE-001. |
+| Arguments | 75 deterministic nested JSON values round-trip; six nonfinite float cases fail before transport. | Serialization safety for generated plain JSON values, not arbitrary Python object semantics. |
+| Supporting endpoints | 14 sync/async cases inspect tenant, default approver, consent contact, revocation and audit methods, paths and bodies. | Internal SDK contract parity only; no checked-in OpenAPI/schema was found to validate server compatibility. |
+| Audit transport errors | Sync/async transport errors remain best effort and do not replace the function outcome. | Matches the explicit best-effort comment; server persistence is unverified. |
+
+## OWASP API review applicability
+
+This is a local checklist mapped to the API Top 10 categories, not certification or a production penetration test.
+
+| Category | SDK-local assessment | Remaining server-side evidence |
+| --- | --- | --- |
+| API1 Broken Object Level Authorization | Action/contact identifiers are sent to the API; auth propagation and independent client identities are tested. | Cross-tenant object access, identifier ownership and database policies are unavailable. |
+| API2 Broken Authentication | Missing credentials fail locally; 401/403 are propagated. BE-006 exposes a credential through config repr if an application logs it. | Key expiry, rotation, revocation, scope and gateway authentication cannot be tested here. |
+| API3 Broken Object Property Level Authorization | Plain JSON arguments are serialized predictably. BE-004 breaks binding between approval content and eventual mutable execution inputs. | Server writable-field restrictions and sensitive-field filtering are unavailable. |
+| API4 Unrestricted Resource Consumption | BE-001 removes fallback pacing; BE-002 omits owned-client cleanup; BE-005 does not enforce a strict caller deadline. | Server rate limits, capacity and billing protections are unavailable. |
+| API5 Broken Function Level Authorization | Local fail-closed and 403 propagation cases pass. | Administrative/approver role permissions for contacts, tenant changes and approvals remain untested. |
+| API6 Unrestricted Access to Sensitive Business Flows | Rejected/unknown decisions block execution; BE-004 permits mutated arguments and BE-003 omits an audit attempt after failed fallback execution. | Server approval replay controls and business limits are unavailable. |
+| API7 Server Side Request Forgery | No server is present. SDK base URL is caller configuration; tests use reserved `.invalid` hosts and mocks. | Do not infer server URL validation or SSRF protection from this sweep. |
+| API8 Security Misconfiguration | Default decorator timeout behavior rejects. Explicit `fallback='execute'` is opt-in. Config repr protection is missing (BE-006). | TLS, CORS, proxy and production deployment settings were not contacted. |
+| API9 Improper Inventory Management | Public sync/async endpoint inventory exercised; no checked-in OpenAPI/schema available in the searched source tree. | API version compatibility, retired endpoints and production inventory are unverified. |
+| API10 Unsafe Consumption of APIs | Non-2xx and sampled decision states fail closed; generated JSON inputs round-trip. | Full malformed successful response/schema fuzzing and actual upstream contracts remain gaps. |
+
+## Limits and handoff
+
+No browser/UI backend exists in this package. Screenshots would not establish Python client behavior; terminal reports and reproducible tests are the evidence. Root QA owns aggregate before/after coverage, full-suite checks and the dependency audit. Backend-only tests are not a statement that every optional adapter/framework combination works.
+
+Still untested: real server authorization and audit durability, actual idempotency deduplication, real HTTP/TLS latency, thread races during lazy client construction, cancellation teardown, indefinite pending load, and every malformed success-envelope shape. Coverage is reported in `COVERAGE.md`; expected-failure execution contributes to coverage but does not mean those behaviors are correct.
+
+PR: opened by orchestrator
+
+CI status: pending at time of writing

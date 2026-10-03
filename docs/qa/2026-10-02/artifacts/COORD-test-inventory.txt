@@ -1,0 +1,925 @@
+UTC start: 2026-10-03T01:50:04+00:00
+Command: python3 -c 'from pathlib import Path; names=list(Path("tests").glob("test*.py")); [(print("\nFILE:",p),print(p.read_text())) for p in names]'
+Exit: 0
+
+
+FILE: tests/test_idempotency.py
+"""Idempotency-Key support on POST /v1/approvals (client + decorator)."""
+
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import httpx
+import pytest
+
+from sentinel import SentinelClient, oversight
+from sentinel.config import SentinelConfig
+
+_APPROVAL_BODY = {"action_id": "act_1", "status": "pending"}
+
+
+def _make_client(captured: list) -> SentinelClient:
+    """Real SentinelClient with an httpx MockTransport that records requests.
+
+    Uses the client's own default headers so the test verifies the real
+    httpx merge behavior (per-request headers must not drop Authorization).
+    """
+    client = SentinelClient(SentinelConfig(api_key="sk_test", api_url="https://api.test"))
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request)
+        return httpx.Response(200, json=_APPROVAL_BODY)
+
+    client._client = httpx.Client(
+        base_url="https://api.test",
+        headers=client._headers(),
+        transport=httpx.MockTransport(handler),
+    )
+    client._aclient = httpx.AsyncClient(
+        base_url="https://api.test",
+        headers=client._headers(),
+        transport=httpx.MockTransport(handler),
+    )
+    return client
+
+
+# ------------- client: sync -------------
+def test_header_sent_with_exact_value():
+    captured = []
+    client = _make_client(captured)
+    client.create_approval(function_name="transfer", arguments={"a": 1}, idempotency_key="key-123")
+    assert captured[0].headers["Idempotency-Key"] == "key-123"
+
+
+def test_header_absent_when_not_set():
+    captured = []
+    client = _make_client(captured)
+    client.create_approval(function_name="transfer", arguments={"a": 1})
+    assert "Idempotency-Key" not in captured[0].headers
+
+
+def test_header_merge_keeps_authorization():
+    captured = []
+    client = _make_client(captured)
+    client.create_approval(function_name="transfer", arguments={"a": 1}, idempotency_key="key-123")
+    assert captured[0].headers["Authorization"] == "Bearer [REDACTED]"
+    assert captured[0].headers["Idempotency-Key"] == "key-123"
+
+
+# ------------- client: async -------------
+@pytest.mark.asyncio
+async def test_async_header_sent_with_exact_value():
+    captured = []
+    client = _make_client(captured)
+    await client.acreate_approval(
+        function_name="transfer", arguments={"a": 1}, idempotency_key="akey-456"
+    )
+    assert captured[0].headers["Idempotency-Key"] == "akey-456"
+    assert captured[0].headers["Authorization"] == "Bearer [REDACTED]"
+
+
+@pytest.mark.asyncio
+async def test_async_header_absent_when_not_set():
+    captured = []
+    client = _make_client(captured)
+    await client.acreate_approval(function_name="transfer", arguments={"a": 1})
+    assert "Idempotency-Key" not in captured[0].headers
+
+
+# ------------- decorator: sync -------------
+@patch("sentinel.decorator.SentinelClient")
+def test_decorator_string_key_passed_through(mock_client_cls):
+    mock_client = MagicMock()
+    mock_client.create_approval.return_value = {"action_id": "act_1"}
+    mock_client.wait_for_decision.return_value = {"status": "approved"}
+    mock_client_cls.return_value = mock_client
+
+    @oversight(idempotency_key="fixed-key")
+    def task():
+        return "ok"
+
+    assert task() == "ok"
+    assert task() == "ok"
+    for call in mock_client.create_approval.call_args_list:
+        assert call.kwargs["idempotency_key"] == "fixed-key"
+
+
+@patch("sentinel.decorator.SentinelClient")
+def test_decorator_callable_invoked_per_call(mock_client_cls):
+    mock_client = MagicMock()
+    mock_client.create_approval.return_value = {"action_id": "act_1"}
+    mock_client.wait_for_decision.return_value = {"status": "approved"}
+    mock_client_cls.return_value = mock_client
+
+    counter = {"n": 0}
+
+    def keygen():
+        counter["n"] += 1
+        return f"key-{counter['n']}"
+
+    @oversight(idempotency_key=keygen)
+    def task():
+        return "ok"
+
+    task()
+    task()
+    keys = [c.kwargs["idempotency_key"] for c in mock_client.create_approval.call_args_list]
+    assert keys == ["key-1", "key-2"]
+    assert counter["n"] == 2
+
+
+@patch("sentinel.decorator.SentinelClient")
+def test_decorator_none_key_not_passed(mock_client_cls):
+    mock_client = MagicMock()
+    mock_client.create_approval.return_value = {"action_id": "act_1"}
+    mock_client.wait_for_decision.return_value = {"status": "approved"}
+    mock_client_cls.return_value = mock_client
+
+    @oversight()
+    def task():
+        return "ok"
+
+    task()
+    assert "idempotency_key" not in mock_client.create_approval.call_args.kwargs
+
+
+# ------------- decorator: async -------------
+@pytest.mark.asyncio
+@patch("sentinel.decorator.SentinelClient")
+async def test_decorator_async_callable_invoked_per_call(mock_client_cls):
+    mock_client = MagicMock()
+    mock_client.acreate_approval = AsyncMock(return_value={"action_id": "act_1"})
+    mock_client.await_for_decision = AsyncMock(return_value={"status": "approved"})
+    mock_client.aemit_audit_event = AsyncMock()
+    mock_client_cls.return_value = mock_client
+
+    counter = {"n": 0}
+
+    def keygen():
+        counter["n"] += 1
+        return f"akey-{counter['n']}"
+
+    @oversight(idempotency_key=keygen)
+    async def task():
+        return "ok"
+
+    assert await task() == "ok"
+    assert await task() == "ok"
+    keys = [c.kwargs["idempotency_key"] for c in mock_client.acreate_approval.call_args_list]
+    assert keys == ["akey-1", "akey-2"]
+
+
+FILE: tests/test_openai_agents_adapter.py
+import asyncio
+import json
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+from sentinel.adapters.openai_agents import gated
+from sentinel.exceptions import ApprovalRejected
+
+
+class FakeFunctionTool:
+    """Mimics agents.FunctionTool: name + async on_invoke_tool(ctx, args_json)."""
+
+    def __init__(self, name, fn):
+        self.name = name
+        self._fn = fn
+
+        async def on_invoke_tool(ctx, args_json):
+            return self._fn(**json.loads(args_json or "{}"))
+
+        self.on_invoke_tool = on_invoke_tool
+
+
+def _approved_async_client():
+    client = MagicMock()
+    client.acreate_approval = AsyncMock(return_value={"action_id": "act_1"})
+    client.await_for_decision = AsyncMock(return_value={"status": "approved"})
+    return client
+
+
+def _approved_sync_client():
+    client = MagicMock()
+    client.create_approval.return_value = {"action_id": "act_1"}
+    client.wait_for_decision.return_value = {"status": "approved"}
+    return client
+
+
+def test_function_tool_approved_runs_and_returns():
+    client = _approved_async_client()
+
+    def search_web(query, limit=5):
+        return {"query": query, "limit": limit}
+
+    tool = FakeFunctionTool("search_web", search_web)
+    gated_tool = gated(tool, client=client, risk_level="high")
+
+    assert gated_tool is tool  # same object, callback swapped
+    result = asyncio.run(tool.on_invoke_tool(None, json.dumps({"query": "cats", "limit": 3})))
+
+    assert result == {"query": "cats", "limit": 3}
+    client.acreate_approval.assert_awaited_once_with(
+        function_name="search_web",
+        arguments={"query": "cats", "limit": 3},
+        risk_level="high",
+        approvers=None,
+        timeout_seconds=None,
+    )
+    client.await_for_decision.assert_awaited_once_with("act_1", timeout=None)
+
+
+def test_function_tool_rejected_raises_and_tool_not_called():
+    client = MagicMock()
+    client.acreate_approval = AsyncMock(return_value={"action_id": "act_2"})
+    client.await_for_decision = AsyncMock(
+        return_value={"status": "rejected", "reason": "too risky"}
+    )
+
+    ran = {"v": False}
+
+    def dangerous():
+        ran["v"] = True
+        return "done"
+
+    tool = FakeFunctionTool("dangerous", dangerous)
+    gated(tool, client=client)
+
+    with pytest.raises(ApprovalRejected) as exc:
+        asyncio.run(tool.on_invoke_tool(None, "{}"))
+    assert "too risky" in str(exc.value)
+    assert exc.value.action_id == "act_2"
+    assert ran["v"] is False
+
+
+def test_function_tool_empty_args_json():
+    client = _approved_async_client()
+    tool = FakeFunctionTool("noop", lambda: "ok")
+    gated(tool, client=client)
+
+    assert asyncio.run(tool.on_invoke_tool(None, "")) == "ok"
+    assert client.acreate_approval.call_args.kwargs["arguments"] == {}
+
+
+def test_plain_sync_callable_is_gated():
+    client = _approved_sync_client()
+
+    def wire_transfer(amount, recipient):
+        return {"amount": amount, "recipient": recipient}
+
+    wrapped = gated(wire_transfer, client=client, risk_level="critical")
+    result = wrapped(amount=100, recipient="acct_9")
+
+    assert result == {"amount": 100, "recipient": "acct_9"}
+    client.create_approval.assert_called_once_with(
+        function_name="wire_transfer",
+        arguments={"amount": 100, "recipient": "acct_9"},
+        risk_level="critical",
+        approvers=None,
+        timeout_seconds=None,
+    )
+
+
+def test_plain_sync_callable_rejected_raises():
+    client = MagicMock()
+    client.create_approval.return_value = {"action_id": "act_3"}
+    client.wait_for_decision.return_value = {"status": "rejected", "reason": "nope"}
+
+    ran = {"v": False}
+
+    def dangerous():
+        ran["v"] = True
+
+    with pytest.raises(ApprovalRejected):
+        gated(dangerous, client=client)()
+    assert ran["v"] is False
+
+
+def test_plain_async_callable_is_gated():
+    client = _approved_async_client()
+
+    async def async_tool(x):
+        return x * 2
+
+    wrapped = gated(async_tool, client=client)
+    assert asyncio.iscoroutinefunction(wrapped)
+    assert asyncio.run(wrapped(x=21)) == 42
+    client.acreate_approval.assert_awaited_once()
+
+
+def test_explicit_function_name_overrides_tool_name():
+    client = _approved_async_client()
+    tool = FakeFunctionTool("original", lambda: "ok")
+    gated(tool, client=client, function_name="custom_name")
+
+    asyncio.run(tool.on_invoke_tool(None, "{}"))
+    assert client.acreate_approval.call_args.kwargs["function_name"] == "custom_name"
+
+
+def test_non_tool_raises_type_error():
+    with pytest.raises(TypeError):
+        gated(object(), client=MagicMock())
+
+
+def test_importable_without_openai_agents_installed():
+    # The adapter must not import the `agents` package at module level —
+    # importing the adapter must never pull in openai-agents.
+    import sys
+
+    import sentinel.adapters.openai_agents  # noqa: F401
+
+    assert "agents" not in sys.modules
+
+
+FILE: tests/test_semantic_kernel_adapter.py
+import asyncio
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+from sentinel.adapters.semantic_kernel import gate_kernel, sentinel_filter
+from sentinel.exceptions import ApprovalRejected
+
+
+class FakeFunction:
+    """Mimics semantic_kernel KernelFunction: name + plugin_name."""
+
+    def __init__(self, name, plugin_name=None):
+        self.name = name
+        self.plugin_name = plugin_name
+
+
+class FakeContext:
+    """Mimics semantic_kernel.filters.FunctionInvocationContext."""
+
+    def __init__(self, function, arguments=None):
+        self.function = function
+        self.arguments = arguments or {}
+        self.result = None
+
+
+def _approved_client():
+    client = MagicMock()
+    client.acreate_approval = AsyncMock(return_value={"action_id": "act_1"})
+    client.await_for_decision = AsyncMock(return_value={"status": "approved"})
+    return client
+
+
+def _run_filter(sk_filter, context):
+    """Drive an SK filter with a `next` that records whether the function ran."""
+    ran = {"v": False}
+
+    async def next_callback(ctx):
+        ran["v"] = True
+        ctx.result = "executed"
+
+    asyncio.run(sk_filter(context, next_callback))
+    return ran["v"]
+
+
+def test_approved_runs_function():
+    client = _approved_client()
+    sk_filter = sentinel_filter(client=client, risk_level="high")
+    ctx = FakeContext(FakeFunction("wire_transfer", "ops"), {"amount": 100, "recipient": "acct_9"})
+
+    assert _run_filter(sk_filter, ctx) is True
+    assert ctx.result == "executed"
+    client.acreate_approval.assert_awaited_once_with(
+        function_name="ops.wire_transfer",
+        arguments={"amount": 100, "recipient": "acct_9"},
+        risk_level="high",
+        approvers=None,
+        timeout_seconds=None,
+    )
+    client.await_for_decision.assert_awaited_once_with("act_1", timeout=None)
+
+
+def test_rejected_raises_and_function_not_called():
+    client = MagicMock()
+    client.acreate_approval = AsyncMock(return_value={"action_id": "act_2"})
+    client.await_for_decision = AsyncMock(
+        return_value={"status": "rejected", "reason": "too risky"}
+    )
+    sk_filter = sentinel_filter(client=client)
+    ctx = FakeContext(FakeFunction("dangerous"))
+
+    ran = {"v": False}
+
+    async def next_callback(c):
+        ran["v"] = True
+
+    with pytest.raises(ApprovalRejected) as exc:
+        asyncio.run(sk_filter(ctx, next_callback))
+    assert "too risky" in str(exc.value)
+    assert exc.value.action_id == "act_2"
+    assert ran["v"] is False
+
+
+def test_unqualified_name_used_when_no_plugin():
+    client = _approved_client()
+    sk_filter = sentinel_filter(client=client)
+    ctx = FakeContext(FakeFunction("lookup"))
+
+    _run_filter(sk_filter, ctx)
+    assert client.acreate_approval.call_args.kwargs["function_name"] == "lookup"
+
+
+def test_allowlist_unlisted_function_calls_through():
+    client = _approved_client()
+    sk_filter = sentinel_filter(client=client, function_allowlist=["wire_transfer"])
+    ctx = FakeContext(FakeFunction("harmless", "ops"))
+
+    assert _run_filter(sk_filter, ctx) is True
+    client.acreate_approval.assert_not_awaited()
+    client.await_for_decision.assert_not_awaited()
+
+
+def test_allowlist_matches_qualified_name():
+    client = _approved_client()
+    sk_filter = sentinel_filter(client=client, function_allowlist=["ops.wire_transfer"])
+    ctx = FakeContext(FakeFunction("wire_transfer", "ops"))
+
+    assert _run_filter(sk_filter, ctx) is True
+    client.acreate_approval.assert_awaited_once()
+
+
+def test_denylist_listed_function_skips_approval():
+    client = _approved_client()
+    sk_filter = sentinel_filter(client=client, function_denylist=["read_only_lookup"])
+    ctx = FakeContext(FakeFunction("read_only_lookup", "data"))
+
+    assert _run_filter(sk_filter, ctx) is True
+    client.acreate_approval.assert_not_awaited()
+
+
+def test_arguments_drop_execution_settings():
+    client = _approved_client()
+    sk_filter = sentinel_filter(client=client)
+    ctx = FakeContext(
+        FakeFunction("act", "ops"),
+        {"amount": 5, "execution_settings": object()},
+    )
+
+    _run_filter(sk_filter, ctx)
+    assert client.acreate_approval.call_args.kwargs["arguments"] == {"amount": 5}
+
+
+def test_gate_kernel_registers_filter_and_returns_kernel():
+    client = _approved_client()
+    kernel = MagicMock()
+
+    returned = gate_kernel(kernel, client=client, risk_level="critical")
+
+    assert returned is kernel
+    kernel.add_filter.assert_called_once()
+    filter_type, registered = kernel.add_filter.call_args.args
+    assert filter_type == "function_invocation"
+    assert callable(registered)
+
+    # The registered filter actually gates: run it and confirm approval flow.
+    ctx = FakeContext(FakeFunction("change_state", "lights"), {"id": 1})
+    assert _run_filter(registered, ctx) is True
+    client.acreate_approval.assert_awaited_once_with(
+        function_name="lights.change_state",
+        arguments={"id": 1},
+        risk_level="critical",
+        approvers=None,
+        timeout_seconds=None,
+    )
+
+
+def test_importable_without_semantic_kernel_installed():
+    # The adapter must not import the `semantic_kernel` package at module
+    # level — importing the adapter must never pull it in.
+    import sys
+
+    import sentinel.adapters.semantic_kernel  # noqa: F401
+
+    assert "semantic_kernel" not in sys.modules
+
+
+FILE: tests/test_serializable.py
+"""Regression test for 0.1.8 — fail fast on un-serializable arguments."""
+
+import pytest
+
+from sentinel.client import _ensure_json_serializable
+
+
+def test_plain_dict_ok():
+    _ensure_json_serializable({"amount": 100, "recipient": "alice"})
+
+
+def test_nested_dict_ok():
+    _ensure_json_serializable({"meta": {"tags": ["a", "b"], "n": 1}})
+
+
+def test_primitives_ok():
+    for v in (None, True, 1, 1.5, "str", [], {}, [1, 2, 3]):
+        _ensure_json_serializable(v)
+
+
+def test_set_raises_typeerror():
+    with pytest.raises(TypeError, match="JSON-serializable"):
+        _ensure_json_serializable({1, 2, 3})
+
+
+def test_bytes_raises_typeerror():
+    with pytest.raises(TypeError, match="JSON-serializable"):
+        _ensure_json_serializable(b"bytes")
+
+
+def test_object_raises_typeerror():
+    class Foo:
+        pass
+
+    with pytest.raises(TypeError, match="JSON-serializable"):
+        _ensure_json_serializable(Foo())
+
+
+def test_nested_unserializable_raises():
+    with pytest.raises(TypeError, match="JSON-serializable"):
+        _ensure_json_serializable({"ok": "yes", "bad": {1, 2}})
+
+
+FILE: tests/test_list_and_timeout.py
+"""list_approvals / list_audit_events_page parity + timeout_seconds int coercion.
+
+All HTTP is mocked with httpx.MockTransport so these run offline. The live API
+(https://api.pauseapi.app/openapi.json) types ApprovalCreate.timeout_seconds as
+an integer (default 300) and 422s on a fractional value, and the GET
+/v1/approvals + GET /v1/audit-events endpoints accept status/action_id, limit,
+and cursor query params returning a {data, has_more, next_cursor} envelope.
+"""
+
+import json
+from urllib.parse import parse_qs
+
+import httpx
+import pytest
+
+from sentinel import PageResult, SentinelClient
+from sentinel.config import SentinelConfig
+
+_PAGE_BODY = {
+    "data": [{"action_id": "act_1"}, {"action_id": "act_2"}],
+    "has_more": True,
+    "next_cursor": "cur_abc",
+}
+
+
+def _make_client(captured: list, *, body=_PAGE_BODY, status_code=200) -> SentinelClient:
+    """Real SentinelClient backed by an httpx MockTransport that records requests."""
+    client = SentinelClient(SentinelConfig(api_key="sk_test", api_url="https://api.test"))
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request)
+        return httpx.Response(status_code, json=body)
+
+    client._client = httpx.Client(
+        base_url="https://api.test",
+        headers=client._headers(),
+        transport=httpx.MockTransport(handler),
+    )
+    client._aclient = httpx.AsyncClient(
+        base_url="https://api.test",
+        headers=client._headers(),
+        transport=httpx.MockTransport(handler),
+    )
+    return client
+
+
+def _query(request: httpx.Request) -> dict:
+    return {k: v[0] for k, v in parse_qs(request.url.query.decode()).items()}
+
+
+# ------------- timeout_seconds int coercion -------------
+def test_create_approval_coerces_fractional_timeout_to_int():
+    captured = []
+    client = _make_client(captured, body={"action_id": "act_1", "status": "pending"})
+    client.create_approval(function_name="t", arguments={"a": 1}, timeout_seconds=1.9)
+    payload = json.loads(captured[0].content)
+    assert payload["timeout_seconds"] == 1
+    assert isinstance(payload["timeout_seconds"], int)
+
+
+def test_create_approval_coerces_float_config_default_to_int():
+    captured = []
+    # config default timeout is a float (300.0); the wire value must be an int.
+    client = _make_client(captured, body={"action_id": "act_1", "status": "pending"})
+    client.config.timeout_seconds = 300.0
+    client.create_approval(function_name="t", arguments={"a": 1})
+    payload = json.loads(captured[0].content)
+    assert payload["timeout_seconds"] == 300
+    assert isinstance(payload["timeout_seconds"], int)
+
+
+@pytest.mark.asyncio
+async def test_acreate_approval_coerces_fractional_timeout_to_int():
+    captured = []
+    client = _make_client(captured, body={"action_id": "act_1", "status": "pending"})
+    await client.acreate_approval(function_name="t", arguments={"a": 1}, timeout_seconds=2.7)
+    payload = json.loads(captured[0].content)
+    assert payload["timeout_seconds"] == 2
+    assert isinstance(payload["timeout_seconds"], int)
+
+
+# ------------- list_approvals -------------
+def test_list_approvals_returns_typed_page():
+    captured = []
+    client = _make_client(captured)
+    page = client.list_approvals()
+    assert isinstance(page, PageResult)
+    assert page.data == _PAGE_BODY["data"]
+    assert page.has_more is True
+    assert page.next_cursor == "cur_abc"
+
+
+def test_list_approvals_sends_default_limit():
+    captured = []
+    client = _make_client(captured)
+    client.list_approvals()
+    q = _query(captured[0])
+    assert captured[0].url.path == "/v1/approvals"
+    assert q["limit"] == "50"
+    assert "cursor" not in q
+    assert "status" not in q
+
+
+def test_list_approvals_sends_status_limit_cursor():
+    captured = []
+    client = _make_client(captured)
+    client.list_approvals(status="pending", limit=10, cursor="cur_xyz")
+    q = _query(captured[0])
+    assert q["status"] == "pending"
+    assert q["limit"] == "10"
+    assert q["cursor"] == "cur_xyz"
+
+
+def test_list_approvals_tolerates_bare_list():
+    captured = []
+    client = _make_client(captured, body=[{"action_id": "act_1"}])
+    page = client.list_approvals()
+    assert page.data == [{"action_id": "act_1"}]
+    assert page.has_more is False
+    assert page.next_cursor is None
+
+
+@pytest.mark.asyncio
+async def test_alist_approvals_returns_typed_page():
+    captured = []
+    client = _make_client(captured)
+    page = await client.alist_approvals(status="approved", limit=5, cursor="c1")
+    assert isinstance(page, PageResult)
+    assert page.next_cursor == "cur_abc"
+    q = _query(captured[0])
+    assert q == {"status": "approved", "limit": "5", "cursor": "c1"}
+
+
+# ------------- list_audit_events_page -------------
+def test_list_audit_events_page_sends_default_limit():
+    captured = []
+    client = _make_client(captured)
+    page = client.list_audit_events_page()
+    assert isinstance(page, PageResult)
+    q = _query(captured[0])
+    assert captured[0].url.path == "/v1/audit-events"
+    assert q["limit"] == "50"
+
+
+def test_list_audit_events_page_sends_action_id_limit_cursor():
+    captured = []
+    client = _make_client(captured)
+    client.list_audit_events_page(action_id="act_9", limit=100, cursor="cur_2")
+    q = _query(captured[0])
+    assert q == {"action_id": "act_9", "limit": "100", "cursor": "cur_2"}
+
+
+@pytest.mark.asyncio
+async def test_alist_audit_events_page_returns_typed_page():
+    captured = []
+    client = _make_client(captured)
+    page = await client.alist_audit_events_page(limit=25)
+    assert isinstance(page, PageResult)
+    assert page.has_more is True
+    q = _query(captured[0])
+    assert q["limit"] == "25"
+
+
+FILE: tests/test_langgraph_adapter.py
+import asyncio
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+from sentinel.adapters.langgraph import SentinelToolGate
+from sentinel.exceptions import ApprovalRejected
+
+
+def _approved_client():
+    client = MagicMock()
+    client.create_approval.return_value = {"action_id": "act_1"}
+    client.wait_for_decision.return_value = {"status": "approved"}
+    return client
+
+
+def test_approved_runs_and_returns():
+    client = _approved_client()
+    gate = SentinelToolGate(client=client, risk_level="high")
+
+    def search_web(query, limit=5):
+        return {"query": query, "limit": limit}
+
+    wrapped = gate.wrap(search_web)
+    result = wrapped(query="cats", limit=3)
+
+    assert result == {"query": "cats", "limit": 3}
+    client.create_approval.assert_called_once_with(
+        function_name="search_web",
+        arguments={"query": "cats", "limit": 3},
+        risk_level="high",
+        approvers=None,
+        timeout_seconds=None,
+    )
+    client.wait_for_decision.assert_called_once_with("act_1", timeout=None)
+
+
+def test_positional_args_use_args_convention():
+    client = _approved_client()
+    gate = SentinelToolGate(client=client)
+
+    def tool_fn(a, b):
+        return a + b
+
+    assert gate.wrap(tool_fn)(1, 2) == 3
+    arguments = client.create_approval.call_args.kwargs["arguments"]
+    assert arguments == {"args": [1, 2]}
+
+
+def test_rejected_raises_and_fn_not_called():
+    client = MagicMock()
+    client.create_approval.return_value = {"action_id": "act_2"}
+    client.wait_for_decision.return_value = {
+        "status": "rejected",
+        "reason": "too risky",
+    }
+    gate = SentinelToolGate(client=client)
+
+    ran = {"v": False}
+
+    def dangerous():
+        ran["v"] = True
+        return "done"
+
+    with pytest.raises(ApprovalRejected) as exc:
+        gate.wrap(dangerous)()
+    assert "too risky" in str(exc.value)
+    assert exc.value.action_id == "act_2"
+    assert ran["v"] is False
+
+
+def test_allowlist_unlisted_tool_calls_through():
+    client = _approved_client()
+    gate = SentinelToolGate(client=client, tool_allowlist=["wire_transfer"])
+
+    def harmless():
+        return "ok"
+
+    assert gate.wrap(harmless)() == "ok"
+    client.create_approval.assert_not_called()
+    client.wait_for_decision.assert_not_called()
+
+
+def test_allowlist_listed_tool_is_gated():
+    client = _approved_client()
+    gate = SentinelToolGate(client=client, tool_allowlist=["wire_transfer"])
+
+    def wire_transfer():
+        return "sent"
+
+    assert gate.wrap(wire_transfer)() == "sent"
+    client.create_approval.assert_called_once()
+
+
+def test_denylist_listed_tool_skips_approval():
+    client = _approved_client()
+    gate = SentinelToolGate(client=client, tool_denylist=["read_only_lookup"])
+
+    def read_only_lookup():
+        return "data"
+
+    assert gate.wrap(read_only_lookup)() == "data"
+    client.create_approval.assert_not_called()
+
+
+def test_explicit_function_name_overrides_fn_name():
+    client = _approved_client()
+    gate = SentinelToolGate(client=client)
+
+    def fn():
+        return "ok"
+
+    gate.wrap(fn, function_name="custom_name")()
+    assert client.create_approval.call_args.kwargs["function_name"] == "custom_name"
+
+
+def test_async_fn_wrapped_is_awaitable():
+    client = MagicMock()
+    client.acreate_approval = AsyncMock(return_value={"action_id": "act_3"})
+    client.await_for_decision = AsyncMock(return_value={"status": "approved"})
+    gate = SentinelToolGate(client=client)
+
+    async def async_tool(x):
+        return x * 2
+
+    wrapped = gate.wrap(async_tool)
+    assert asyncio.iscoroutinefunction(wrapped)
+    result = asyncio.run(wrapped(x=21))
+
+    assert result == 42
+    client.acreate_approval.assert_awaited_once_with(
+        function_name="async_tool",
+        arguments={"x": 21},
+        risk_level="high",
+        approvers=None,
+        timeout_seconds=None,
+    )
+    client.await_for_decision.assert_awaited_once_with("act_3", timeout=None)
+
+
+def test_async_rejected_raises():
+    client = MagicMock()
+    client.acreate_approval = AsyncMock(return_value={"action_id": "act_4"})
+    client.await_for_decision = AsyncMock(return_value={"status": "rejected", "reason": "nope"})
+    gate = SentinelToolGate(client=client)
+
+    ran = {"v": False}
+
+    async def async_dangerous():
+        ran["v"] = True
+
+    with pytest.raises(ApprovalRejected):
+        asyncio.run(gate.wrap(async_dangerous)())
+    assert ran["v"] is False
+
+
+FILE: tests/test_decorator.py
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from sentinel import ApprovalRejected, SentinelClient, SentinelConfigError, configure, oversight
+
+
+@patch("sentinel.decorator.SentinelClient")
+def test_approval_success(mock_client_cls):
+    mock_client = MagicMock()
+    mock_client.create_approval.return_value = {"action_id": "act_1"}
+    mock_client.wait_for_decision.return_value = {"status": "approved"}
+    mock_client_cls.return_value = mock_client
+
+    @oversight(risk_level="high")
+    def transfer_funds(amount, to):
+        return {"amount": amount, "to": to}
+
+    result = transfer_funds(100, to="alice")
+    assert result == {"amount": 100, "to": "alice"}
+    mock_client.create_approval.assert_called_once_with(
+        function_name="transfer_funds",
+        arguments={"amount": 100, "to": "alice"},
+        risk_level="high",
+        approvers=None,
+        timeout_seconds=None,
+    )
+    mock_client.wait_for_decision.assert_called_once_with("act_1", timeout=None)
+    mock_client.emit_audit_event.assert_called_once()
+
+
+@patch("sentinel.decorator.SentinelClient")
+def test_rejection(mock_client_cls):
+    mock_client = MagicMock()
+    mock_client.create_approval.return_value = {"action_id": "act_2"}
+    mock_client.wait_for_decision.return_value = {
+        "status": "rejected",
+        "reason": "too risky",
+    }
+    mock_client_cls.return_value = mock_client
+
+    ran = {"v": False}
+
+    @oversight()
+    def dangerous():
+        ran["v"] = True
+        return "done"
+
+    with pytest.raises(ApprovalRejected) as exc:
+        dangerous()
+    assert "too risky" in str(exc.value)
+    assert ran["v"] is False
+
+
+def test_requires_api_key_before_network_calls():
+    configure(api_key=None)
+    with pytest.raises(SentinelConfigError):
+        SentinelClient().create_approval(function_name="dangerous", arguments={})
+

@@ -1,0 +1,6 @@
+UTC start: 2026-10-03T01:51:25+00:00
+Command: python3 -c 'from pathlib import Path; print("python exists:",Path(".venv3.11/bin/python").exists()); print("pytest exists:",Path(".venv3.11/bin/pytest").exists())'
+Exit: 0
+
+python exists: False
+pytest exists: False

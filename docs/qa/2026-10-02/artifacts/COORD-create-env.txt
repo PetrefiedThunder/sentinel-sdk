@@ -1,0 +1,8 @@
+UTC start: 2026-10-03T01:50:10+00:00
+Command: uv venv --python 3.11 .venv
+Exit: 0
+
+Downloading cpython-3.11.15-macos-aarch64-none (download) (25.9MiB)
+ Downloaded cpython-3.11.15-macos-aarch64-none (download)
+Using CPython 3.11.15
+Creating virtual environment at: .venv

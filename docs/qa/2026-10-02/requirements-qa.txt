@@ -1,0 +1,7 @@
+# QA-only tools; install alongside the projects [dev] extra.
+# Full resolved inventory: artifacts/COORD-environment.txt.
+pytest-cov==7.1.0
+hypothesis==6.168.3
+mypy==2.4.0
+pip-audit==2.10.1
+langchain-core==1.6.6

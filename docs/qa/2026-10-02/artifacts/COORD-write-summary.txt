@@ -1,0 +1,5 @@
+UTC start: 2026-10-03T01:58:18+00:00
+Command: .venv/bin/python -
+Exit: 0
+
+SUMMARY.md written; 11 findings, counts 1/2/7/1.

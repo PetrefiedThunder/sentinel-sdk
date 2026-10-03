@@ -1,0 +1,10 @@
+UTC start: 2026-10-03T01:58:56+00:00
+Command: .venv/bin/python -
+Exit: 0
+
+Mandatory docs, unique IDs/counts, markdown links, Python syntax, file-size limit and source/doc whitespace: PASS
+Findings: {'Critical': 1, 'High': 2, 'Medium': 7, 'Low': 1}
+QA artifacts/docs: 157
+coverage-before.json statements 384 696 branches 75 160 combined 53.62
+coverage-after.json statements 665 696 branches 137 160 combined 93.69
+coverage-passing-only.json statements 656 696 branches 132 160 combined 92.06

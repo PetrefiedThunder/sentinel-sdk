@@ -1,0 +1,20 @@
+UTC start: 2026-10-03T01:53:47+00:00
+Command: .venv/bin/python -m pytest tests/test_qa_adapters.py -q -ra
+Exit: 0
+
+............................................xxxxxxxxxxxxx..........      [100%]
+=========================== short test summary info ============================
+XFAIL tests/test_qa_adapters.py::test_mixed_sync_arguments_are_fully_presented_for_approval[autogen] - FE-002: positional arguments omitted when kwargs exist
+XFAIL tests/test_qa_adapters.py::test_mixed_sync_arguments_are_fully_presented_for_approval[crewai] - FE-002: positional arguments omitted when kwargs exist
+XFAIL tests/test_qa_adapters.py::test_mixed_sync_arguments_are_fully_presented_for_approval[langgraph] - FE-002: positional arguments omitted when kwargs exist
+XFAIL tests/test_qa_adapters.py::test_mixed_sync_arguments_are_fully_presented_for_approval[openai_agents] - FE-002: positional arguments omitted when kwargs exist
+XFAIL tests/test_qa_adapters.py::test_mixed_async_arguments_are_fully_presented_for_approval[autogen] - FE-002: positional arguments omitted when kwargs exist
+XFAIL tests/test_qa_adapters.py::test_mixed_async_arguments_are_fully_presented_for_approval[langgraph] - FE-002: positional arguments omitted when kwargs exist
+XFAIL tests/test_qa_adapters.py::test_mixed_async_arguments_are_fully_presented_for_approval[openai_agents] - FE-002: positional arguments omitted when kwargs exist
+XFAIL tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[rejected-invoke] - FE-001: LangChain swallows callback rejection and runs tool
+XFAIL tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[rejected-ainvoke] - FE-001: LangChain swallows callback rejection and runs tool
+XFAIL tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[timeout-invoke] - FE-001: LangChain swallows callback rejection and runs tool
+XFAIL tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[timeout-ainvoke] - FE-001: LangChain swallows callback rejection and runs tool
+XFAIL tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[transport_error-invoke] - FE-001: LangChain swallows callback rejection and runs tool
+XFAIL tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[transport_error-ainvoke] - FE-001: LangChain swallows callback rejection and runs tool
+54 passed, 13 xfailed in 0.23s

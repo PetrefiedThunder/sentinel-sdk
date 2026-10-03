@@ -1,0 +1,19 @@
+UTC start: 2026-10-03T01:52:45+00:00
+Command: .venv/bin/python3.11 -m pytest tests/test_qa_dx.py -ra
+Exit: 0
+
+============================= test session starts ==============================
+platform darwin -- Python 3.11.15, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/sellers/Projects/qa-sweep-2026-10-02/sentinel-sdk
+configfile: pyproject.toml
+plugins: platformdirs-4.12.2, hypothesis-6.168.3, cov-7.1.0, asyncio-1.4.0, langsmith-0.14.4, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 12 items
+
+tests/test_qa_dx.py x......x...x                                         [100%]
+
+=========================== short test summary info ============================
+XFAIL tests/test_qa_dx.py::test_readme_quickstart_runs_after_approval - UX-002: README quickstart invokes stripe without importing or supplying it
+XFAIL tests/test_qa_dx.py::test_readme_environment_configuration[SENTINEL_POLL_INTERVAL-0.25-poll_interval-0.25] - UX-001: documented SENTINEL_POLL_INTERVAL environment variable is ignored
+XFAIL tests/test_qa_dx.py::test_missing_required_argument_fails_before_requesting_human_approval - UX-003: missing required function argument requests approval before raising TypeError
+========================= 9 passed, 3 xfailed in 0.12s =========================
