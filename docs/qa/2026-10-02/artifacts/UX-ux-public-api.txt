@@ -1,0 +1,252 @@
+UTC start: 2026-10-03T01:50:57+00:00
+Command: python3 -c 'from pathlib import Path; paths=["CONTRIBUTING.md","sentinel/__init__.py","sentinel/config.py","sentinel/exceptions.py","pyproject.toml"]; [(print("FILE",p),print("".join(f"{i}: {line}" for i,line in enumerate(Path(p).read_text().splitlines(True),1)))) for p in paths]'
+Exit: 0
+
+FILE CONTRIBUTING.md
+1: # Contributing to Sentinel (Python SDK)
+2: 
+3: Thanks for considering a contribution. Bug reports, feature ideas, and
+4: PRs are all welcome.
+5: 
+6: ## Quick start
+7: 
+8: ```bash
+9: git clone https://github.com/PetrefiedThunder/sentinel-sdk
+10: cd sentinel-sdk
+11: python -m venv .venv && source .venv/bin/activate
+12: pip install -e ".[dev]"
+13: pytest
+14: ```
+15: 
+16: ## Filing a bug
+17: 
+18: Open an issue at https://github.com/PetrefiedThunder/sentinel-sdk/issues
+19: and include:
+20: 
+21: 1. SDK version (`python -c "import sentinel; print(sentinel.__version__)"`)
+22: 2. Python version and OS
+23: 3. A minimal reproducible example (10–20 lines)
+24: 4. The full traceback / error message
+25: 
+26: ## Pull requests
+27: 
+28: 1. Open an issue first if it's a behavior change — saves you wasted work.
+29: 2. Branch from `main`. Small, focused PRs over large ones.
+30: 3. Add a test that fails before your fix and passes after.
+31: 4. Run `pytest` and `ruff check .` before pushing.
+32: 5. Update `CHANGELOG.md` under an `## [Unreleased]` heading.
+33: 
+34: ## Releasing (maintainers only)
+35: 
+36: 1. Bump `version` in `pyproject.toml`, `sentinel/__init__.py`,
+37:    and the `USER_AGENT` constant in `sentinel/client.py`.
+38: 2. Move `## [Unreleased]` notes into a versioned section in
+39:    `CHANGELOG.md` with today's date.
+40: 3. Commit, tag `vX.Y.Z`, push tags. GitHub Actions ships to PyPI via
+41:    Trusted Publishing.
+42: 
+43: ## Security
+44: 
+45: If you find a security issue, please email security@regengine.co —
+46: do **not** file a public GitHub issue.
+47: 
+48: ## Code of conduct
+49: 
+50: Be excellent to each other. Bigoted, harassing, or otherwise antisocial
+51: behavior gets you removed from the project.
+
+FILE sentinel/__init__.py
+1: """Sentinel SDK — oversight infrastructure for AI agents."""
+2: 
+3: from .client import PageResult, SentinelClient
+4: from .config import SentinelConfig, configure, get_config
+5: from .decorator import oversight
+6: from .exceptions import (
+7:     ApprovalRejected,
+8:     ApprovalTimeout,
+9:     SentinelAPIError,
+10:     SentinelConfigError,
+11:     SentinelError,
+12: )
+13: 
+14: __version__ = "0.1.9"
+15: 
+16: __all__ = [
+17:     "oversight",
+18:     "SentinelClient",
+19:     "PageResult",
+20:     "SentinelConfig",
+21:     "configure",
+22:     "get_config",
+23:     "SentinelError",
+24:     "SentinelAPIError",
+25:     "SentinelConfigError",
+26:     "ApprovalRejected",
+27:     "ApprovalTimeout",
+28:     "__version__",
+29: ]
+
+FILE sentinel/config.py
+1: import os
+2: from dataclasses import dataclass, field, replace
+3: 
+4: 
+5: def _default_api_url() -> str:
+6:     return os.environ.get("SENTINEL_API_URL", "https://api.pauseapi.app")
+7: 
+8: 
+9: def _default_api_key() -> str | None:
+10:     return os.environ.get("SENTINEL_API_KEY")
+11: 
+12: 
+13: def _default_timeout() -> float:
+14:     try:
+15:         return float(os.environ.get("SENTINEL_TIMEOUT", "300"))
+16:     except ValueError:
+17:         return 300.0
+18: 
+19: 
+20: def _default_fallback() -> str:
+21:     return os.environ.get("SENTINEL_FALLBACK", "reject")
+22: 
+23: 
+24: @dataclass
+25: class SentinelConfig:
+26:     api_url: str = field(default_factory=_default_api_url)
+27:     api_key: str | None = field(default_factory=_default_api_key)
+28:     timeout_seconds: float = field(default_factory=_default_timeout)
+29:     poll_interval: float = 2.0
+30:     fallback: str = field(default_factory=_default_fallback)
+31: 
+32: 
+33: _config: SentinelConfig = SentinelConfig()
+34: 
+35: 
+36: def configure(**kwargs) -> SentinelConfig:
+37:     """Mutate the module-global config."""
+38:     global _config
+39:     _config = replace(_config, **kwargs)
+40:     return _config
+41: 
+42: 
+43: def get_config() -> SentinelConfig:
+44:     return _config
+
+FILE sentinel/exceptions.py
+1: class SentinelError(Exception):
+2:     """Base error for the Sentinel SDK."""
+3: 
+4: 
+5: class SentinelConfigError(SentinelError):
+6:     """Raised when the SDK is used without required configuration."""
+7: 
+8: 
+9: class SentinelAPIError(SentinelError):
+10:     """Raised when a Sentinel API request returns a non-2xx response."""
+11: 
+12:     def __init__(self, status_code: int, message: str = "", url: str | None = None):
+13:         self.status_code = status_code
+14:         self.url = url
+15:         msg = f"Sentinel API {status_code}"
+16:         if url:
+17:             msg += f" {url}"
+18:         if message:
+19:             msg += f": {message}"
+20:         super().__init__(msg)
+21: 
+22: 
+23: class ApprovalRejected(SentinelError):
+24:     """Raised when an approval request is rejected by an approver."""
+25: 
+26:     def __init__(self, reason: str = "", action_id: str | None = None):
+27:         self.reason = reason
+28:         self.action_id = action_id
+29:         super().__init__(reason or "Approval rejected")
+30: 
+31: 
+32: class ApprovalTimeout(SentinelError):
+33:     """Raised when an approval request times out without a decision."""
+34: 
+35:     def __init__(self, action_id: str | None = None, timeout_seconds: float | None = None):
+36:         self.action_id = action_id
+37:         self.timeout_seconds = timeout_seconds
+38:         msg = (
+39:             f"Approval timed out after {timeout_seconds}s"
+40:             if timeout_seconds
+41:             else "Approval timed out"
+42:         )
+43:         super().__init__(msg)
+
+FILE pyproject.toml
+1: [build-system]
+2: requires = ["hatchling"]
+3: build-backend = "hatchling.build"
+4: 
+5: [project]
+6: name = "sentinel-oversight"
+7: version = "0.1.9"
+8: description = "Python SDK for Sentinel human-in-the-loop oversight"
+9: readme = "README.md"
+10: requires-python = ">=3.11"
+11: license = "MIT"
+12: authors = [{ name = "Christopher Sellers / RegEngine, Inc." }]
+13: dependencies = [
+14:     "httpx>=0.27",
+15: ]
+16: 
+17: [project.optional-dependencies]
+18: # Adapter extras. Only langchain has a hard third-party import
+19: # (sentinel/adapters/langchain.py needs langchain_core); the openai-agents and
+20: # semantic-kernel adapters intentionally have no runtime dependency on their
+21: # host frameworks, so they need no extra. README only advertises [langchain].
+22: langchain = ["langchain-core>=0.3"]
+23: dev = [
+24:     "pytest>=8.0",
+25:     "pytest-asyncio",
+26:     "ruff==0.16.8",  # pinned to match .pre-commit-config.yaml so CI and pre-commit agree
+27: ]
+28: 
+29: [project.urls]
+30: Homepage = "https://pauseapi.app"
+31: Repository = "https://github.com/PetrefiedThunder/sentinel-sdk"
+32: 
+33: [tool.hatch.build.targets.wheel]
+34: packages = ["sentinel"]
+35: 
+36: [tool.ruff]
+37: line-length = 100
+38: target-version = "py311"
+39: extend-exclude = ["dist", "build", ".venv", "tests/fixtures"]
+40: 
+41: [tool.ruff.lint]
+42: # Sensible default — pyflakes, pycodestyle, isort, bugbear, comprehensions
+43: select = ["E", "F", "W", "I", "B", "C4", "UP", "SIM", "TCH"]
+44: ignore = [
+45:     "E501",  # line length handled by formatter
+46:     "B008",  # FastAPI uses Depends() in defaults
+47: ]
+48: 
+49: [tool.ruff.lint.per-file-ignores]
+50: "tests/**" = ["B011"]  # assert False in tests is fine
+51: 
+52: [tool.ruff.format]
+53: quote-style = "double"
+54: indent-style = "space"
+55: 
+56: [tool.semantic_release]
+57: version_toml = ["pyproject.toml:project.version"]
+58: version_variables = [
+59:     "sentinel/__init__.py:__version__",
+60:     "sentinel/client.py:USER_AGENT",
+61: ]
+62: branch = "main"
+63: upload_to_pypi = false  # GH Actions publish.yml handles PyPI via OIDC
+64: upload_to_release = false  # SBOM workflow attaches release assets
+65: build_command = "python -m pip install build && python -m build"
+66: commit_message = "chore(release): {version}\n\n{changelog}"
+67: 
+68: [tool.semantic_release.commit_parser_options]
+69: allowed_tags = ["feat", "fix", "perf", "refactor", "docs", "build", "ci", "test", "chore"]
+70: minor_tags = ["feat"]
+71: patch_tags = ["fix", "perf", "refactor"]
+

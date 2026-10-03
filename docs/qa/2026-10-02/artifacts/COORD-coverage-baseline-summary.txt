@@ -1,0 +1,20 @@
+UTC start: 2026-10-03T01:54:52+00:00
+Command: .venv/bin/python -c 'import json; p=json.load(open("docs/qa/2026-10-02/artifacts/coverage-before.json")); print(json.dumps(p["totals"],indent=2))'
+Exit: 0
+
+{
+  "covered_lines": 384,
+  "num_statements": 696,
+  "percent_covered": 53.62149532710281,
+  "percent_covered_display": "54",
+  "missing_lines": 312,
+  "excluded_lines": 14,
+  "percent_statements_covered": 55.172413793103445,
+  "percent_statements_covered_display": "55",
+  "num_branches": 160,
+  "num_partial_branches": 15,
+  "covered_branches": 75,
+  "missing_branches": 85,
+  "percent_branches_covered": 46.875,
+  "percent_branches_covered_display": "47"
+}

@@ -1,0 +1,78 @@
+UTC start: 2026-10-03T01:52:58+00:00
+Command: .venv/bin/python -m pytest --runxfail -q 'tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[rejected-invoke]' 'tests/test_qa_adapters.py::test_mixed_sync_arguments_are_fully_presented_for_approval[autogen]'
+Exit: 1
+
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+__ test_real_langchain_tool_does_not_run_after_gate_failure[rejected-invoke] ___
+
+asynchronous = False, failure = 'rejected'
+
+    @pytest.mark.xfail(strict=True, raises=AssertionError, reason="FE-001: LangChain swallows callback rejection and runs tool")
+    @pytest.mark.parametrize("asynchronous", [False, True], ids=["invoke", "ainvoke"])
+    @pytest.mark.parametrize("failure", ["rejected", "timeout", "transport_error"])
+    def test_real_langchain_tool_does_not_run_after_gate_failure(asynchronous, failure):
+        pytest.importorskip("langchain_core")
+        from langchain_core.tools import tool
+    
+        from sentinel.adapters.langchain import SentinelCallbackHandler
+    
+        calls = []
+    
+        @tool
+        def local_action(value: int) -> str:
+            """Record a local action without contacting any external service."""
+            calls.append(value)
+            return "executed"
+    
+        client = _client({"status": "rejected", "reason": "qa denied"})
+        if failure == "timeout":
+            client.wait_for_decision.side_effect = ApprovalTimeout("qa-action", 1)
+        elif failure == "transport_error":
+            client.create_approval.side_effect = ConnectionError("qa local connection failure")
+        config = {"callbacks": [SentinelCallbackHandler(client=client)]}
+        try:
+            if asynchronous:
+                asyncio.run(local_action.ainvoke({"value": 7}, config=config))
+            else:
+                local_action.invoke({"value": 7}, config=config)
+        except (ApprovalRejected, ApprovalTimeout, ConnectionError):
+            pass
+        client.create_approval.assert_called_once()
+>       assert calls == []
+E       assert [7] == []
+E         
+E         Left contains one more item: 7
+E         Use -v to get more diff
+
+tests/test_qa_adapters.py:165: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  langchain_core.callbacks.manager:manager.py:341 Error in SentinelCallbackHandler.on_tool_start callback: ApprovalRejected('qa denied')
+_____ test_mixed_sync_arguments_are_fully_presented_for_approval[autogen] ______
+
+adapter = 'autogen'
+
+    @pytest.mark.xfail(strict=True, raises=AssertionError, reason="FE-002: positional arguments omitted when kwargs exist")
+    @pytest.mark.parametrize("adapter", ["autogen", "crewai", "langgraph", "openai_agents"])
+    def test_mixed_sync_arguments_are_fully_presented_for_approval(adapter):
+        client = _client({"status": "approved"})
+    
+        def action(amount: int, *, recipient: str):
+            return amount, recipient
+    
+        assert _wrap(adapter, action, client)(90000, recipient="qa-recipient") == (90000, "qa-recipient")
+>       assert client.create_approval.call_args.kwargs["arguments"] == {
+            "amount": 90000, "recipient": "qa-recipient"
+        }
+E       AssertionError: assert {'recipient': 'qa-recipient'} == {'amount': 90...qa-recipient'}
+E         
+E         Omitting 1 identical items, use -vv to show
+E         Right contains 1 more item:
+E         {'amount': 90000}
+E         Use -v to get more diff
+
+tests/test_qa_adapters.py:113: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[rejected-invoke]
+FAILED tests/test_qa_adapters.py::test_mixed_sync_arguments_are_fully_presented_for_approval[autogen]
+2 failed in 0.17s

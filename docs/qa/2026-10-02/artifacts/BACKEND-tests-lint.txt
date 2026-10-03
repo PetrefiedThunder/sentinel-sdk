@@ -1,0 +1,21 @@
+UTC start: 2026-10-03T01:53:26+00:00
+Command: .venv/bin/ruff check tests/test_qa_backend.py
+Exit: 1
+
+SIM105 Use `contextlib.suppress(ApprovalRejected, ApprovalTimeout, ValueError)` instead of `try`-`except`-`pass`
+   --> tests/test_qa_backend.py:277:5
+    |
+275 |           return "ok"
+276 |
+277 | /     try:
+278 | |         wrap_call(mode, operation)()
+279 | |     except (ApprovalRejected, ApprovalTimeout, ValueError):
+280 | |         pass
+    | |____________^
+281 |       if mode == "async":
+282 |           client.aclose.assert_awaited_once()
+    |
+help: Replace `try`-`except`-`pass` with `with contextlib.suppress(ApprovalRejected, ApprovalTimeout, ValueError): ...`
+
+Found 1 error.
+No fixes available (1 hidden fix can be enabled with the `--unsafe-fixes` option).

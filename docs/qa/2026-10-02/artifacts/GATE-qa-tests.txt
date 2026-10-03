@@ -1,0 +1,41 @@
+UTC start: 2026-10-03T01:54:45+00:00
+Command: .venv/bin/python -m pytest tests/test_qa_adapters.py tests/test_qa_backend.py tests/test_qa_dx.py -q -ra
+Exit: 0
+
+............................................xxxxxxxxxxxxx............... [ 43%]
+..........................xxxx.................xxxxxxxxxxx.............. [ 86%]
+..........xx......x...x                                                  [100%]
+=========================== short test summary info ============================
+XFAIL tests/test_qa_adapters.py::test_mixed_sync_arguments_are_fully_presented_for_approval[autogen] - FE-002: positional arguments omitted when kwargs exist
+XFAIL tests/test_qa_adapters.py::test_mixed_sync_arguments_are_fully_presented_for_approval[crewai] - FE-002: positional arguments omitted when kwargs exist
+XFAIL tests/test_qa_adapters.py::test_mixed_sync_arguments_are_fully_presented_for_approval[langgraph] - FE-002: positional arguments omitted when kwargs exist
+XFAIL tests/test_qa_adapters.py::test_mixed_sync_arguments_are_fully_presented_for_approval[openai_agents] - FE-002: positional arguments omitted when kwargs exist
+XFAIL tests/test_qa_adapters.py::test_mixed_async_arguments_are_fully_presented_for_approval[autogen] - FE-002: positional arguments omitted when kwargs exist
+XFAIL tests/test_qa_adapters.py::test_mixed_async_arguments_are_fully_presented_for_approval[langgraph] - FE-002: positional arguments omitted when kwargs exist
+XFAIL tests/test_qa_adapters.py::test_mixed_async_arguments_are_fully_presented_for_approval[openai_agents] - FE-002: positional arguments omitted when kwargs exist
+XFAIL tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[rejected-invoke] - FE-001: LangChain swallows callback rejection and runs tool
+XFAIL tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[rejected-ainvoke] - FE-001: LangChain swallows callback rejection and runs tool
+XFAIL tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[timeout-invoke] - FE-001: LangChain swallows callback rejection and runs tool
+XFAIL tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[timeout-ainvoke] - FE-001: LangChain swallows callback rejection and runs tool
+XFAIL tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[transport_error-invoke] - FE-001: LangChain swallows callback rejection and runs tool
+XFAIL tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[transport_error-ainvoke] - FE-001: LangChain swallows callback rejection and runs tool
+XFAIL tests/test_qa_backend.py::test_legacy_wait_paces_pending_requests[sync] - BE-001: legacy polling ignores poll_interval
+XFAIL tests/test_qa_backend.py::test_legacy_wait_paces_pending_requests[async] - BE-001: legacy polling ignores poll_interval
+XFAIL tests/test_qa_backend.py::test_late_approval_does_not_bypass_deadline[sync] - BE-005: an approved response after the deadline is accepted
+XFAIL tests/test_qa_backend.py::test_late_approval_does_not_bypass_deadline[async] - BE-005: an approved response after the deadline is accepted
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[approved-sync] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[approved-async] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[rejected-sync] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[rejected-async] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[timeout-sync] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[timeout-async] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[operation-error-sync] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[operation-error-async] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_timeout_fallback_exception_is_audited[sync] - BE-003: failing timeout fallback does not emit audit evidence
+XFAIL tests/test_qa_backend.py::test_timeout_fallback_exception_is_audited[async] - BE-003: failing timeout fallback does not emit audit evidence
+XFAIL tests/test_qa_backend.py::test_execution_arguments_match_approved_snapshot - BE-004: mutable arguments can change while approval is pending
+XFAIL tests/test_qa_backend.py::test_config_repr_omits_credential - BE-006: config repr contains the credential value
+XFAIL tests/test_qa_dx.py::test_readme_quickstart_runs_after_approval - UX-002: README quickstart invokes stripe without importing or supplying it
+XFAIL tests/test_qa_dx.py::test_readme_environment_configuration[SENTINEL_POLL_INTERVAL-0.25-poll_interval-0.25] - UX-001: documented SENTINEL_POLL_INTERVAL environment variable is ignored
+XFAIL tests/test_qa_dx.py::test_missing_required_argument_fails_before_requesting_human_approval - UX-003: missing required function argument requests approval before raising TypeError
+135 passed, 32 xfailed in 0.70s

@@ -1,0 +1,112 @@
+UTC start: 2026-10-03T01:53:01+00:00
+Command: .venv/bin/python3.11 -m pytest tests/test_qa_dx.py --runxfail -q
+Exit: 1
+
+F......F...F                                                             [100%]
+=================================== FAILURES ===================================
+__________________ test_readme_quickstart_runs_after_approval __________________
+
+quickstart = ({'__builtins__': {'__name__': 'builtins', '__doc__': "Built-in functions, types, exceptions, and other objects.\n\nTh...72d40>, 'transfer_funds': <function transfer_funds at 0x10cb73a60>}, <MagicMock spec='SentinelClient' id='4508443408'>)
+
+    @pytest.mark.xfail(
+        strict=True,
+        raises=NameError,
+        reason="UX-002: README quickstart invokes stripe without importing or supplying it",
+    )
+    def test_readme_quickstart_runs_after_approval(quickstart):
+        namespace, _ = quickstart
+>       namespace["transfer_funds"](1000, "acct_qa")
+
+tests/test_qa_dx.py:50: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+sentinel/decorator.py:142: in wrapper
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+amount = 1000, recipient = 'acct_qa'
+
+>   ???
+E   NameError: name 'stripe' is not defined
+
+README.md:29:11: NameError
+_ test_readme_environment_configuration[SENTINEL_POLL_INTERVAL-0.25-poll_interval-0.25] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10cc1b650>
+env_name = 'SENTINEL_POLL_INTERVAL', env_value = '0.25'
+attribute = 'poll_interval', expected = 0.25
+
+    @pytest.mark.parametrize(
+        ("env_name", "env_value", "attribute", "expected"),
+        [
+            ("SENTINEL_API_URL", "https://qa.invalid", "api_url", "https://qa.invalid"),
+            ("SENTINEL_API_KEY", "qa-placeholder", "api_key", "qa-placeholder"),
+            ("SENTINEL_TIMEOUT", "17.5", "timeout_seconds", 17.5),
+            ("SENTINEL_FALLBACK", "execute", "fallback", "execute"),
+            pytest.param(
+                "SENTINEL_POLL_INTERVAL",
+                "0.25",
+                "poll_interval",
+                0.25,
+                marks=pytest.mark.xfail(
+                    strict=True,
+                    raises=AssertionError,
+                    reason="UX-001: documented SENTINEL_POLL_INTERVAL environment variable is ignored",
+                ),
+            ),
+        ],
+    )
+    def test_readme_environment_configuration(monkeypatch, env_name, env_value, attribute, expected):
+        for variable in (
+            "SENTINEL_API_URL",
+            "SENTINEL_API_KEY",
+            "SENTINEL_TIMEOUT",
+            "SENTINEL_FALLBACK",
+            "SENTINEL_POLL_INTERVAL",
+        ):
+            monkeypatch.delenv(variable, raising=False)
+        monkeypatch.setenv(env_name, env_value)
+>       assert getattr(SentinelConfig(), attribute) == expected
+E       AssertionError: assert 2.0 == 0.25
+E        +  where 2.0 = getattr(SentinelConfig(api_url='https://api.pauseapi.app', api_key=None, timeout_seconds=300.0, poll_interval=2.0, fallback='reject'), 'poll_interval')
+E        +    where SentinelConfig(api_url='https://api.pauseapi.app', api_key=None, timeout_seconds=300.0, poll_interval=2.0, fallback='reject') = SentinelConfig()
+
+tests/test_qa_dx.py:106: AssertionError
+____ test_missing_required_argument_fails_before_requesting_human_approval _____
+
+quickstart = ({'__builtins__': {'__name__': 'builtins', '__doc__': "Built-in functions, types, exceptions, and other objects.\n\nTh...72d40>, 'transfer_funds': <function transfer_funds at 0x10cbc6200>}, <MagicMock spec='SentinelClient' id='4508720848'>)
+
+    @pytest.mark.xfail(
+        strict=True,
+        raises=AssertionError,
+        reason="UX-003: missing required function argument requests approval before raising TypeError",
+    )
+    def test_missing_required_argument_fails_before_requesting_human_approval(quickstart):
+        namespace, client = quickstart
+        with pytest.raises(TypeError, match="required positional argument"):
+            namespace["transfer_funds"](1000)
+>       client.create_approval.assert_not_called()
+
+tests/test_qa_dx.py:147: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock name='mock.create_approval' id='4508718480'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'create_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='transfer_funds', arguments={'amount': 1000}, risk_level='high', approvers=['sms:+15551234567', 'alice@acme.com'], timeout_seconds=300)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_qa_dx.py::test_readme_quickstart_runs_after_approval - Name...
+FAILED tests/test_qa_dx.py::test_readme_environment_configuration[SENTINEL_POLL_INTERVAL-0.25-poll_interval-0.25]
+FAILED tests/test_qa_dx.py::test_missing_required_argument_fails_before_requesting_human_approval
+3 failed, 9 passed in 0.12s

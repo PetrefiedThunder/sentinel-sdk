@@ -1,0 +1,5 @@
+UTC start: 2026-10-03T01:52:08+00:00
+Command: .venv/bin/ruff check sentinel tests/test_decorator.py tests/test_idempotency.py tests/test_langgraph_adapter.py tests/test_list_and_timeout.py tests/test_openai_agents_adapter.py tests/test_semantic_kernel_adapter.py tests/test_serializable.py
+Exit: 0
+
+All checks passed!

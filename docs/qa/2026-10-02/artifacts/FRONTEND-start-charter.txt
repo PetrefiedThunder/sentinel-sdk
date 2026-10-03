@@ -1,0 +1,4 @@
+UTC start: 2026-10-03T01:51:13+00:00
+Command: python3 -c 'from pathlib import Path; from datetime import datetime, timezone; p=Path("docs/qa/2026-10-02/FRONTEND-LOG.md"); stamp=datetime.now(timezone.utc).isoformat(timespec="seconds"); p.write_text("# Frontend QA substitute: adapter integration and packaging\n\nThis Python SDK has no browser UI. Browser, WCAG, responsive-layout, console/network and Lighthouse checks do not apply; adapter host integration is the useful frontend boundary. All execution is local with mocked approval clients.\n" + p.read_text() + f"\n- **{stamp}** Charter FE-A (15-minute timebox): prove host-framework callbacks stop side effects after rejection/error; exercise all seven adapters across approved, rejected, unknown and malformed decisions. Inspect metadata and mixed-argument fidelity. Exit with focused regressions and evidence; real defects remain strict expected failures.\n")'
+Exit: 0
+

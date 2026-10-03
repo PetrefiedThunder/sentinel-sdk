@@ -1,0 +1,339 @@
+UTC start: 2026-10-03T01:53:47+00:00
+Command: python3 -c 'from pathlib import Path; import datetime; print(datetime.datetime.now(datetime.timezone.utc).isoformat()); p=Path("tests/test_qa_adapters.py"); print("".join(f"{i}: {line}" for i,line in enumerate(p.open(),1))); print(Path("docs/qa/2026-10-02/FRONTEND-LOG.md").read_text())'
+Exit: 0
+
+2026-10-03T01:53:47.903991+00:00
+1: """QA sweep: local adapter contracts; no provider or approval-service calls."""
+2: 
+3: import asyncio
+4: import inspect
+5: from types import SimpleNamespace
+6: from unittest.mock import AsyncMock, MagicMock
+7: 
+8: import pytest
+9: 
+10: from sentinel.adapters import anthropic, autogen, crewai, langgraph, openai_agents
+11: from sentinel.adapters.semantic_kernel import sentinel_filter
+12: from sentinel.exceptions import ApprovalRejected, ApprovalTimeout
+13: 
+14: 
+15: def _client(decision):
+16:     client = MagicMock()
+17:     client.create_approval.return_value = {"action_id": "qa-action"}
+18:     client.wait_for_decision.return_value = decision
+19:     client.acreate_approval = AsyncMock(return_value={"action_id": "qa-action"})
+20:     client.await_for_decision = AsyncMock(return_value=decision)
+21:     return client
+22: 
+23: 
+24: def _wrap(adapter, fn, client):
+25:     if adapter == "autogen":
+26:         return autogen.gated(client=client)(fn)
+27:     if adapter == "crewai":
+28:         return crewai.gated(fn, client=client)
+29:     if adapter == "langgraph":
+30:         return langgraph.SentinelToolGate(client=client).wrap(fn)
+31:     return openai_agents.gated(fn, client=client)
+32: 
+33: 
+34: def _invoke(adapter, client, fn):
+35:     if adapter == "anthropic":
+36:         return anthropic.GatedToolExecutor({"action": fn}, client=client).run_tool_uses(
+37:             [{"type": "tool_use", "id": "qa-use", "name": "action", "input": {}}]
+38:         )
+39:     if adapter == "semantic_kernel":
+40:         context = SimpleNamespace(function=SimpleNamespace(name="action"), arguments={})
+41: 
+42:         async def next_callback(_context):
+43:             fn()
+44: 
+45:         return asyncio.run(sentinel_filter(client=client)(context, next_callback))
+46:     if adapter == "langchain":
+47:         pytest.importorskip("langchain_core")
+48:         from sentinel.adapters.langchain import SentinelCallbackHandler
+49: 
+50:         SentinelCallbackHandler(client=client).on_tool_start({"name": "action"}, "{}")
+51:         return fn()
+52:     return _wrap(adapter, fn, client)()
+53: 
+54: 
+55: @pytest.mark.parametrize(
+56:     "adapter",
+57:     [
+58:         "anthropic",
+59:         "autogen",
+60:         "crewai",
+61:         "langgraph",
+62:         "openai_agents",
+63:         "semantic_kernel",
+64:         "langchain",
+65:     ],
+66: )
+67: @pytest.mark.parametrize("decision", [{"status": "rejected"}, {"status": "unknown"}, {}, None])
+68: def test_adapter_direct_invocation_does_not_execute_without_approval(adapter, decision):
+69:     """Direct adapter gate must fail closed even on an invalid server response."""
+70:     calls = []
+71:     client = _client(decision)
+72:     try:
+73:         result = _invoke(adapter, client, lambda: calls.append("executed"))
+74:     except (ApprovalRejected, AttributeError, TypeError):
+75:         result = None
+76:     assert calls == []
+77:     if adapter == "anthropic":
+78:         assert result[0]["is_error"] is True
+79:         assert result[0]["tool_use_id"] == "qa-use"
+80: 
+81: 
+82: @pytest.mark.parametrize(
+83:     "adapter",
+84:     [
+85:         "anthropic",
+86:         "autogen",
+87:         "crewai",
+88:         "langgraph",
+89:         "openai_agents",
+90:         "semantic_kernel",
+91:         "langchain",
+92:     ],
+93: )
+94: def test_adapter_direct_invocation_executes_once_after_approval(adapter):
+95:     calls = []
+96:     _invoke(adapter, _client({"status": "approved"}), lambda: calls.append("executed"))
+97:     assert calls == ["executed"]
+98: 
+99: 
+100: @pytest.mark.parametrize("adapter", ["autogen", "langgraph", "openai_agents"])
+101: @pytest.mark.parametrize("decision", [{"status": "rejected"}, {"status": "unknown"}, {}])
+102: def test_async_callable_rejection_preserves_semantics_and_stops_execution(adapter, decision):
+103:     calls = []
+104: 
+105:     async def action(value: int) -> int:
+106:         calls.append(value)
+107:         return value
+108: 
+109:     client = _client(decision)
+110:     wrapped = _wrap(adapter, action, client)
+111:     assert inspect.iscoroutinefunction(wrapped)
+112:     assert inspect.signature(wrapped) == inspect.signature(action)
+113:     with pytest.raises(ApprovalRejected):
+114:         asyncio.run(wrapped(value=5))
+115:     assert calls == []
+116:     client.create_approval.assert_not_called()
+117:     client.acreate_approval.assert_awaited_once()
+118: 
+119: 
+120: @pytest.mark.xfail(
+121:     strict=True,
+122:     raises=AssertionError,
+123:     reason="FE-002: positional arguments omitted when kwargs exist",
+124: )
+125: @pytest.mark.parametrize("adapter", ["autogen", "crewai", "langgraph", "openai_agents"])
+126: def test_mixed_sync_arguments_are_fully_presented_for_approval(adapter):
+127:     client = _client({"status": "approved"})
+128: 
+129:     def action(amount: int, *, recipient: str):
+130:         return amount, recipient
+131: 
+132:     assert _wrap(adapter, action, client)(90000, recipient="qa-recipient") == (
+133:         90000,
+134:         "qa-recipient",
+135:     )
+136:     assert client.create_approval.call_args.kwargs["arguments"] == {
+137:         "amount": 90000,
+138:         "recipient": "qa-recipient",
+139:     }
+140: 
+141: 
+142: @pytest.mark.xfail(
+143:     strict=True,
+144:     raises=AssertionError,
+145:     reason="FE-002: positional arguments omitted when kwargs exist",
+146: )
+147: @pytest.mark.parametrize("adapter", ["autogen", "langgraph", "openai_agents"])
+148: def test_mixed_async_arguments_are_fully_presented_for_approval(adapter):
+149:     client = _client({"status": "approved"})
+150: 
+151:     async def action(amount: int, *, recipient: str):
+152:         return amount, recipient
+153: 
+154:     assert asyncio.run(_wrap(adapter, action, client)(90000, recipient="qa-recipient")) == (
+155:         90000,
+156:         "qa-recipient",
+157:     )
+158:     assert client.acreate_approval.call_args.kwargs["arguments"] == {
+159:         "amount": 90000,
+160:         "recipient": "qa-recipient",
+161:     }
+162: 
+163: 
+164: @pytest.mark.xfail(
+165:     strict=True,
+166:     raises=AssertionError,
+167:     reason="FE-001: LangChain swallows callback rejection and runs tool",
+168: )
+169: @pytest.mark.parametrize("asynchronous", [False, True], ids=["invoke", "ainvoke"])
+170: @pytest.mark.parametrize("failure", ["rejected", "timeout", "transport_error"])
+171: def test_real_langchain_tool_does_not_run_after_gate_failure(asynchronous, failure):
+172:     pytest.importorskip("langchain_core")
+173:     from langchain_core.tools import tool
+174: 
+175:     from sentinel.adapters.langchain import SentinelCallbackHandler
+176: 
+177:     calls = []
+178: 
+179:     @tool
+180:     def local_action(value: int) -> str:
+181:         """Record a local action without contacting any external service."""
+182:         calls.append(value)
+183:         return "executed"
+184: 
+185:     client = _client({"status": "rejected", "reason": "qa denied"})
+186:     if failure == "timeout":
+187:         client.wait_for_decision.side_effect = ApprovalTimeout("qa-action", 1)
+188:     elif failure == "transport_error":
+189:         client.create_approval.side_effect = ConnectionError("qa local connection failure")
+190:     config = {"callbacks": [SentinelCallbackHandler(client=client)]}
+191:     try:
+192:         if asynchronous:
+193:             asyncio.run(local_action.ainvoke({"value": 7}, config=config))
+194:         else:
+195:             local_action.invoke({"value": 7}, config=config)
+196:     except (ApprovalRejected, ApprovalTimeout, ConnectionError):
+197:         pass
+198:     client.create_approval.assert_called_once()
+199:     assert calls == []
+200: 
+201: 
+202: @pytest.mark.parametrize("asynchronous", [False, True], ids=["invoke", "ainvoke"])
+203: def test_real_langchain_approved_tool_executes_once(asynchronous):
+204:     pytest.importorskip("langchain_core")
+205:     from langchain_core.tools import tool
+206: 
+207:     from sentinel.adapters.langchain import SentinelCallbackHandler
+208: 
+209:     calls = []
+210: 
+211:     @tool
+212:     def local_action(value: int) -> str:
+213:         """Record a local action without contacting any external service."""
+214:         calls.append(value)
+215:         return "executed"
+216: 
+217:     client = _client({"status": "approved"})
+218:     config = {"callbacks": [SentinelCallbackHandler(client=client)]}
+219:     if asynchronous:
+220:         result = asyncio.run(local_action.ainvoke({"value": 7}, config=config))
+221:     else:
+222:         result = local_action.invoke({"value": 7}, config=config)
+223:     assert result == "executed"
+224:     assert calls == [7]
+225:     client.create_approval.assert_called_once()
+226:     client.wait_for_decision.assert_called_once_with("qa-action", timeout=None)
+227: 
+228: 
+229: @pytest.mark.parametrize("block_style", ["mapping", "model"])
+230: def test_anthropic_unknown_tool_and_non_tool_blocks_are_safe(block_style):
+231:     client = _client({"status": "approved"})
+232:     blocks = [
+233:         {"type": "text", "text": "ignore"},
+234:         {"type": "tool_use", "id": "qa-use", "name": "missing", "input": {}},
+235:     ]
+236:     if block_style == "model":
+237:         blocks = [SimpleNamespace(**block) for block in blocks]
+238:     results = anthropic.GatedToolExecutor({}, client=client).run_tool_uses(blocks)
+239:     assert len(results) == 1
+240:     assert results[0]["is_error"] is True
+241:     assert results[0]["tool_use_id"] == "qa-use"
+242:     client.create_approval.assert_not_called()
+243: 
+244: 
+245: @pytest.mark.parametrize("args_json", ["not json", "[]", "null", "7", "{}"])
+246: def test_openai_function_tool_rejection_blocks_malformed_and_valid_inputs(args_json):
+247:     original = AsyncMock(return_value="executed")
+248:     tool = SimpleNamespace(name="action", on_invoke_tool=original)
+249:     client = _client({"status": "rejected"})
+250:     assert openai_agents.gated(tool, client=client) is tool
+251:     with pytest.raises(ApprovalRejected):
+252:         asyncio.run(tool.on_invoke_tool(None, args_json))
+253:     original.assert_not_awaited()
+254: 
+255: 
+256: def test_crewai_run_object_keeps_identity_and_rejection_blocks_original():
+257:     original = MagicMock(return_value="executed")
+258:     tool = SimpleNamespace(name="action", _run=original)
+259:     assert crewai.gated(tool, client=_client({"status": "rejected"})) is tool
+260:     with pytest.raises(ApprovalRejected):
+261:         tool._run(value=1)
+262:     original.assert_not_called()
+
+# Frontend QA substitute: adapter integration and packaging
+
+This Python SDK has no browser UI. Browser, WCAG, responsive-layout, console/network and Lighthouse checks do not apply; adapter host integration is the useful frontend boundary. All execution is local with mocked approval clients.
+# Pass 2: Adapter and packaging QA
+
+All timestamps UTC.
+
+- **2026-10-03T01:50:34+00:00 → 2026-10-03T01:50:34+00:00** `pwd` — exit **0**; [output](artifacts/FRONTEND-identity.txt).
+
+- **2026-10-03T01:50:39+00:00 → 2026-10-03T01:50:39+00:00** `rg --files -g '!uv.lock' -g '!*.lock' -g '!.env*' -g '!docs/qa/**'` — exit **0**; [output](artifacts/FRONTEND-file-map.txt).
+
+- **2026-10-03T01:50:39+00:00 → 2026-10-03T01:50:39+00:00** `python3 -c 'import subprocess; [(print(x), subprocess.run(x.split(), check=False)) for x in ["git worktree list", "git status --short --branch", "git remote -v"]]'` — exit **0**; [output](artifacts/FRONTEND-git-identity.txt).
+
+- **2026-10-03T01:50:46+00:00 → 2026-10-03T01:50:46+00:00** `rg --files --hidden -g AGENTS.md -g '!docs/qa/**' -g '!.git/**'` — exit **1**; [output](artifacts/FRONTEND-instructions.txt).
+
+- **2026-10-03T01:50:46+00:00 → 2026-10-03T01:50:46+00:00** `python3 -c 'from pathlib import Path; files=[Path("pyproject.toml"),*Path("tests").glob("test_*adapter.py")]; [(print("\nFILE",str(p)),print(p.read_text())) for p in files]'` — exit **0**; [output](artifacts/FRONTEND-test-config.txt).
+
+- **2026-10-03T01:50:46+00:00 → 2026-10-03T01:50:46+00:00** `python3 -c 'from pathlib import Path; files=list(Path("sentinel/adapters").glob("*.py")); [(print("\nFILE",str(p)),print("".join(f"{i}: {s}" for i,s in enumerate(p.open(),1)))) for p in files]'` — exit **0**; [output](artifacts/FRONTEND-adapter-source.txt).
+
+- **2026-10-03T01:50:50+00:00 → 2026-10-03T01:50:50+00:00** `python3 -c 'from pathlib import Path; files=["sentinel/adapters/langchain.py","sentinel/adapters/anthropic.py","sentinel/adapters/openai_agents.py","sentinel/adapters/langgraph.py"]; [(print("\nFILE",p),print("".join(f"{i}: {s}" for i,s in enumerate(Path(p).open(),1)))) for p in files]'` — exit **0**; [output](artifacts/FRONTEND-focused-source.txt).
+
+- **2026-10-03T01:51:00+00:00 → 2026-10-03T01:51:00+00:00** `python3 -c 'from pathlib import Path; from datetime import datetime, timezone; print(datetime.now(timezone.utc).isoformat()); print(Path("docs/qa/2026-10-02/artifacts/qa_run.py").read_text())'` — exit **0**; [output](artifacts/FRONTEND-logger-and-time.txt).
+
+- **2026-10-03T01:51:13+00:00** Charter FE-A (15-minute timebox): prove host-framework callbacks stop side effects after rejection/error; exercise all seven adapters across approved, rejected, unknown and malformed decisions. Inspect metadata and mixed-argument fidelity. Exit with focused regressions and evidence; real defects remain strict expected failures.
+
+- **2026-10-03T01:51:13+00:00 → 2026-10-03T01:51:13+00:00** `python3 -c 'from pathlib import Path; from datetime import datetime, timezone; p=Path("docs/qa/2026-10-02/FRONTEND-LOG.md"); stamp=datetime.now(timezone.utc).isoformat(timespec="seconds"); p.write_text("# Frontend QA substitute: adapter integration and packaging\n\nThis Python SDK has no browser UI. Browser, WCAG, responsive-layout, console/network and Lighthouse checks do not apply; adapter host integration is the useful frontend boundary. All execution is local with mocked approval clients.\n" + p.read_text() + f"\n- **{stamp}** Charter FE-A (15-minute timebox): prove host-framework callbacks stop side effects after rejection/error; exercise all seven adapters across approved, rejected, unknown and malformed decisions. Inspect metadata and mixed-argument fidelity. Exit with focused regressions and evidence; real defects remain strict expected failures.\n")'` — exit **0**; [output](artifacts/FRONTEND-start-charter.txt).
+
+- **2026-10-03T01:51:25+00:00 → 2026-10-03T01:51:25+00:00** `python3 -c 'from pathlib import Path; print("python exists:",Path(".venv3.11/bin/python").exists()); print("pytest exists:",Path(".venv3.11/bin/pytest").exists())'` — exit **0**; [output](artifacts/FRONTEND-environment-check.txt).
+
+- **2026-10-03T01:51:28+00:00 → 2026-10-03T01:51:28+00:00** `rg -n -A 28 -B 5 'LangChain|CrewAI|AutoGen|LangGraph|Anthropic|OpenAI Agents|Semantic Kernel|async' README.md` — exit **0**; [output](artifacts/FRONTEND-readme-contracts.txt).
+
+- **2026-10-03T01:52:31+00:00** Tool edit: added tests/test_qa_adapters.py using apply_patch. All-seven direct-gate matrix, sync/async metadata, Anthropic unknown-tool output, OpenAI malformed-input rejection, CrewAI object identity; strict expected-failure regressions for FE-001 host fail-open and FE-002 incomplete approval arguments. No product source changed.
+
+- **2026-10-03T01:52:31+00:00 → 2026-10-03T01:52:31+00:00** `python3 -c 'from pathlib import Path; from datetime import datetime, timezone; stamp=datetime.now(timezone.utc).isoformat(timespec="seconds"); p=Path("docs/qa/2026-10-02/FRONTEND-LOG.md"); p.open("a").write(f"\n- **{stamp}** Tool edit: added tests/test_qa_adapters.py using apply_patch. All-seven direct-gate matrix, sync/async metadata, Anthropic unknown-tool output, OpenAI malformed-input rejection, CrewAI object identity; strict expected-failure regressions for FE-001 host fail-open and FE-002 incomplete approval arguments. No product source changed.\n"); print(Path("sentinel/exceptions.py").read_text())'` — exit **0**; [output](artifacts/FRONTEND-log-test-edit.txt).
+
+- **2026-10-03T01:52:31+00:00 → 2026-10-03T01:52:31+00:00** `.venv/bin/python -m pytest tests/test_qa_adapters.py -q -ra` — exit **0**; [output](artifacts/FRONTEND-adapter-tests.txt).
+
+- **2026-10-03T01:52:58+00:00 → 2026-10-03T01:52:58+00:00** `.venv/bin/python -m pytest --runxfail -q 'tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[rejected-invoke]' 'tests/test_qa_adapters.py::test_mixed_sync_arguments_are_fully_presented_for_approval[autogen]'` — exit **1**; [output](artifacts/FRONTEND-negative-control.txt).
+
+- **2026-10-03T01:52:58+00:00 → 2026-10-03T01:52:58+00:00** `.venv/bin/python -c 'import inspect; from langchain_core.callbacks import BaseCallbackHandler; from langchain_core.callbacks import manager; import importlib.metadata; print("langchain-core",importlib.metadata.version("langchain-core")); print("BaseCallbackHandler.raise_error:",BaseCallbackHandler.raise_error); print("manager:",inspect.getsourcefile(manager)); source,start=inspect.getsourcelines(manager.handle_event); print("".join(f"{i}: {line}" for i,line in enumerate(source,start)))'` — exit **0**; [output](artifacts/FRONTEND-langchain-source-evidence.txt).
+
+- **2026-10-03T01:53:25+00:00** Charter FE-A completed early after 9 minutes: direct adapter gate checks pass, but actual LangChain invoke/ainvoke execute after rejection, timeout or transport failure (FE-001). Four callable adapters omit positional input whenever keyword arguments exist (FE-002). Intentional --runxfail negative control exits 1 with both failures.
+- **2026-10-03T01:53:25+00:00** Tool edit: imported ApprovalTimeout in tests, allowed its propagation in host regression, verified callback invocation, and added approved LangChain invoke/ainvoke controls via apply_patch.
+- **2026-10-03T01:53:25+00:00** Charter FE-B (10-minute timebox): verify focused test quality, adapter error/malformed contract coverage and artifact reproducibility; inspect host signature/in-place wrapping limits without expanding to heavy framework installation. Root owns build/static/package auditing.
+
+- **2026-10-03T01:53:25+00:00 → 2026-10-03T01:53:25+00:00** `python3 -c 'from pathlib import Path; from datetime import datetime, timezone; stamp=datetime.now(timezone.utc).isoformat(timespec="seconds"); Path("docs/qa/2026-10-02/FRONTEND-LOG.md").open("a").write(f"\n- **{stamp}** Charter FE-A completed early after 9 minutes: direct adapter gate checks pass, but actual LangChain invoke/ainvoke execute after rejection, timeout or transport failure (FE-001). Four callable adapters omit positional input whenever keyword arguments exist (FE-002). Intentional --runxfail negative control exits 1 with both failures.\n- **{stamp}** Tool edit: imported ApprovalTimeout in tests, allowed its propagation in host regression, verified callback invocation, and added approved LangChain invoke/ainvoke controls via apply_patch.\n- **{stamp}** Charter FE-B (10-minute timebox): verify focused test quality, adapter error/malformed contract coverage and artifact reproducibility; inspect host signature/in-place wrapping limits without expanding to heavy framework installation. Root owns build/static/package auditing.\n")'` — exit **0**; [output](artifacts/FRONTEND-log-charter-a-completion.txt).
+
+- **2026-10-03T01:53:25+00:00 → 2026-10-03T01:53:25+00:00** `.venv/bin/python -m ruff check tests/test_qa_adapters.py` — exit **0**; [output](artifacts/FRONTEND-test-lint.txt).
+
+- **2026-10-03T01:53:25+00:00 → 2026-10-03T01:53:25+00:00** `.venv/bin/python -m ruff format --check tests/test_qa_adapters.py` — exit **1**; [output](artifacts/FRONTEND-test-format-check.txt).
+
+- **2026-10-03T01:53:25+00:00 → 2026-10-03T01:53:26+00:00** `.venv/bin/python -m pytest tests/test_qa_adapters.py -q -ra` — exit **0**; [output](artifacts/FRONTEND-adapter-tests-final.txt).
+
+- **2026-10-03T01:53:47+00:00 → 2026-10-03T01:53:47+00:00** `.venv/bin/python -m ruff format tests/test_qa_adapters.py` — exit **0**; [output](artifacts/FRONTEND-format-test.txt).
+
+- **2026-10-03T01:53:47+00:00 → 2026-10-03T01:53:47+00:00** `.venv/bin/python -c 'import asyncio; from unittest.mock import MagicMock; from langchain_core.tools import tool; from sentinel.adapters.langchain import SentinelCallbackHandler; from sentinel.exceptions import ApprovalRejected; calls=[]
+@tool
+def local_action(value:int)->str:
+    """Local QA no-network action."""
+    calls.append(value)
+    return "executed"
+client=MagicMock(); client.create_approval.return_value={"action_id":"qa-action"}; client.wait_for_decision.return_value={"status":"rejected"}; handler=SentinelCallbackHandler(client=client); handler.raise_error=True
+for asynchronous in (False,True):
+    try:
+        value=local_action.ainvoke({"value":7},config={"callbacks":[handler]}) if asynchronous else local_action.invoke({"value":7},config={"callbacks":[handler]})
+        if asynchronous: asyncio.run(value)
+    except ApprovalRejected: print("propagated rejected decision", "ainvoke" if asynchronous else "invoke")
+assert calls==[],calls
+assert client.create_approval.call_count==2
+print("Tool calls with test-only raise_error override:",calls)'` — exit **0**; [output](artifacts/FRONTEND-suggested-fix-control.txt).
+

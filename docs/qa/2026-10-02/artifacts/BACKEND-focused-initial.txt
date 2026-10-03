@@ -1,0 +1,253 @@
+UTC start: 2026-10-03T01:52:37+00:00
+Command: .venv/bin/python -m pytest tests/test_qa_backend.py -q -rxX
+Exit: 1
+
+...............................xxxx...F.F.F.F.F.F.F.xxxxxxxxxxx          [100%]
+=================================== FAILURES ===================================
+___________ test_unapproved_decisions_never_execute[decision0-sync] ____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108fa2210>
+mode = 'sync', decision = {'status': 'rejected'}
+
+    @pytest.mark.parametrize("mode", ["sync", "async"])
+    @pytest.mark.parametrize("decision", [{"status": "rejected"}, {"status": "unknown"}, {}, {"status": "rejected", "decision": "approved"}])
+    def test_unapproved_decisions_never_execute(monkeypatch, mode, decision):
+        decorator_client(monkeypatch, mode, decision=decision)
+        operation = MagicMock()
+        with pytest.raises(ApprovalRejected):
+>           wrap_call(mode, operation)()
+
+tests/test_qa_backend.py:233: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+sentinel/decorator.py:118: in wrapper
+    function_name=fn.__name__,
+                  ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock id='4446183760'>, name = '__name__'
+
+    def __getattr__(self, name):
+        if name in {'_mock_methods', '_mock_unsafe'}:
+            raise AttributeError(name)
+        elif self._mock_methods is not None:
+            if name not in self._mock_methods or name in _all_magics:
+                raise AttributeError("Mock object has no attribute %r" % name)
+        elif _is_magic(name):
+>           raise AttributeError(name)
+E           AttributeError: __name__
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:655: AttributeError
+___________ test_unapproved_decisions_never_execute[decision1-sync] ____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108feb790>
+mode = 'sync', decision = {'status': 'unknown'}
+
+    @pytest.mark.parametrize("mode", ["sync", "async"])
+    @pytest.mark.parametrize("decision", [{"status": "rejected"}, {"status": "unknown"}, {}, {"status": "rejected", "decision": "approved"}])
+    def test_unapproved_decisions_never_execute(monkeypatch, mode, decision):
+        decorator_client(monkeypatch, mode, decision=decision)
+        operation = MagicMock()
+        with pytest.raises(ApprovalRejected):
+>           wrap_call(mode, operation)()
+
+tests/test_qa_backend.py:233: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+sentinel/decorator.py:118: in wrapper
+    function_name=fn.__name__,
+                  ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock id='4444513616'>, name = '__name__'
+
+    def __getattr__(self, name):
+        if name in {'_mock_methods', '_mock_unsafe'}:
+            raise AttributeError(name)
+        elif self._mock_methods is not None:
+            if name not in self._mock_methods or name in _all_magics:
+                raise AttributeError("Mock object has no attribute %r" % name)
+        elif _is_magic(name):
+>           raise AttributeError(name)
+E           AttributeError: __name__
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:655: AttributeError
+___________ test_unapproved_decisions_never_execute[decision2-sync] ____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108fea890>
+mode = 'sync', decision = {}
+
+    @pytest.mark.parametrize("mode", ["sync", "async"])
+    @pytest.mark.parametrize("decision", [{"status": "rejected"}, {"status": "unknown"}, {}, {"status": "rejected", "decision": "approved"}])
+    def test_unapproved_decisions_never_execute(monkeypatch, mode, decision):
+        decorator_client(monkeypatch, mode, decision=decision)
+        operation = MagicMock()
+        with pytest.raises(ApprovalRejected):
+>           wrap_call(mode, operation)()
+
+tests/test_qa_backend.py:233: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+sentinel/decorator.py:118: in wrapper
+    function_name=fn.__name__,
+                  ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock id='4445333456'>, name = '__name__'
+
+    def __getattr__(self, name):
+        if name in {'_mock_methods', '_mock_unsafe'}:
+            raise AttributeError(name)
+        elif self._mock_methods is not None:
+            if name not in self._mock_methods or name in _all_magics:
+                raise AttributeError("Mock object has no attribute %r" % name)
+        elif _is_magic(name):
+>           raise AttributeError(name)
+E           AttributeError: __name__
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:655: AttributeError
+___________ test_unapproved_decisions_never_execute[decision3-sync] ____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108f91c10>
+mode = 'sync', decision = {'status': 'rejected', 'decision': 'approved'}
+
+    @pytest.mark.parametrize("mode", ["sync", "async"])
+    @pytest.mark.parametrize("decision", [{"status": "rejected"}, {"status": "unknown"}, {}, {"status": "rejected", "decision": "approved"}])
+    def test_unapproved_decisions_never_execute(monkeypatch, mode, decision):
+        decorator_client(monkeypatch, mode, decision=decision)
+        operation = MagicMock()
+        with pytest.raises(ApprovalRejected):
+>           wrap_call(mode, operation)()
+
+tests/test_qa_backend.py:233: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+sentinel/decorator.py:118: in wrapper
+    function_name=fn.__name__,
+                  ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock id='4443223312'>, name = '__name__'
+
+    def __getattr__(self, name):
+        if name in {'_mock_methods', '_mock_unsafe'}:
+            raise AttributeError(name)
+        elif self._mock_methods is not None:
+            if name not in self._mock_methods or name in _all_magics:
+                raise AttributeError("Mock object has no attribute %r" % name)
+        elif _is_magic(name):
+>           raise AttributeError(name)
+E           AttributeError: __name__
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:655: AttributeError
+__________________ test_default_timeout_never_executes[sync] ___________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1092823d0>
+mode = 'sync'
+
+    @pytest.mark.parametrize("mode", ["sync", "async"])
+    def test_default_timeout_never_executes(monkeypatch, mode):
+        decorator_client(monkeypatch, mode, failure=ApprovalTimeout("action", 1))
+        operation = MagicMock()
+        with pytest.raises(ApprovalTimeout):
+>           wrap_call(mode, operation)()
+
+tests/test_qa_backend.py:242: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+sentinel/decorator.py:118: in wrapper
+    function_name=fn.__name__,
+                  ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock id='4445802064'>, name = '__name__'
+
+    def __getattr__(self, name):
+        if name in {'_mock_methods', '_mock_unsafe'}:
+            raise AttributeError(name)
+        elif self._mock_methods is not None:
+            if name not in self._mock_methods or name in _all_magics:
+                raise AttributeError("Mock object has no attribute %r" % name)
+        elif _is_magic(name):
+>           raise AttributeError(name)
+E           AttributeError: __name__
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:655: AttributeError
+_ test_execute_fallback_does_not_bypass_api_or_network_failures[failure0-sync] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108fd4990>
+mode = 'sync', failure = SentinelAPIError('Sentinel API 403: denied')
+
+    @pytest.mark.parametrize("mode", ["sync", "async"])
+    @pytest.mark.parametrize("failure", [SentinelAPIError(403, "denied"), httpx.ReadTimeout("synthetic")])
+    def test_execute_fallback_does_not_bypass_api_or_network_failures(monkeypatch, mode, failure):
+        decorator_client(monkeypatch, mode, failure=failure)
+        operation = MagicMock()
+        with pytest.raises(type(failure)):
+>           wrap_call(mode, operation, fallback="execute")()
+
+tests/test_qa_backend.py:252: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+sentinel/decorator.py:118: in wrapper
+    function_name=fn.__name__,
+                  ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock id='4445785104'>, name = '__name__'
+
+    def __getattr__(self, name):
+        if name in {'_mock_methods', '_mock_unsafe'}:
+            raise AttributeError(name)
+        elif self._mock_methods is not None:
+            if name not in self._mock_methods or name in _all_magics:
+                raise AttributeError("Mock object has no attribute %r" % name)
+        elif _is_magic(name):
+>           raise AttributeError(name)
+E           AttributeError: __name__
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:655: AttributeError
+_ test_execute_fallback_does_not_bypass_api_or_network_failures[failure1-sync] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109036f10>
+mode = 'sync', failure = ReadTimeout('synthetic')
+
+    @pytest.mark.parametrize("mode", ["sync", "async"])
+    @pytest.mark.parametrize("failure", [SentinelAPIError(403, "denied"), httpx.ReadTimeout("synthetic")])
+    def test_execute_fallback_does_not_bypass_api_or_network_failures(monkeypatch, mode, failure):
+        decorator_client(monkeypatch, mode, failure=failure)
+        operation = MagicMock()
+        with pytest.raises(type(failure)):
+>           wrap_call(mode, operation, fallback="execute")()
+
+tests/test_qa_backend.py:252: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+sentinel/decorator.py:118: in wrapper
+    function_name=fn.__name__,
+                  ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock id='4445858896'>, name = '__name__'
+
+    def __getattr__(self, name):
+        if name in {'_mock_methods', '_mock_unsafe'}:
+            raise AttributeError(name)
+        elif self._mock_methods is not None:
+            if name not in self._mock_methods or name in _all_magics:
+                raise AttributeError("Mock object has no attribute %r" % name)
+        elif _is_magic(name):
+>           raise AttributeError(name)
+E           AttributeError: __name__
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:655: AttributeError
+=========================== short test summary info ============================
+XFAIL tests/test_qa_backend.py::test_legacy_wait_paces_pending_requests[sync] - BE-001: legacy polling ignores poll_interval
+XFAIL tests/test_qa_backend.py::test_legacy_wait_paces_pending_requests[async] - BE-001: legacy polling ignores poll_interval
+XFAIL tests/test_qa_backend.py::test_late_approval_does_not_bypass_deadline[sync] - BE-005: an approved response after the deadline is accepted
+XFAIL tests/test_qa_backend.py::test_late_approval_does_not_bypass_deadline[async] - BE-005: an approved response after the deadline is accepted
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[approved-sync] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[approved-async] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[rejected-sync] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[rejected-async] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[timeout-sync] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[timeout-async] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[operation-error-sync] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[operation-error-async] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_timeout_fallback_exception_is_audited[sync] - BE-003: failing timeout fallback does not emit audit evidence
+XFAIL tests/test_qa_backend.py::test_timeout_fallback_exception_is_audited[async] - BE-003: failing timeout fallback does not emit audit evidence
+XFAIL tests/test_qa_backend.py::test_execution_arguments_match_approved_snapshot - BE-004: mutable arguments can change while approval is pending
+7 failed, 41 passed, 15 xfailed in 0.52s

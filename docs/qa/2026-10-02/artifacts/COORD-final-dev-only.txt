@@ -1,0 +1,9 @@
+UTC start: 2026-10-03T01:55:41+00:00
+Command: /private/tmp/sentinel-qa-wheel-env/bin/python -m pytest tests -q --junitxml=docs/qa/2026-10-02/artifacts/dev-only-junit.xml
+Exit: 0
+
+...............................................s......s......s......s... [ 32%]
+...s.........xxxxxxxssssssss.......................................xxxx. [ 64%]
+................xxxxxxxxxxx......s.................xx......x...x........ [ 96%]
+........                                                                 [100%]
+184 passed, 14 skipped, 26 xfailed in 0.52s
