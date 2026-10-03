@@ -1,0 +1,30 @@
+UTC start: 2026-10-03T02:39:39+00:00
+Command: .venv/bin/mypy sentinel
+Exit: 1
+
+sentinel/adapters/semantic_kernel.py:115: error: Argument "timeout_seconds" to "acreate_approval" of "SentinelClient" has incompatible type "float | None"; expected "int | None"  [arg-type]
+sentinel/adapters/semantic_kernel.py:118: error: Argument 1 to "await_for_decision" of "SentinelClient" has incompatible type "Any | None"; expected "str"  [arg-type]
+sentinel/adapters/openai_agents.py:130: error: Argument "timeout_seconds" to "create_approval" of "SentinelClient" has incompatible type "float | None"; expected "int | None"  [arg-type]
+sentinel/adapters/openai_agents.py:133: error: Argument 1 to "wait_for_decision" of "SentinelClient" has incompatible type "Any | None"; expected "str"  [arg-type]
+sentinel/adapters/openai_agents.py:159: error: Argument "timeout_seconds" to "acreate_approval" of "SentinelClient" has incompatible type "float | None"; expected "int | None"  [arg-type]
+sentinel/adapters/openai_agents.py:162: error: Argument 1 to "await_for_decision" of "SentinelClient" has incompatible type "Any | None"; expected "str"  [arg-type]
+sentinel/adapters/langgraph.py:68: error: Argument 1 to "_should_gate" of "SentinelToolGate" has incompatible type "str | Any | None"; expected "str"  [arg-type]
+sentinel/adapters/langgraph.py:77: error: Argument "function_name" to "acreate_approval" of "SentinelClient" has incompatible type "str | Any | None"; expected "str"  [arg-type]
+sentinel/adapters/langgraph.py:81: error: Argument "timeout_seconds" to "acreate_approval" of "SentinelClient" has incompatible type "float | None"; expected "int | None"  [arg-type]
+sentinel/adapters/langgraph.py:85: error: Argument 1 to "await_for_decision" of "SentinelClient" has incompatible type "Any | None"; expected "str"  [arg-type]
+sentinel/adapters/langgraph.py:101: error: Argument "function_name" to "create_approval" of "SentinelClient" has incompatible type "str | Any | None"; expected "str"  [arg-type]
+sentinel/adapters/langgraph.py:105: error: Argument "timeout_seconds" to "create_approval" of "SentinelClient" has incompatible type "float | None"; expected "int | None"  [arg-type]
+sentinel/adapters/langgraph.py:108: error: Argument 1 to "wait_for_decision" of "SentinelClient" has incompatible type "Any | None"; expected "str"  [arg-type]
+sentinel/adapters/crewai.py:65: error: Argument "timeout_seconds" to "create_approval" of "SentinelClient" has incompatible type "float | None"; expected "int | None"  [arg-type]
+sentinel/adapters/crewai.py:68: error: Argument 1 to "wait_for_decision" of "SentinelClient" has incompatible type "Any | None"; expected "str"  [arg-type]
+sentinel/adapters/autogen.py:53: error: Argument "function_name" to "acreate_approval" of "SentinelClient" has incompatible type "str | Any | None"; expected "str"  [arg-type]
+sentinel/adapters/autogen.py:57: error: Argument "timeout_seconds" to "acreate_approval" of "SentinelClient" has incompatible type "float | None"; expected "int | None"  [arg-type]
+sentinel/adapters/autogen.py:61: error: Argument 1 to "await_for_decision" of "SentinelClient" has incompatible type "Any | None"; expected "str"  [arg-type]
+sentinel/adapters/autogen.py:77: error: Argument "function_name" to "create_approval" of "SentinelClient" has incompatible type "str | Any | None"; expected "str"  [arg-type]
+sentinel/adapters/autogen.py:81: error: Argument "timeout_seconds" to "create_approval" of "SentinelClient" has incompatible type "float | None"; expected "int | None"  [arg-type]
+sentinel/adapters/autogen.py:84: error: Argument 1 to "wait_for_decision" of "SentinelClient" has incompatible type "Any | None"; expected "str"  [arg-type]
+sentinel/adapters/anthropic.py:147: error: Argument "timeout_seconds" to "create_approval" of "SentinelClient" has incompatible type "float | None"; expected "int | None"  [arg-type]
+sentinel/adapters/anthropic.py:150: error: Argument 1 to "wait_for_decision" of "SentinelClient" has incompatible type "Any | None"; expected "str"  [arg-type]
+sentinel/adapters/langchain.py:65: error: Argument "timeout_seconds" to "create_approval" of "SentinelClient" has incompatible type "float | None"; expected "int | None"  [arg-type]
+sentinel/adapters/langchain.py:68: error: Argument 1 to "wait_for_decision" of "SentinelClient" has incompatible type "Any | None"; expected "str"  [arg-type]
+Found 25 errors in 7 files (checked 13 source files)

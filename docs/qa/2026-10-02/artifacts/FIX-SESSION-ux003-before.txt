@@ -1,0 +1,42 @@
+UTC start: 2026-10-03T02:45:56+00:00
+Command: .venv/bin/python -m pytest tests/test_qa_dx.py -q --runxfail -k missing_required_argument
+Exit: 1
+
+F                                                                        [100%]
+=================================== FAILURES ===================================
+____ test_missing_required_argument_fails_before_requesting_human_approval _____
+
+quickstart = ({'__builtins__': {'__name__': 'builtins', '__doc__': "Built-in functions, types, exceptions, and other objects.\n\nTh...98c20>, 'transfer_funds': <function transfer_funds at 0x10a399a80>}, <MagicMock spec='SentinelClient' id='4466616592'>)
+
+    @pytest.mark.xfail(
+        strict=True,
+        raises=AssertionError,
+        reason="UX-003: missing required function argument requests approval before raising TypeError",
+    )
+    def test_missing_required_argument_fails_before_requesting_human_approval(quickstart):
+        namespace, client = quickstart
+        with pytest.raises(TypeError, match="required positional argument"):
+            namespace["transfer_funds"](1000)
+>       client.create_approval.assert_not_called()
+
+tests/test_qa_dx.py:147:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='mock.create_approval' id='4465122576'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'create_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='transfer_funds', arguments={'amount': 1000}, risk_level='high', approvers=['sms:+15551234567', 'alice@acme.com'], timeout_seconds=300)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_qa_dx.py::test_missing_required_argument_fails_before_requesting_human_approval
+1 failed, 11 deselected in 0.10s

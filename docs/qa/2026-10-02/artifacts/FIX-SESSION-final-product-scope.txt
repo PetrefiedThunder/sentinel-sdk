@@ -1,0 +1,17 @@
+UTC start: 2026-10-03T02:48:03+00:00
+Command: git diff --stat ede988f HEAD
+Exit: 0
+
+ README.md                          |   6 ++
+ sentinel/adapters/_arguments.py    |  21 +++++
+ sentinel/adapters/autogen.py       |   5 +-
+ sentinel/adapters/crewai.py        |   4 +-
+ sentinel/adapters/langchain.py     |   3 +
+ sentinel/adapters/langgraph.py     |   5 +-
+ sentinel/adapters/openai_agents.py |   5 +-
+ sentinel/decorator.py              |  22 ++++-
+ tests/test_adapter_arguments.py    | 168 +++++++++++++++++++++++++++++++++++++
+ tests/test_qa_adapters.py          |  97 ++++++++++++++++-----
+ tests/test_qa_backend.py           |  62 ++++++++++++--
+ tests/test_qa_dx.py                |   8 +-
+ 12 files changed, 361 insertions(+), 45 deletions(-)

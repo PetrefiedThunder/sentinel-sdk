@@ -1,0 +1,5 @@
+UTC start: 2026-10-03T02:39:24+00:00
+Command: .venv/bin/ruff check sentinel/adapters/langchain.py tests/test_qa_adapters.py
+Exit: 0
+
+All checks passed!

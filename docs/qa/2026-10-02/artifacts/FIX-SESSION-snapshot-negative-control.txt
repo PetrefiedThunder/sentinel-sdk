@@ -1,0 +1,53 @@
+UTC start: 2026-10-03T02:38:57+00:00
+Command: .venv/bin/python -m pytest --runxfail -q tests/test_qa_backend.py::test_execution_arguments_match_approved_snapshot
+Exit: 1
+
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_______________ test_execution_arguments_match_approved_snapshot _______________
+
+client_factory = <function client_factory.<locals>.make at 0x108729d00>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10876d190>
+
+    @pytest.mark.asyncio
+    @pytest.mark.xfail(
+        strict=True,
+        raises=AssertionError,
+        reason="BE-004: mutable arguments can change while approval is pending",
+    )
+    async def test_execution_arguments_match_approved_snapshot(client_factory, monkeypatch):
+        approval_requested = asyncio.Event()
+        mutation_done = asyncio.Event()
+        observed = {}
+        arguments = {"amount": 10}
+
+        async def handler(request):
+            if request.url.path == "/v1/approvals":
+                observed["approved"] = json.loads(request.content)["arguments"]["payload"]["amount"]
+                return httpx.Response(200, json={"action_id": "action"})
+            if request.url.path.endswith("/wait"):
+                approval_requested.set()
+                await mutation_done.wait()
+                return httpx.Response(200, json={"status": "approved"})
+            return httpx.Response(200, json={})
+
+        client = client_factory(handler)
+        monkeypatch.setattr(decorator_module, "SentinelClient", lambda config: client)
+
+        @oversight()
+        async def operation(payload):
+            observed["executed"] = payload["amount"]
+
+        async def concurrent_mutation():
+            await approval_requested.wait()
+            arguments["amount"] = 999
+            mutation_done.set()
+
+        await asyncio.gather(operation(arguments), concurrent_mutation())
+>       assert observed["executed"] == observed["approved"]
+E       assert 999 == 10
+
+tests/test_qa_backend.py:365: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_qa_backend.py::test_execution_arguments_match_approved_snapshot
+1 failed in 0.07s

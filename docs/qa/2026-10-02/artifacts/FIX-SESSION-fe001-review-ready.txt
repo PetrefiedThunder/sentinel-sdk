@@ -1,0 +1,8 @@
+UTC start: 2026-10-03T02:40:21+00:00
+Command: git diff --stat
+Exit: 0
+
+ README.md                      |  6 +++
+ sentinel/adapters/langchain.py |  3 ++
+ tests/test_qa_adapters.py      | 85 +++++++++++++++++++++++++++++++++++++-----
+ 3 files changed, 85 insertions(+), 9 deletions(-)

@@ -1,0 +1,35 @@
+UTC start: 2026-10-03T02:38:48+00:00
+Command: rg -n -A 35 -B 8 'serialize_arguments|bound_arguments|class |object\(|default|oversight' tests/test_qa_dx.py
+Exit: 0
+
+117-def test_missing_configuration_explains_recovery_before_network(monkeypatch, isolated_config):
+118-    constructor = MagicMock(side_effect=AssertionError("HTTP client must not be created"))
+119-    monkeypatch.setattr("sentinel.client.httpx.Client", constructor)
+120-    with pytest.raises(SentinelConfigError, match=r"sentinel\.configure\(api_key="):
+121-        SentinelClient().get_tenant()
+122-    constructor.assert_not_called()
+123-
+124-
+125:def test_oversight_preserves_discoverable_function_signature():
+126-    import inspect
+127-
+128:    @sentinel.oversight()
+129-    def action(amount: int, recipient: str = "qa-recipient") -> str:
+130-        """Example operation visible to Python help and agent frameworks."""
+131-        return recipient
+132-
+133-    assert action.__name__ == "action"
+134-    assert action.__doc__ == "Example operation visible to Python help and agent frameworks."
+135-    assert list(inspect.signature(action).parameters) == ["amount", "recipient"]
+136-
+137-
+138-@pytest.mark.xfail(
+139-    strict=True,
+140-    raises=AssertionError,
+141-    reason="UX-003: missing required function argument requests approval before raising TypeError",
+142-)
+143-def test_missing_required_argument_fails_before_requesting_human_approval(quickstart):
+144-    namespace, client = quickstart
+145-    with pytest.raises(TypeError, match="required positional argument"):
+146-        namespace["transfer_funds"](1000)
+147-    client.create_approval.assert_not_called()

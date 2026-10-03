@@ -1,0 +1,16 @@
+UTC start: 2026-10-03T02:47:23+00:00
+Command: git diff --name-only ede988f -- sentinel tests README.md pyproject.toml .github
+Exit: 0
+
+README.md
+sentinel/adapters/_arguments.py
+sentinel/adapters/autogen.py
+sentinel/adapters/crewai.py
+sentinel/adapters/langchain.py
+sentinel/adapters/langgraph.py
+sentinel/adapters/openai_agents.py
+sentinel/decorator.py
+tests/test_adapter_arguments.py
+tests/test_qa_adapters.py
+tests/test_qa_backend.py
+tests/test_qa_dx.py

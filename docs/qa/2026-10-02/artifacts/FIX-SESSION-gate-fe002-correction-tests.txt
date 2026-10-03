@@ -1,0 +1,172 @@
+UTC start: 2026-10-03T02:44:20+00:00
+Command: nl -ba tests/test_adapter_arguments.py
+Exit: 0
+
+     1	"""FE-002: mixed-call approval inputs and existing payload compatibility."""
+     2
+     3	import asyncio
+     4	import functools
+     5	import inspect
+     6	from unittest.mock import AsyncMock, MagicMock
+     7
+     8	import pytest
+     9
+    10	from sentinel.adapters import autogen, crewai, langgraph, openai_agents
+    11	from sentinel.client import _ensure_json_serializable
+    12
+    13	CASES = [(name, False) for name in ("autogen", "crewai", "langgraph", "openai_agents")]
+    14	CASES += [(name, True) for name in ("autogen", "langgraph", "openai_agents")]
+    15
+    16
+    17	@pytest.fixture(params=CASES, ids=[f"{name}-{'async' if mode else 'sync'}" for name, mode in CASES])
+    18	def gated_call(request):
+    19	    adapter, asynchronous = request.param
+    20	    client = MagicMock()
+    21	    client.create_approval.return_value = {"action_id": "qa-action"}
+    22	    client.wait_for_decision.return_value = {"status": "approved"}
+    23	    client.acreate_approval = AsyncMock(return_value={"action_id": "qa-action"})
+    24	    client.await_for_decision = AsyncMock(return_value={"status": "approved"})
+    25
+    26	    def gate(fn):
+    27	        if asynchronous:
+    28	            original = fn
+    29
+    30	            @functools.wraps(original)
+    31	            async def fn(*args, **kwargs):
+    32	                return original(*args, **kwargs)
+    33
+    34	        if adapter == "autogen":
+    35	            wrapped = autogen.gated(client=client)(fn)
+    36	        elif adapter == "crewai":
+    37	            wrapped = crewai.gated(fn, client=client)
+    38	        elif adapter == "langgraph":
+    39	            wrapped = langgraph.SentinelToolGate(client=client).wrap(fn)
+    40	        else:
+    41	            wrapped = openai_agents.gated(fn, client=client)
+    42
+    43	        def invoke(*args, **kwargs):
+    44	            result = wrapped(*args, **kwargs)
+    45	            return asyncio.run(result) if asynchronous else result
+    46
+    47	        return invoke
+    48
+    49	    approval = client.acreate_approval if asynchronous else client.create_approval
+    50	    return gate, client, approval
+    51
+    52
+    53	def test_mixed_inputs_include_variadics_without_omitted_defaults(gated_call):
+    54	    gate, _, approval = gated_call
+    55
+    56	    def action(amount, /, *items, recipient, note="ordinary", **metadata):
+    57	        return amount, items, recipient, note, metadata
+    58
+    59	    assert gate(action)(10, "extra", recipient="recipient", currency="USD") == (
+    60	        10,
+    61	        ("extra",),
+    62	        "recipient",
+    63	        "ordinary",
+    64	        {"currency": "USD"},
+    65	    )
+    66	    assert approval.call_args.kwargs["arguments"] == {
+    67	        "amount": 10,
+    68	        "items": ("extra",),
+    69	        "recipient": "recipient",
+    70	        "metadata": {"currency": "USD"},
+    71	    }
+    72
+    73
+    74	@pytest.mark.parametrize("error", [TypeError, ValueError])
+    75	def test_unavailable_signature_preserves_keyword_collisions(gated_call, monkeypatch, error):
+    76	    gate, _, approval = gated_call
+    77
+    78	    def action(amount, **metadata):
+    79	        return amount, metadata
+    80
+    81	    wrapped = gate(action)
+    82
+    83	    def unavailable(_fn):
+    84	        raise error("signature unavailable")
+    85
+    86	    monkeypatch.setattr(inspect, "signature", unavailable)
+    87	    metadata = {"args": "keyword value", "kwargs": "other keyword value"}
+    88	    assert wrapped(10, **metadata) == (10, metadata)
+    89	    assert approval.call_args.kwargs["arguments"] == {"args": [10], "kwargs": metadata}
+    90
+    91
+    92	@pytest.mark.parametrize(
+    93	    "kwargs",
+    94	    [
+    95	        {"amount": 20, "recipient": "recipient"},
+    96	        {"unexpected": "value"},
+    97	        {"recipient": "recipient", "unexpected": "value"},
+    98	    ],
+    99	    ids=["duplicate", "missing-required", "unexpected"],
+   100	)
+   101	def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+   102	    gate, client, _ = gated_call
+   103	    calls = []
+   104
+   105	    def action(amount, *, recipient):
+   106	        calls.append((amount, recipient))
+   107
+   108	    with pytest.raises(TypeError):
+   109	        gate(action)(10, **kwargs)
+   110	    assert calls == []
+   111	    client.create_approval.assert_not_called()
+   112	    client.acreate_approval.assert_not_called()
+   113	    client.wait_for_decision.assert_not_called()
+   114	    client.await_for_decision.assert_not_called()
+   115
+   116
+   117	@pytest.mark.parametrize(
+   118	    "args, kwargs, expected",
+   119	    [
+   120	        ((10, "recipient"), {}, {"args": [10, "recipient"]}),
+   121	        ((), {"amount": 10, "recipient": "recipient"}, {"amount": 10, "recipient": "recipient"}),
+   122	        ((), {}, {"args": []}),
+   123	    ],
+   124	    ids=["positional", "keyword", "empty"],
+   125	)
+   126	def test_nonmixed_payload_shape_remains_compatible(gated_call, args, kwargs, expected):
+   127	    gate, _, approval = gated_call
+   128
+   129	    def action(amount=10, recipient="recipient"):
+   130	        return amount, recipient
+   131
+   132	    assert gate(action)(*args, **kwargs) == (10, "recipient")
+   133	    assert approval.call_args.kwargs["arguments"] == expected
+   134
+   135
+   136	def test_mixed_binding_preserves_raw_values(gated_call):
+   137	    gate, _, approval = gated_call
+   138	    value = object()
+   139
+   140	    def action(payload, *, recipient):
+   141	        assert payload is value
+   142	        return recipient
+   143
+   144	    assert gate(action)(value, recipient="recipient") == "recipient"
+   145	    assert approval.call_args.kwargs["arguments"]["payload"] is value
+   146
+   147
+   148	def test_omitted_nonserializable_default_stays_out_of_approval(gated_call):
+   149	    """FE-002 must not add an unpassed internal dependency to the JSON payload."""
+   150	    gate, _, approval = gated_call
+   151	    dependency = object()
+   152
+   153	    def create_approval(**kwargs):
+   154	        _ensure_json_serializable(kwargs["arguments"])
+   155	        return {"action_id": "qa-action"}
+   156
+   157	    approval.side_effect = create_approval
+   158
+   159	    def action(amount, *, recipient, dependency=dependency):
+   160	        return amount, recipient, dependency
+   161
+   162	    result = gate(action)(10, recipient="recipient")
+   163	    assert result == (10, "recipient", dependency)
+   164	    assert result[2] is dependency
+   165	    assert approval.call_args.kwargs["arguments"] == {
+   166	        "amount": 10,
+   167	        "recipient": "recipient",
+   168	    }

@@ -1,0 +1,188 @@
+UTC start: 2026-10-03T02:38:48+00:00
+Command: rg -n --glob '*.py' --glob '*.md' --glob '!docs/qa/**' 'bound_arguments|serialize_arguments|__deepcopy__|self|@oversight' sentinel tests examples README.md
+Exit: 2
+
+rg: examples: No such file or directory (os error 2)
+README.md:11:Wrap the function with `@oversight`, and the SDK pauses execution, requests
+README.md:34:@oversight(
+README.md:117:# now any @oversight(...) call without approvers uses these
+README.md:146:`@oversight(idempotency_key=...)` also accepts a callable, invoked once per call.
+README.md:173:@oversight(risk_level="medium", approvers=["alice@acme.com"])
+sentinel/exceptions.py:12:    def __init__(self, status_code: int, message: str = "", url: str | None = None):
+sentinel/exceptions.py:13:        self.status_code = status_code
+sentinel/exceptions.py:14:        self.url = url
+sentinel/exceptions.py:26:    def __init__(self, reason: str = "", action_id: str | None = None):
+sentinel/exceptions.py:27:        self.reason = reason
+sentinel/exceptions.py:28:        self.action_id = action_id
+sentinel/exceptions.py:35:    def __init__(self, action_id: str | None = None, timeout_seconds: float | None = None):
+sentinel/exceptions.py:36:        self.action_id = action_id
+sentinel/exceptions.py:37:        self.timeout_seconds = timeout_seconds
+tests/test_decorator.py:15:    @oversight(risk_level="high")
+tests/test_decorator.py:44:    @oversight()
+sentinel/adapters/langgraph.py:41:        self,
+sentinel/adapters/langgraph.py:49:        self.client = client or SentinelClient()
+sentinel/adapters/langgraph.py:50:        self.risk_level = risk_level
+sentinel/adapters/langgraph.py:51:        self.approvers = approvers
+sentinel/adapters/langgraph.py:52:        self.timeout_seconds = timeout_seconds
+sentinel/adapters/langgraph.py:53:        self.tool_allowlist = set(tool_allowlist) if tool_allowlist is not None else None
+sentinel/adapters/langgraph.py:54:        self.tool_denylist = set(tool_denylist) if tool_denylist is not None else None
+sentinel/adapters/langgraph.py:56:    def _should_gate(self, tool_name: str) -> bool:
+sentinel/adapters/langgraph.py:57:        if self.tool_allowlist is not None:
+sentinel/adapters/langgraph.py:58:            return tool_name in self.tool_allowlist
+sentinel/adapters/langgraph.py:59:        if self.tool_denylist is not None:
+sentinel/adapters/langgraph.py:60:            return tool_name not in self.tool_denylist
+sentinel/adapters/langgraph.py:63:    def wrap(self, fn: Callable, function_name: str | None = None) -> Callable:
+sentinel/adapters/langgraph.py:68:        if not self._should_gate(derived_name):
+sentinel/adapters/langgraph.py:76:                approval = await self.client.acreate_approval(
+sentinel/adapters/langgraph.py:79:                    risk_level=self.risk_level,
+sentinel/adapters/langgraph.py:80:                    approvers=self.approvers,
+sentinel/adapters/langgraph.py:81:                    timeout_seconds=self.timeout_seconds,
+sentinel/adapters/langgraph.py:84:                decision = await self.client.await_for_decision(
+sentinel/adapters/langgraph.py:85:                    action_id, timeout=self.timeout_seconds
+sentinel/adapters/langgraph.py:100:            approval = self.client.create_approval(
+sentinel/adapters/langgraph.py:103:                risk_level=self.risk_level,
+sentinel/adapters/langgraph.py:104:                approvers=self.approvers,
+sentinel/adapters/langgraph.py:105:                timeout_seconds=self.timeout_seconds,
+sentinel/adapters/langgraph.py:108:            decision = self.client.wait_for_decision(action_id, timeout=self.timeout_seconds)
+sentinel/adapters/langchain.py:39:        self,
+sentinel/adapters/langchain.py:45:        self.client = client or SentinelClient()
+sentinel/adapters/langchain.py:46:        self.risk_level = risk_level
+sentinel/adapters/langchain.py:47:        self.approvers = approvers
+sentinel/adapters/langchain.py:48:        self.timeout_seconds = timeout_seconds
+sentinel/adapters/langchain.py:51:        self,
+sentinel/adapters/langchain.py:57:        approval = self.client.create_approval(
+sentinel/adapters/langchain.py:60:            risk_level=self.risk_level,
+sentinel/adapters/langchain.py:61:            approvers=self.approvers,
+sentinel/adapters/langchain.py:62:            timeout_seconds=self.timeout_seconds,
+sentinel/adapters/langchain.py:65:        decision = self.client.wait_for_decision(action_id, timeout=self.timeout_seconds)
+sentinel/adapters/anthropic.py:63:        self,
+sentinel/adapters/anthropic.py:72:        self.tools = tools
+sentinel/adapters/anthropic.py:73:        self.gated_tools: set[str] | None = set(gated_tools) if gated_tools is not None else None
+sentinel/adapters/anthropic.py:74:        self.client = client or SentinelClient()
+sentinel/adapters/anthropic.py:75:        self.risk_level = risk_level
+sentinel/adapters/anthropic.py:76:        self.approvers = approvers
+sentinel/adapters/anthropic.py:77:        self.timeout_seconds = timeout_seconds
+sentinel/adapters/anthropic.py:79:    def _should_gate(self, tool_name: str) -> bool:
+sentinel/adapters/anthropic.py:80:        if self.gated_tools is None:
+sentinel/adapters/anthropic.py:82:        return tool_name in self.gated_tools
+sentinel/adapters/anthropic.py:84:    def run_tool_uses(self, content_blocks: Any) -> list[dict[str, Any]]:
+sentinel/adapters/anthropic.py:98:            if tool_name not in self.tools:
+sentinel/adapters/anthropic.py:110:                if self._should_gate(tool_name):
+sentinel/adapters/anthropic.py:111:                    self._await_approval(tool_name, tool_input)
+sentinel/adapters/anthropic.py:112:                output = self.tools[tool_name](**tool_input)
+sentinel/adapters/anthropic.py:141:    def _await_approval(self, tool_name: str, tool_input: dict[str, Any]) -> None:
+sentinel/adapters/anthropic.py:142:        approval = self.client.create_approval(
+sentinel/adapters/anthropic.py:145:            risk_level=self.risk_level,
+sentinel/adapters/anthropic.py:146:            approvers=self.approvers,
+sentinel/adapters/anthropic.py:147:            timeout_seconds=self.timeout_seconds,
+sentinel/adapters/anthropic.py:150:        decision = self.client.wait_for_decision(action_id, timeout=self.timeout_seconds)
+sentinel/adapters/semantic_kernel.py:25:If you build the filter yourself, ``sentinel_filter()`` returns the raw filter
+sentinel/client.py:59:            f"@oversight arguments must be JSON-serializable. "
+sentinel/client.py:88:    def __init__(self, config: SentinelConfig | None = None):
+sentinel/client.py:89:        self.config = config or get_config()
+sentinel/client.py:90:        self._client: httpx.Client | None = None
+sentinel/client.py:91:        self._aclient: httpx.AsyncClient | None = None
+sentinel/client.py:94:    def _headers(self) -> dict:
+sentinel/client.py:95:        if not self.config.api_key:
+sentinel/client.py:100:            "Authorization": f"Bearer [REDACTED]",
+sentinel/client.py:103:    def _url(self, path: str) -> str:
+sentinel/client.py:104:        return f"{self.config.api_url.rstrip('/')}{path}"
+sentinel/client.py:106:    def _get_client(self) -> httpx.Client:
+sentinel/client.py:107:        if self._client is None:
+sentinel/client.py:108:            self._client = httpx.Client(
+sentinel/client.py:109:                base_url=self.config.api_url.rstrip("/"),
+sentinel/client.py:110:                headers=self._headers(),
+sentinel/client.py:114:        return self._client
+sentinel/client.py:116:    def _get_aclient(self) -> httpx.AsyncClient:
+sentinel/client.py:117:        if self._aclient is None:
+sentinel/client.py:118:            self._aclient = httpx.AsyncClient(
+sentinel/client.py:119:                base_url=self.config.api_url.rstrip("/"),
+sentinel/client.py:120:                headers=self._headers(),
+sentinel/client.py:124:        return self._aclient
+sentinel/client.py:126:    def close(self) -> None:
+sentinel/client.py:127:        if self._client is not None:
+sentinel/client.py:128:            self._client.close()
+sentinel/client.py:129:            self._client = None
+sentinel/client.py:131:    async def aclose(self) -> None:
+sentinel/client.py:132:        if self._aclient is not None:
+sentinel/client.py:133:            await self._aclient.aclose()
+sentinel/client.py:134:            self._aclient = None
+sentinel/client.py:138:        self,
+sentinel/client.py:155:            "timeout_seconds": int(timeout_seconds or self.config.timeout_seconds),
+sentinel/client.py:158:        r = self._get_client().post("/v1/approvals", json=payload, headers=headers)
+sentinel/client.py:162:    def get_approval(self, action_id: str) -> dict:
+sentinel/client.py:163:        r = self._get_client().get(f"/v1/approvals/{action_id}")
+sentinel/client.py:168:        self,
+sentinel/client.py:185:        r = self._get_client().get("/v1/approvals", params=params)
+sentinel/client.py:190:        self,
+sentinel/client.py:200:        timeout = timeout or self.config.timeout_seconds
+sentinel/client.py:205:                r = self._get_client().get(
+sentinel/client.py:216:                data = self.get_approval(action_id)
+sentinel/client.py:223:    def get_tenant(self) -> dict:
+sentinel/client.py:225:        r = self._get_client().get("/v1/tenants/me")
+sentinel/client.py:229:    def set_default_approvers(self, approvers: list[str]) -> dict:
+sentinel/client.py:230:        """Set the tenant's default-approvers list. Used when `@oversight()`
+sentinel/client.py:236:        r = self._get_client().patch("/v1/tenants/me", json={"default_approvers": approvers})
+sentinel/client.py:241:        self,
+sentinel/client.py:265:        r = self._get_client().post("/v1/approver-contacts", json=payload)
+sentinel/client.py:269:    def list_sms_contacts(self) -> list:
+sentinel/client.py:270:        r = self._get_client().get("/v1/approver-contacts")
+sentinel/client.py:274:    def revoke_sms_contact(self, contact_id: str) -> dict:
+sentinel/client.py:275:        r = self._get_client().delete(f"/v1/approver-contacts/{contact_id}")
+sentinel/client.py:279:    def list_audit_events(self, action_id: str | None = None) -> list:
+sentinel/client.py:281:        r = self._get_client().get("/v1/audit-events", params=params)
+sentinel/client.py:286:        self,
+sentinel/client.py:302:        r = self._get_client().get("/v1/audit-events", params=params)
+sentinel/client.py:307:        self,
+sentinel/client.py:318:            self._get_client().post("/v1/audit-events", json=payload, timeout=10.0)
+sentinel/client.py:325:        self,
+sentinel/client.py:340:            "timeout_seconds": int(timeout_seconds or self.config.timeout_seconds),
+sentinel/client.py:343:        r = await self._get_aclient().post("/v1/approvals", json=payload, headers=headers)
+sentinel/client.py:347:    async def aget_approval(self, action_id: str) -> dict:
+sentinel/client.py:348:        r = await self._get_aclient().get(f"/v1/approvals/{action_id}")
+sentinel/client.py:353:        self,
+sentinel/client.py:364:        r = await self._get_aclient().get("/v1/approvals", params=params)
+sentinel/client.py:369:        self,
+sentinel/client.py:374:        timeout = timeout or self.config.timeout_seconds
+sentinel/client.py:379:                r = await self._get_aclient().get(
+sentinel/client.py:389:                data = await self.aget_approval(action_id)
+sentinel/client.py:396:    async def aget_tenant(self) -> dict:
+sentinel/client.py:397:        r = await self._get_aclient().get("/v1/tenants/me")
+sentinel/client.py:401:    async def aset_default_approvers(self, approvers: list[str]) -> dict:
+sentinel/client.py:402:        r = await self._get_aclient().patch("/v1/tenants/me", json={"default_approvers": approvers})
+sentinel/client.py:407:        self,
+sentinel/client.py:421:        r = await self._get_aclient().post("/v1/approver-contacts", json=payload)
+sentinel/client.py:425:    async def alist_sms_contacts(self) -> list:
+sentinel/client.py:426:        r = await self._get_aclient().get("/v1/approver-contacts")
+sentinel/client.py:430:    async def arevoke_sms_contact(self, contact_id: str) -> dict:
+sentinel/client.py:431:        r = await self._get_aclient().delete(f"/v1/approver-contacts/{contact_id}")
+sentinel/client.py:435:    async def alist_audit_events(self, action_id: str | None = None) -> list:
+sentinel/client.py:437:        r = await self._get_aclient().get("/v1/audit-events", params=params)
+sentinel/client.py:442:        self,
+sentinel/client.py:453:        r = await self._get_aclient().get("/v1/audit-events", params=params)
+sentinel/client.py:458:        self,
+sentinel/client.py:469:            await self._get_aclient().post("/v1/audit-events", json=payload, timeout=10.0)
+sentinel/decorator.py:25:def _serialize_arguments(value: Any) -> Any:
+sentinel/decorator.py:29:        return [_serialize_arguments(v) for v in value]
+sentinel/decorator.py:31:        return {str(k): _serialize_arguments(v) for k, v in value.items()}
+sentinel/decorator.py:35:def _bound_arguments(fn: Callable, args: tuple, kwargs: dict) -> dict:
+sentinel/decorator.py:39:    return _serialize_arguments(dict(bound.arguments))
+sentinel/decorator.py:67:                arguments = _bound_arguments(fn, args, kwargs)
+sentinel/decorator.py:116:            arguments = _bound_arguments(fn, args, kwargs)
+tests/test_qa_backend.py:355:    @oversight()
+tests/test_idempotency.py:90:    @oversight(idempotency_key="fixed-key")
+tests/test_idempotency.py:113:    @oversight(idempotency_key=keygen)
+tests/test_idempotency.py:131:    @oversight()
+tests/test_idempotency.py:155:    @oversight(idempotency_key=keygen)
+tests/test_openai_agents_adapter.py:14:    def __init__(self, name, fn):
+tests/test_openai_agents_adapter.py:15:        self.name = name
+tests/test_openai_agents_adapter.py:16:        self._fn = fn
+tests/test_openai_agents_adapter.py:19:            return self._fn(**json.loads(args_json or "{}"))
+tests/test_openai_agents_adapter.py:21:        self.on_invoke_tool = on_invoke_tool
+tests/test_semantic_kernel_adapter.py:13:    def __init__(self, name, plugin_name=None):
+tests/test_semantic_kernel_adapter.py:14:        self.name = name
+tests/test_semantic_kernel_adapter.py:15:        self.plugin_name = plugin_name
+tests/test_semantic_kernel_adapter.py:21:    def __init__(self, function, arguments=None):
+tests/test_semantic_kernel_adapter.py:22:        self.function = function
+tests/test_semantic_kernel_adapter.py:23:        self.arguments = arguments or {}
+tests/test_semantic_kernel_adapter.py:24:        self.result = None

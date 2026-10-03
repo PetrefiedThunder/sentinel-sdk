@@ -1,0 +1,5 @@
+UTC start: 2026-10-03T02:41:53+00:00
+Command: python3 -c 'print("FE-002 design: shared argument helper preserves existing kwargs-only and args-only shapes. Mixed calls bind full signature and defaults; only inspect.signature TypeError/ValueError uses nested args/kwargs fallback, preserving keyword collisions. Bind errors propagate before any approval. No snapshots or repr conversion. Add sync four-adapter and async three-adapter tests for defaults, variadics, unavailable signatures, invalid binding, raw values and nonmixed compatibility; convert seven QA xfails.")'
+Exit: 0
+
+FE-002 design: shared argument helper preserves existing kwargs-only and args-only shapes. Mixed calls bind full signature and defaults; only inspect.signature TypeError/ValueError uses nested args/kwargs fallback, preserving keyword collisions. Bind errors propagate before any approval. No snapshots or repr conversion. Add sync four-adapter and async three-adapter tests for defaults, variadics, unavailable signatures, invalid binding, raw values and nonmixed compatibility; convert seven QA xfails.

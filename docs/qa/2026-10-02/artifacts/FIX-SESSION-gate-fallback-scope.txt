@@ -1,0 +1,21 @@
+UTC start: 2026-10-03T02:40:13+00:00
+Command: rg -n 'fallback|ApprovalTimeout|except' sentinel/decorator.py sentinel/config.py README.md
+Exit: 0
+
+sentinel/config.py:16:    except ValueError:
+sentinel/config.py:20:def _default_fallback() -> str:
+sentinel/config.py:30:    fallback: str = field(default_factory=_default_fallback)
+README.md:50:`timeout_seconds` → `ApprovalTimeout` is raised (unless `fallback="execute"`).
+README.md:166:- `ApprovalTimeout(action_id, timeout_seconds)` — no decision before deadline.
+README.md:203:`raise_error=True` setting enabled. The decorator's explicit `fallback="execute"`
+README.md:205:LangChain handler does not use that fallback.
+sentinel/decorator.py:9:from .exceptions import ApprovalRejected, ApprovalTimeout
+sentinel/decorator.py:46:    fallback: str | None = None,
+sentinel/decorator.py:66:                fb = fallback or cfg.fallback
+sentinel/decorator.py:79:                except ApprovalTimeout:
+sentinel/decorator.py:85:                            error="timeout-fallback-execute",
+sentinel/decorator.py:94:                    except Exception as e:
+sentinel/decorator.py:115:            fb = fallback or cfg.fallback
+sentinel/decorator.py:128:            except ApprovalTimeout:
+sentinel/decorator.py:134:                        error="timeout-fallback-execute",
+sentinel/decorator.py:143:                except Exception as e:

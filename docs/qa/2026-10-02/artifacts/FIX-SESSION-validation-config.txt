@@ -1,0 +1,137 @@
+UTC start: 2026-10-03T02:41:21+00:00
+Command: python3 -c 'from pathlib import Path; paths=[".github/workflows/ci.yml",".pre-commit-config.yaml","docs/qa/2026-10-02/artifacts/COORD-build.txt","docs/qa/2026-10-02/artifacts/COORD-final-py314.txt"]; [(print("FILE",p),print(Path(p).read_text() if Path(p).is_file() else "not present")) for p in paths]'
+Exit: 0
+
+FILE .github/workflows/ci.yml
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: pip install --upgrade pip uv
+
+      - name: Install package + dev deps
+        run: uv pip install --system -e ".[dev]"
+
+      - name: Ruff check
+        run: ruff check .
+
+      - name: Pytest
+        run: pytest -q
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # gitleaks scans git history; full clone avoids missing commits.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: pip install --upgrade pip uv
+
+      # Day-one policy: a pre-existing advisory in a dependency must not
+      # red-line main, so this step is non-blocking. pip-audit resolves the
+      # dependency set from pyproject.toml.
+      - name: Dependency audit (pip-audit)
+        continue-on-error: true
+        run: uvx pip-audit .
+
+      # Secret scan is a HARD gate. Uses the gitleaks binary (not the action,
+      # which 500s without a permissions block). gitleaks auto-detects the
+      # root .gitleaks.toml; no -c flag needed.
+      - name: Secret scan (gitleaks)
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz | tar -xz -C /tmp gitleaks
+          /tmp/gitleaks git . --redact --no-banner
+
+FILE .pre-commit-config.yaml
+repos:
+  # Ruff: lint + format (replaces black + isort + flake8)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # Standard hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]
+
+  # gitleaks: prevent committing secrets
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+
+FILE docs/qa/2026-10-02/artifacts/COORD-build.txt
+UTC start: 2026-10-03T01:52:17+00:00
+Command: uv build --out-dir /private/tmp/sentinel-qa-dist
+Exit: 0
+
+Building source distribution...
+Building wheel from source distribution...
+Successfully built /private/tmp/sentinel-qa-dist/sentinel_oversight-0.1.9.tar.gz
+Successfully built /private/tmp/sentinel-qa-dist/sentinel_oversight-0.1.9-py3-none-any.whl
+
+FILE docs/qa/2026-10-02/artifacts/COORD-final-py314.txt
+UTC start: 2026-10-03T01:55:41+00:00
+Command: /private/tmp/sentinel-qa-py314-env/bin/python -m pytest tests -q --junitxml=docs/qa/2026-10-02/artifacts/py314-junit.xml
+Exit: 0
+
+........................................................................ [ 32%]
+.............xxxxxxxxxxxxx.........................................xxxx. [ 64%]
+................xxxxxxxxxxx........................xx......x...x........ [ 96%]
+........                                                                 [100%]
+=============================== warnings summary ===============================
+tests/test_langgraph_adapter.py: 7 warnings
+tests/test_qa_adapters.py: 10 warnings
+  /Users/sellers/Projects/qa-sweep-2026-10-02/sentinel-sdk/sentinel/adapters/langgraph.py:71: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    if asyncio.iscoroutinefunction(fn):
+
+tests/test_langgraph_adapter.py::test_async_fn_wrapped_is_awaitable
+  /Users/sellers/Projects/qa-sweep-2026-10-02/sentinel-sdk/tests/test_langgraph_adapter.py:127: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    assert asyncio.iscoroutinefunction(wrapped)
+
+tests/test_openai_agents_adapter.py: 3 warnings
+tests/test_qa_adapters.py: 10 warnings
+  /Users/sellers/Projects/qa-sweep-2026-10-02/sentinel-sdk/sentinel/adapters/openai_agents.py:105: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    if asyncio.iscoroutinefunction(fn):
+
+tests/test_openai_agents_adapter.py::test_plain_async_callable_is_gated
+  /Users/sellers/Projects/qa-sweep-2026-10-02/sentinel-sdk/tests/test_openai_agents_adapter.py:134: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    assert asyncio.iscoroutinefunction(wrapped)
+
+tests/test_qa_adapters.py: 10 warnings
+  /Users/sellers/Projects/qa-sweep-2026-10-02/sentinel-sdk/sentinel/adapters/autogen.py:47: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    if asyncio.iscoroutinefunction(fn):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+192 passed, 32 xfailed, 42 warnings in 1.99s

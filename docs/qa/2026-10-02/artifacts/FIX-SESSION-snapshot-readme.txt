@@ -1,0 +1,246 @@
+UTC start: 2026-10-03T02:38:39+00:00
+Command: cat README.md
+Exit: 0
+
+# Sentinel SDK (Python)
+
+[![PyPI version](https://img.shields.io/pypi/v/sentinel-oversight.svg)](https://pypi.org/project/sentinel-oversight/)
+[![Python](https://img.shields.io/pypi/pyversions/sentinel-oversight.svg)](https://pypi.org/project/sentinel-oversight/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Status](https://img.shields.io/badge/status-public%20beta-blue.svg)](https://pauseapi.app)
+
+**Oversight infrastructure for AI agents.**
+
+Sentinel adds human-in-the-loop approval to any Python function your agent calls.
+Wrap the function with `@oversight`, and the SDK pauses execution, requests
+approval, and only runs once a human approves.
+
+## Install
+
+```bash
+pip install sentinel-oversight
+```
+
+## Quick start
+
+```bash
+# 1. Create an account at https://app.pauseapi.app/signup
+#    Copy the API key it returns.
+
+# 2. Wrap your function:
+```
+
+```python
+from sentinel import configure, oversight
+
+configure(api_key="sk_live_…")
+
+@oversight(
+    risk_level="high",
+    approvers=["sms:+15551234567", "alice@acme.com"],
+    timeout_seconds=300,
+)
+def transfer_funds(amount: int, recipient: str):
+    return stripe.transfers.create(amount=amount, destination=recipient)
+```
+
+When your agent calls `transfer_funds(1000, "acct_xyz")`:
+1. Sentinel **pauses** execution and creates an approval on the backend.
+2. Notifications fire to every approver in the list (rules below).
+3. A human clicks **Approve** from a signed text/email link or the dashboard.
+4. The wrapped function **runs**, and its return value flows back to the caller.
+
+If rejected → `ApprovalRejected(reason)` is raised. If no response within
+`timeout_seconds` → `ApprovalTimeout` is raised (unless `fallback="execute"`).
+
+## Approver formats
+
+Each entry in `approvers=[...]` is a string. The format determines the channel.
+
+| Format                          | Channel | Example                            |
+|---------------------------------|---------|------------------------------------|
+| `name@company.com`              | Email   | `alice@acme.com`                   |
+| `mailto:name@company.com`       | Email (explicit) | `mailto:alice@acme.com`   |
+| `sms:+15551234567`              | SMS (Twilio) | `sms:+14155550123` — requires consent, see [SMS approvers](#sms-approvers--tcpa-consent) |
+
+You can mix formats — every approver receives a notification, the **first**
+decision wins.
+
+## Notification routing
+
+- **Email** — fires if `RESEND_API_KEY` is set AND any approver looks like an
+  email address. Email contains signed approve/reject links (HMAC-SHA256, scoped
+  to that action_id and timeout window).
+- **SMS** — fires if Twilio credentials are set AND an approver uses `sms:`.
+
+By default, emails send from `onboarding@resend.dev`. To get branded
+`approvals@yourdomain.app` email, verify your domain in Resend (Pro plan).
+
+## SMS approvers — TCPA consent
+
+To use `sms:+1...` approvers you must first register an opt-in record for each
+phone number. Sentinel won't create an approval whose approvers include an
+SMS destination without an active consent record — the API returns
+`400 SMS approver requires active SMS consent contact`.
+
+```python
+from sentinel import SentinelClient
+client = SentinelClient()
+
+# One-time, per phone number, after you've collected a real opt-in:
+client.register_sms_contact(
+    phone_number="+15551234567",
+    display_name="Maya (CTO)",
+    consent_source="onboarding_checkbox",       # e.g. "signed_form", "captured_web_form"
+    consent_note="Checked the SMS opt-in box during signup on 2026-05-25",
+)
+```
+
+Other helpers:
+```python
+client.list_sms_contacts()           # all active + revoked contacts for this tenant
+client.revoke_sms_contact("con_…")   # marks consent revoked; future SMS won't send
+```
+
+The customer can also reply **STOP** to any Sentinel SMS — the Twilio inbound
+webhook (`/webhooks/twilio/inbound`) automatically revokes their consent
+record. **HELP** returns a description and contact info. These two keywords
+are TCPA-mandated.
+
+## Default approvers
+
+If you don't want to pass `approvers=[...]` on every decorator, set a default
+on your tenant. The API falls back to the tenant's `default_approvers` when
+the caller's list is empty.
+
+```python
+from sentinel import SentinelClient
+client = SentinelClient()
+
+client.set_default_approvers(["sms:+15551234567", "ops@yourcompany.com"])
+# now any @oversight(...) call without approvers uses these
+```
+
+Read or override via the web UI at `https://app.pauseapi.app/contacts`.
+
+Resolution order when an approval is created:
+1. The caller's explicit `approvers=[...]` (if non-empty)
+2. The tenant's saved `default_approvers`
+3. The global `DEFAULT_APPROVERS` env var on the API
+4. 400 error if all three are empty
+
+## Risk levels
+
+`risk_level` is a string the dashboard uses for prioritization. Allowed values:
+`low`, `medium`, `high`, `critical`. Required.
+
+## Idempotency
+
+Pass `idempotency_key` to safely retry approval creation. The same tenant + key
+replays the original response; reusing a key with a different body returns 409.
+
+```python
+client.create_approval(
+    function_name="transfer_funds",
+    arguments={"amount": 100},
+    idempotency_key="transfer-2026-06-09-001",
+)
+```
+
+`@oversight(idempotency_key=...)` also accepts a callable, invoked once per call.
+
+## Configuration
+
+Set via `configure(...)` or environment variables:
+
+| Variable                | Default                         | Description                            |
+|-------------------------|---------------------------------|----------------------------------------|
+| `SENTINEL_API_URL`      | `https://api.pauseapi.app`      | Base URL of the Sentinel backend       |
+| `SENTINEL_API_KEY`      | _required_                      | Your tenant API key                    |
+| `SENTINEL_TIMEOUT`      | `300`                           | Default `timeout_seconds`              |
+| `SENTINEL_POLL_INTERVAL`| `2`                             | Seconds between status polls           |
+| `SENTINEL_FALLBACK`     | `reject`                        | `reject` or `execute` on timeout       |
+
+## Exceptions
+
+- `SentinelError` — base class for all Sentinel errors.
+- `SentinelConfigError` — SDK was used without an `api_key`.
+- `SentinelAPIError(status_code, message, url)` — backend returned a non-2xx.
+- `ApprovalRejected(reason, action_id)` — a human rejected the request.
+- `ApprovalTimeout(action_id, timeout_seconds)` — no decision before deadline.
+
+## Async
+
+The decorator transparently supports `async def` functions:
+
+```python
+@oversight(risk_level="medium", approvers=["alice@acme.com"])
+async def send_email(to, body):
+    await mailgun.send(to=to, body=body)
+```
+
+## Audit log
+
+Every approval creates a hash-chained audit trail. Fetch it:
+
+```python
+from sentinel import SentinelClient
+client = SentinelClient()
+events = client.list_audit_events(action_id="act_…")  # or omit for full log
+```
+
+Each event has `prev_hash` and `event_hash` (SHA-256). Chain integrity can be
+verified by recomputing `sha256(prev_hash + json(payload))`.
+
+## LangChain
+
+```python
+from sentinel.adapters.langchain import SentinelCallbackHandler
+
+agent.run("…", callbacks=[SentinelCallbackHandler(risk_level="high")])
+```
+
+Install with `pip install sentinel-oversight[langchain]`.
+
+## OpenAI Agents SDK
+
+```python
+from agents import Agent, function_tool
+from sentinel.adapters.openai_agents import gated
+
+@function_tool
+def wire_transfer(amount: int, recipient: str) -> dict: ...
+
+agent = Agent(name="ops", tools=[gated(wire_transfer, risk_level="high")])
+```
+
+No extra install needed — the adapter has no dependency on `openai-agents`.
+
+## Semantic Kernel
+
+```python
+from semantic_kernel import Kernel
+from sentinel.adapters.semantic_kernel import gate_kernel
+
+kernel = Kernel()
+kernel.add_plugin(OpsPlugin(), plugin_name="ops")
+
+gate_kernel(kernel, risk_level="high", approvers=["ops@acme.com"])
+# Every function the kernel invokes now pauses for Sentinel approval.
+```
+
+Registers a function-invocation filter, so every `@kernel_function` runs
+through Sentinel approval. Use `function_allowlist` / `function_denylist` to
+scope which functions are gated. No extra install needed — the adapter has no
+dependency on `semantic-kernel`.
+
+## Links
+
+- Website: <https://pauseapi.app>
+- Dashboard: <https://app.pauseapi.app>
+- API repo: <https://github.com/PetrefiedThunder/sentinel-api>
+- This SDK: <https://github.com/PetrefiedThunder/sentinel-sdk>
+
+## License
+
+MIT

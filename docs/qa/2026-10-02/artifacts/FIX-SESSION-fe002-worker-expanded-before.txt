@@ -1,0 +1,1788 @@
+UTC start: 2026-10-03T02:41:57+00:00
+Command: .venv/bin/python -m pytest -q tests/test_adapter_arguments.py
+Exit: 1
+
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF.....................FFFFFFF   [100%]
+=================================== FAILURES ===================================
+________ test_mixed_inputs_include_defaults_and_variadics[autogen-sync] ________
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d0253a0>, <MagicMock id='4513316624'>, <MagicMock name='mock.create_approval' id='4513070672'>)
+
+    def test_mixed_inputs_include_defaults_and_variadics(gated_call):
+        gate, _, approval = gated_call
+
+        def action(amount, /, *items, recipient, note="ordinary", **metadata):
+            return amount, items, recipient, note, metadata
+
+        assert gate(action)(10, "extra", recipient="recipient", currency="USD") == (
+            10,
+            ("extra",),
+            "recipient",
+            "ordinary",
+            {"currency": "USD"},
+        )
+>       assert approval.call_args.kwargs["arguments"] == {
+            "amount": 10,
+            "items": ("extra",),
+            "recipient": "recipient",
+            "note": "ordinary",
+            "metadata": {"currency": "USD"},
+        }
+E       AssertionError: assert {'recipient':...rency': 'USD'} == {'amount': 10...rdinary', ...}
+E
+E         Omitting 1 identical items, use -vv to show
+E         Left contains 1 more item:
+E         {'currency': 'USD'}
+E         Right contains 4 more items:
+E         {'amount': 10,
+E          'items': ('extra',),...
+E
+E         ...Full output truncated (3 lines hidden), use '-vv' to show
+
+tests/test_adapter_arguments.py:65: AssertionError
+________ test_mixed_inputs_include_defaults_and_variadics[crewai-sync] _________
+
+gated_call = (<function gated_call.<locals>.gate at 0x10cf231a0>, <MagicMock id='4511949328'>, <MagicMock name='mock.create_approval' id='4513365392'>)
+
+    def test_mixed_inputs_include_defaults_and_variadics(gated_call):
+        gate, _, approval = gated_call
+
+        def action(amount, /, *items, recipient, note="ordinary", **metadata):
+            return amount, items, recipient, note, metadata
+
+        assert gate(action)(10, "extra", recipient="recipient", currency="USD") == (
+            10,
+            ("extra",),
+            "recipient",
+            "ordinary",
+            {"currency": "USD"},
+        )
+>       assert approval.call_args.kwargs["arguments"] == {
+            "amount": 10,
+            "items": ("extra",),
+            "recipient": "recipient",
+            "note": "ordinary",
+            "metadata": {"currency": "USD"},
+        }
+E       AssertionError: assert {'recipient':...rency': 'USD'} == {'amount': 10...rdinary', ...}
+E
+E         Omitting 1 identical items, use -vv to show
+E         Left contains 1 more item:
+E         {'currency': 'USD'}
+E         Right contains 4 more items:
+E         {'amount': 10,
+E          'items': ('extra',),...
+E
+E         ...Full output truncated (3 lines hidden), use '-vv' to show
+
+tests/test_adapter_arguments.py:65: AssertionError
+_______ test_mixed_inputs_include_defaults_and_variadics[langgraph-sync] _______
+
+gated_call = (<function gated_call.<locals>.gate at 0x10cfebce0>, <MagicMock id='4513812880'>, <MagicMock name='mock.create_approval' id='4513819920'>)
+
+    def test_mixed_inputs_include_defaults_and_variadics(gated_call):
+        gate, _, approval = gated_call
+
+        def action(amount, /, *items, recipient, note="ordinary", **metadata):
+            return amount, items, recipient, note, metadata
+
+        assert gate(action)(10, "extra", recipient="recipient", currency="USD") == (
+            10,
+            ("extra",),
+            "recipient",
+            "ordinary",
+            {"currency": "USD"},
+        )
+>       assert approval.call_args.kwargs["arguments"] == {
+            "amount": 10,
+            "items": ("extra",),
+            "recipient": "recipient",
+            "note": "ordinary",
+            "metadata": {"currency": "USD"},
+        }
+E       AssertionError: assert {'recipient':...rency': 'USD'} == {'amount': 10...rdinary', ...}
+E
+E         Omitting 1 identical items, use -vv to show
+E         Left contains 1 more item:
+E         {'currency': 'USD'}
+E         Right contains 4 more items:
+E         {'amount': 10,
+E          'items': ('extra',),...
+E
+E         ...Full output truncated (3 lines hidden), use '-vv' to show
+
+tests/test_adapter_arguments.py:65: AssertionError
+_____ test_mixed_inputs_include_defaults_and_variadics[openai_agents-sync] _____
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d064400>, <MagicMock id='4513869584'>, <MagicMock name='mock.create_approval' id='4513721872'>)
+
+    def test_mixed_inputs_include_defaults_and_variadics(gated_call):
+        gate, _, approval = gated_call
+
+        def action(amount, /, *items, recipient, note="ordinary", **metadata):
+            return amount, items, recipient, note, metadata
+
+        assert gate(action)(10, "extra", recipient="recipient", currency="USD") == (
+            10,
+            ("extra",),
+            "recipient",
+            "ordinary",
+            {"currency": "USD"},
+        )
+>       assert approval.call_args.kwargs["arguments"] == {
+            "amount": 10,
+            "items": ("extra",),
+            "recipient": "recipient",
+            "note": "ordinary",
+            "metadata": {"currency": "USD"},
+        }
+E       AssertionError: assert {'recipient':...rency': 'USD'} == {'amount': 10...rdinary', ...}
+E
+E         Omitting 1 identical items, use -vv to show
+E         Left contains 1 more item:
+E         {'currency': 'USD'}
+E         Right contains 4 more items:
+E         {'amount': 10,
+E          'items': ('extra',),...
+E
+E         ...Full output truncated (3 lines hidden), use '-vv' to show
+
+tests/test_adapter_arguments.py:65: AssertionError
+_______ test_mixed_inputs_include_defaults_and_variadics[autogen-async] ________
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d0642c0>, <MagicMock id='4513959952'>, <AsyncMock name='mock.acreate_approval' id='4513967056'>)
+
+    def test_mixed_inputs_include_defaults_and_variadics(gated_call):
+        gate, _, approval = gated_call
+
+        def action(amount, /, *items, recipient, note="ordinary", **metadata):
+            return amount, items, recipient, note, metadata
+
+        assert gate(action)(10, "extra", recipient="recipient", currency="USD") == (
+            10,
+            ("extra",),
+            "recipient",
+            "ordinary",
+            {"currency": "USD"},
+        )
+>       assert approval.call_args.kwargs["arguments"] == {
+            "amount": 10,
+            "items": ("extra",),
+            "recipient": "recipient",
+            "note": "ordinary",
+            "metadata": {"currency": "USD"},
+        }
+E       AssertionError: assert {'recipient':...rency': 'USD'} == {'amount': 10...rdinary', ...}
+E
+E         Omitting 1 identical items, use -vv to show
+E         Left contains 1 more item:
+E         {'currency': 'USD'}
+E         Right contains 4 more items:
+E         {'amount': 10,
+E          'items': ('extra',),...
+E
+E         ...Full output truncated (3 lines hidden), use '-vv' to show
+
+tests/test_adapter_arguments.py:65: AssertionError
+______ test_mixed_inputs_include_defaults_and_variadics[langgraph-async] _______
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d025a80>, <MagicMock id='4513959120'>, <AsyncMock name='mock.acreate_approval' id='4513725200'>)
+
+    def test_mixed_inputs_include_defaults_and_variadics(gated_call):
+        gate, _, approval = gated_call
+
+        def action(amount, /, *items, recipient, note="ordinary", **metadata):
+            return amount, items, recipient, note, metadata
+
+        assert gate(action)(10, "extra", recipient="recipient", currency="USD") == (
+            10,
+            ("extra",),
+            "recipient",
+            "ordinary",
+            {"currency": "USD"},
+        )
+>       assert approval.call_args.kwargs["arguments"] == {
+            "amount": 10,
+            "items": ("extra",),
+            "recipient": "recipient",
+            "note": "ordinary",
+            "metadata": {"currency": "USD"},
+        }
+E       AssertionError: assert {'recipient':...rency': 'USD'} == {'amount': 10...rdinary', ...}
+E
+E         Omitting 1 identical items, use -vv to show
+E         Left contains 1 more item:
+E         {'currency': 'USD'}
+E         Right contains 4 more items:
+E         {'amount': 10,
+E          'items': ('extra',),...
+E
+E         ...Full output truncated (3 lines hidden), use '-vv' to show
+
+tests/test_adapter_arguments.py:65: AssertionError
+____ test_mixed_inputs_include_defaults_and_variadics[openai_agents-async] _____
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d064540>, <MagicMock id='4513070352'>, <AsyncMock name='mock.acreate_approval' id='4513070288'>)
+
+    def test_mixed_inputs_include_defaults_and_variadics(gated_call):
+        gate, _, approval = gated_call
+
+        def action(amount, /, *items, recipient, note="ordinary", **metadata):
+            return amount, items, recipient, note, metadata
+
+        assert gate(action)(10, "extra", recipient="recipient", currency="USD") == (
+            10,
+            ("extra",),
+            "recipient",
+            "ordinary",
+            {"currency": "USD"},
+        )
+>       assert approval.call_args.kwargs["arguments"] == {
+            "amount": 10,
+            "items": ("extra",),
+            "recipient": "recipient",
+            "note": "ordinary",
+            "metadata": {"currency": "USD"},
+        }
+E       AssertionError: assert {'recipient':...rency': 'USD'} == {'amount': 10...rdinary', ...}
+E
+E         Omitting 1 identical items, use -vv to show
+E         Left contains 1 more item:
+E         {'currency': 'USD'}
+E         Right contains 4 more items:
+E         {'amount': 10,
+E          'items': ('extra',),...
+E
+E         ...Full output truncated (3 lines hidden), use '-vv' to show
+
+tests/test_adapter_arguments.py:65: AssertionError
+_ test_unavailable_signature_preserves_keyword_collisions[autogen-sync-TypeError] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d064220>, <MagicMock id='4513917776'>, <MagicMock name='mock.create_approval' id='4513909072'>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d0ccd90>
+error = <class 'TypeError'>
+
+    @pytest.mark.parametrize("error", [TypeError, ValueError])
+    def test_unavailable_signature_preserves_keyword_collisions(gated_call, monkeypatch, error):
+        gate, _, approval = gated_call
+
+        def action(amount, **metadata):
+            return amount, metadata
+
+        wrapped = gate(action)
+
+        def unavailable(_fn):
+            raise error("signature unavailable")
+
+        monkeypatch.setattr(inspect, "signature", unavailable)
+        metadata = {"args": "keyword value", "kwargs": "other keyword value"}
+        assert wrapped(10, **metadata) == (10, metadata)
+>       assert approval.call_args.kwargs["arguments"] == {"args": [10], "kwargs": metadata}
+E       AssertionError: assert {'args': 'key...eyword value'} == {'args': [10]...yword value'}}
+E
+E         Differing items:
+E         {'kwargs': 'other keyword value'} != {'kwargs': {'args': 'keyword value', 'kwargs': 'other keyword value'}}
+E         {'args': 'keyword value'} != {'args': [10]}
+E         Use -v to get more diff
+
+tests/test_adapter_arguments.py:89: AssertionError
+_ test_unavailable_signature_preserves_keyword_collisions[autogen-sync-ValueError] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d064400>, <MagicMock id='4514062480'>, <MagicMock name='mock.create_approval' id='4513369616'>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d0f1d90>
+error = <class 'ValueError'>
+
+    @pytest.mark.parametrize("error", [TypeError, ValueError])
+    def test_unavailable_signature_preserves_keyword_collisions(gated_call, monkeypatch, error):
+        gate, _, approval = gated_call
+
+        def action(amount, **metadata):
+            return amount, metadata
+
+        wrapped = gate(action)
+
+        def unavailable(_fn):
+            raise error("signature unavailable")
+
+        monkeypatch.setattr(inspect, "signature", unavailable)
+        metadata = {"args": "keyword value", "kwargs": "other keyword value"}
+        assert wrapped(10, **metadata) == (10, metadata)
+>       assert approval.call_args.kwargs["arguments"] == {"args": [10], "kwargs": metadata}
+E       AssertionError: assert {'args': 'key...eyword value'} == {'args': [10]...yword value'}}
+E
+E         Differing items:
+E         {'kwargs': 'other keyword value'} != {'kwargs': {'args': 'keyword value', 'kwargs': 'other keyword value'}}
+E         {'args': 'keyword value'} != {'args': [10]}
+E         Use -v to get more diff
+
+tests/test_adapter_arguments.py:89: AssertionError
+_ test_unavailable_signature_preserves_keyword_collisions[crewai-sync-TypeError] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d064ae0>, <MagicMock id='4514154768'>, <MagicMock name='mock.create_approval' id='4511792464'>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d109950>
+error = <class 'TypeError'>
+
+    @pytest.mark.parametrize("error", [TypeError, ValueError])
+    def test_unavailable_signature_preserves_keyword_collisions(gated_call, monkeypatch, error):
+        gate, _, approval = gated_call
+
+        def action(amount, **metadata):
+            return amount, metadata
+
+        wrapped = gate(action)
+
+        def unavailable(_fn):
+            raise error("signature unavailable")
+
+        monkeypatch.setattr(inspect, "signature", unavailable)
+        metadata = {"args": "keyword value", "kwargs": "other keyword value"}
+        assert wrapped(10, **metadata) == (10, metadata)
+>       assert approval.call_args.kwargs["arguments"] == {"args": [10], "kwargs": metadata}
+E       AssertionError: assert {'args': 'key...eyword value'} == {'args': [10]...yword value'}}
+E
+E         Differing items:
+E         {'kwargs': 'other keyword value'} != {'kwargs': {'args': 'keyword value', 'kwargs': 'other keyword value'}}
+E         {'args': 'keyword value'} != {'args': [10]}
+E         Use -v to get more diff
+
+tests/test_adapter_arguments.py:89: AssertionError
+_ test_unavailable_signature_preserves_keyword_collisions[crewai-sync-ValueError] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d065120>, <MagicMock id='4513783440'>, <MagicMock name='mock.create_approval' id='4513782800'>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d0adb10>
+error = <class 'ValueError'>
+
+    @pytest.mark.parametrize("error", [TypeError, ValueError])
+    def test_unavailable_signature_preserves_keyword_collisions(gated_call, monkeypatch, error):
+        gate, _, approval = gated_call
+
+        def action(amount, **metadata):
+            return amount, metadata
+
+        wrapped = gate(action)
+
+        def unavailable(_fn):
+            raise error("signature unavailable")
+
+        monkeypatch.setattr(inspect, "signature", unavailable)
+        metadata = {"args": "keyword value", "kwargs": "other keyword value"}
+        assert wrapped(10, **metadata) == (10, metadata)
+>       assert approval.call_args.kwargs["arguments"] == {"args": [10], "kwargs": metadata}
+E       AssertionError: assert {'args': 'key...eyword value'} == {'args': [10]...yword value'}}
+E
+E         Differing items:
+E         {'kwargs': 'other keyword value'} != {'kwargs': {'args': 'keyword value', 'kwargs': 'other keyword value'}}
+E         {'args': 'keyword value'} != {'args': [10]}
+E         Use -v to get more diff
+
+tests/test_adapter_arguments.py:89: AssertionError
+_ test_unavailable_signature_preserves_keyword_collisions[langgraph-sync-TypeError] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d0651c0>, <MagicMock id='4513732816'>, <MagicMock name='mock.create_approval' id='4513728336'>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d0a3850>
+error = <class 'TypeError'>
+
+    @pytest.mark.parametrize("error", [TypeError, ValueError])
+    def test_unavailable_signature_preserves_keyword_collisions(gated_call, monkeypatch, error):
+        gate, _, approval = gated_call
+
+        def action(amount, **metadata):
+            return amount, metadata
+
+        wrapped = gate(action)
+
+        def unavailable(_fn):
+            raise error("signature unavailable")
+
+        monkeypatch.setattr(inspect, "signature", unavailable)
+        metadata = {"args": "keyword value", "kwargs": "other keyword value"}
+        assert wrapped(10, **metadata) == (10, metadata)
+>       assert approval.call_args.kwargs["arguments"] == {"args": [10], "kwargs": metadata}
+E       AssertionError: assert {'args': 'key...eyword value'} == {'args': [10]...yword value'}}
+E
+E         Differing items:
+E         {'kwargs': 'other keyword value'} != {'kwargs': {'args': 'keyword value', 'kwargs': 'other keyword value'}}
+E         {'args': 'keyword value'} != {'args': [10]}
+E         Use -v to get more diff
+
+tests/test_adapter_arguments.py:89: AssertionError
+_ test_unavailable_signature_preserves_keyword_collisions[langgraph-sync-ValueError] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d064680>, <MagicMock id='4513959312'>, <MagicMock name='mock.create_approval' id='4514209232'>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d0d9e50>
+error = <class 'ValueError'>
+
+    @pytest.mark.parametrize("error", [TypeError, ValueError])
+    def test_unavailable_signature_preserves_keyword_collisions(gated_call, monkeypatch, error):
+        gate, _, approval = gated_call
+
+        def action(amount, **metadata):
+            return amount, metadata
+
+        wrapped = gate(action)
+
+        def unavailable(_fn):
+            raise error("signature unavailable")
+
+        monkeypatch.setattr(inspect, "signature", unavailable)
+        metadata = {"args": "keyword value", "kwargs": "other keyword value"}
+        assert wrapped(10, **metadata) == (10, metadata)
+>       assert approval.call_args.kwargs["arguments"] == {"args": [10], "kwargs": metadata}
+E       AssertionError: assert {'args': 'key...eyword value'} == {'args': [10]...yword value'}}
+E
+E         Differing items:
+E         {'kwargs': 'other keyword value'} != {'kwargs': {'args': 'keyword value', 'kwargs': 'other keyword value'}}
+E         {'args': 'keyword value'} != {'args': [10]}
+E         Use -v to get more diff
+
+tests/test_adapter_arguments.py:89: AssertionError
+_ test_unavailable_signature_preserves_keyword_collisions[openai_agents-sync-TypeError] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d066020>, <MagicMock id='4485618960'>, <MagicMock name='mock.create_approval' id='4513725520'>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d0d98d0>
+error = <class 'TypeError'>
+
+    @pytest.mark.parametrize("error", [TypeError, ValueError])
+    def test_unavailable_signature_preserves_keyword_collisions(gated_call, monkeypatch, error):
+        gate, _, approval = gated_call
+
+        def action(amount, **metadata):
+            return amount, metadata
+
+        wrapped = gate(action)
+
+        def unavailable(_fn):
+            raise error("signature unavailable")
+
+        monkeypatch.setattr(inspect, "signature", unavailable)
+        metadata = {"args": "keyword value", "kwargs": "other keyword value"}
+        assert wrapped(10, **metadata) == (10, metadata)
+>       assert approval.call_args.kwargs["arguments"] == {"args": [10], "kwargs": metadata}
+E       AssertionError: assert {'args': 'key...eyword value'} == {'args': [10]...yword value'}}
+E
+E         Differing items:
+E         {'kwargs': 'other keyword value'} != {'kwargs': {'args': 'keyword value', 'kwargs': 'other keyword value'}}
+E         {'args': 'keyword value'} != {'args': [10]}
+E         Use -v to get more diff
+
+tests/test_adapter_arguments.py:89: AssertionError
+_ test_unavailable_signature_preserves_keyword_collisions[openai_agents-sync-ValueError] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d065c60>, <MagicMock id='4513982416'>, <MagicMock name='mock.create_approval' id='4514220112'>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d0dc550>
+error = <class 'ValueError'>
+
+    @pytest.mark.parametrize("error", [TypeError, ValueError])
+    def test_unavailable_signature_preserves_keyword_collisions(gated_call, monkeypatch, error):
+        gate, _, approval = gated_call
+
+        def action(amount, **metadata):
+            return amount, metadata
+
+        wrapped = gate(action)
+
+        def unavailable(_fn):
+            raise error("signature unavailable")
+
+        monkeypatch.setattr(inspect, "signature", unavailable)
+        metadata = {"args": "keyword value", "kwargs": "other keyword value"}
+        assert wrapped(10, **metadata) == (10, metadata)
+>       assert approval.call_args.kwargs["arguments"] == {"args": [10], "kwargs": metadata}
+E       AssertionError: assert {'args': 'key...eyword value'} == {'args': [10]...yword value'}}
+E
+E         Differing items:
+E         {'kwargs': 'other keyword value'} != {'kwargs': {'args': 'keyword value', 'kwargs': 'other keyword value'}}
+E         {'args': 'keyword value'} != {'args': [10]}
+E         Use -v to get more diff
+
+tests/test_adapter_arguments.py:89: AssertionError
+_ test_unavailable_signature_preserves_keyword_collisions[autogen-async-TypeError] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d065120>, <MagicMock id='4513069648'>, <AsyncMock name='mock.acreate_approval' id='4512273424'>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10cfffcd0>
+error = <class 'TypeError'>
+
+    @pytest.mark.parametrize("error", [TypeError, ValueError])
+    def test_unavailable_signature_preserves_keyword_collisions(gated_call, monkeypatch, error):
+        gate, _, approval = gated_call
+
+        def action(amount, **metadata):
+            return amount, metadata
+
+        wrapped = gate(action)
+
+        def unavailable(_fn):
+            raise error("signature unavailable")
+
+        monkeypatch.setattr(inspect, "signature", unavailable)
+        metadata = {"args": "keyword value", "kwargs": "other keyword value"}
+        assert wrapped(10, **metadata) == (10, metadata)
+>       assert approval.call_args.kwargs["arguments"] == {"args": [10], "kwargs": metadata}
+E       AssertionError: assert {'args': 'key...eyword value'} == {'args': [10]...yword value'}}
+E
+E         Differing items:
+E         {'kwargs': 'other keyword value'} != {'kwargs': {'args': 'keyword value', 'kwargs': 'other keyword value'}}
+E         {'args': 'keyword value'} != {'args': [10]}
+E         Use -v to get more diff
+
+tests/test_adapter_arguments.py:89: AssertionError
+_ test_unavailable_signature_preserves_keyword_collisions[autogen-async-ValueError] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d064ea0>, <MagicMock id='4513117776'>, <AsyncMock name='mock.acreate_approval' id='4511863312'>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d00a010>
+error = <class 'ValueError'>
+
+    @pytest.mark.parametrize("error", [TypeError, ValueError])
+    def test_unavailable_signature_preserves_keyword_collisions(gated_call, monkeypatch, error):
+        gate, _, approval = gated_call
+
+        def action(amount, **metadata):
+            return amount, metadata
+
+        wrapped = gate(action)
+
+        def unavailable(_fn):
+            raise error("signature unavailable")
+
+        monkeypatch.setattr(inspect, "signature", unavailable)
+        metadata = {"args": "keyword value", "kwargs": "other keyword value"}
+        assert wrapped(10, **metadata) == (10, metadata)
+>       assert approval.call_args.kwargs["arguments"] == {"args": [10], "kwargs": metadata}
+E       AssertionError: assert {'args': 'key...eyword value'} == {'args': [10]...yword value'}}
+E
+E         Differing items:
+E         {'kwargs': 'other keyword value'} != {'kwargs': {'args': 'keyword value', 'kwargs': 'other keyword value'}}
+E         {'args': 'keyword value'} != {'args': [10]}
+E         Use -v to get more diff
+
+tests/test_adapter_arguments.py:89: AssertionError
+_ test_unavailable_signature_preserves_keyword_collisions[langgraph-async-TypeError] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d066a20>, <MagicMock id='4513381072'>, <AsyncMock name='mock.acreate_approval' id='4513377616'>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d04a190>
+error = <class 'TypeError'>
+
+    @pytest.mark.parametrize("error", [TypeError, ValueError])
+    def test_unavailable_signature_preserves_keyword_collisions(gated_call, monkeypatch, error):
+        gate, _, approval = gated_call
+
+        def action(amount, **metadata):
+            return amount, metadata
+
+        wrapped = gate(action)
+
+        def unavailable(_fn):
+            raise error("signature unavailable")
+
+        monkeypatch.setattr(inspect, "signature", unavailable)
+        metadata = {"args": "keyword value", "kwargs": "other keyword value"}
+        assert wrapped(10, **metadata) == (10, metadata)
+>       assert approval.call_args.kwargs["arguments"] == {"args": [10], "kwargs": metadata}
+E       AssertionError: assert {'args': 'key...eyword value'} == {'args': [10]...yword value'}}
+E
+E         Differing items:
+E         {'kwargs': 'other keyword value'} != {'kwargs': {'args': 'keyword value', 'kwargs': 'other keyword value'}}
+E         {'args': 'keyword value'} != {'args': [10]}
+E         Use -v to get more diff
+
+tests/test_adapter_arguments.py:89: AssertionError
+_ test_unavailable_signature_preserves_keyword_collisions[langgraph-async-ValueError] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d065580>, <MagicMock id='4513908880'>, <AsyncMock name='mock.acreate_approval' id='4513908368'>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d049e10>
+error = <class 'ValueError'>
+
+    @pytest.mark.parametrize("error", [TypeError, ValueError])
+    def test_unavailable_signature_preserves_keyword_collisions(gated_call, monkeypatch, error):
+        gate, _, approval = gated_call
+
+        def action(amount, **metadata):
+            return amount, metadata
+
+        wrapped = gate(action)
+
+        def unavailable(_fn):
+            raise error("signature unavailable")
+
+        monkeypatch.setattr(inspect, "signature", unavailable)
+        metadata = {"args": "keyword value", "kwargs": "other keyword value"}
+        assert wrapped(10, **metadata) == (10, metadata)
+>       assert approval.call_args.kwargs["arguments"] == {"args": [10], "kwargs": metadata}
+E       AssertionError: assert {'args': 'key...eyword value'} == {'args': [10]...yword value'}}
+E
+E         Differing items:
+E         {'kwargs': 'other keyword value'} != {'kwargs': {'args': 'keyword value', 'kwargs': 'other keyword value'}}
+E         {'args': 'keyword value'} != {'args': [10]}
+E         Use -v to get more diff
+
+tests/test_adapter_arguments.py:89: AssertionError
+_ test_unavailable_signature_preserves_keyword_collisions[openai_agents-async-TypeError] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d066de0>, <MagicMock id='4513860816'>, <AsyncMock name='mock.acreate_approval' id='4513726928'>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d0a3e10>
+error = <class 'TypeError'>
+
+    @pytest.mark.parametrize("error", [TypeError, ValueError])
+    def test_unavailable_signature_preserves_keyword_collisions(gated_call, monkeypatch, error):
+        gate, _, approval = gated_call
+
+        def action(amount, **metadata):
+            return amount, metadata
+
+        wrapped = gate(action)
+
+        def unavailable(_fn):
+            raise error("signature unavailable")
+
+        monkeypatch.setattr(inspect, "signature", unavailable)
+        metadata = {"args": "keyword value", "kwargs": "other keyword value"}
+        assert wrapped(10, **metadata) == (10, metadata)
+>       assert approval.call_args.kwargs["arguments"] == {"args": [10], "kwargs": metadata}
+E       AssertionError: assert {'args': 'key...eyword value'} == {'args': [10]...yword value'}}
+E
+E         Differing items:
+E         {'kwargs': 'other keyword value'} != {'kwargs': {'args': 'keyword value', 'kwargs': 'other keyword value'}}
+E         {'args': 'keyword value'} != {'args': [10]}
+E         Use -v to get more diff
+
+tests/test_adapter_arguments.py:89: AssertionError
+_ test_unavailable_signature_preserves_keyword_collisions[openai_agents-async-ValueError] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d064a40>, <MagicMock id='4513978704'>, <AsyncMock name='mock.acreate_approval' id='4513109968'>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d0de390>
+error = <class 'ValueError'>
+
+    @pytest.mark.parametrize("error", [TypeError, ValueError])
+    def test_unavailable_signature_preserves_keyword_collisions(gated_call, monkeypatch, error):
+        gate, _, approval = gated_call
+
+        def action(amount, **metadata):
+            return amount, metadata
+
+        wrapped = gate(action)
+
+        def unavailable(_fn):
+            raise error("signature unavailable")
+
+        monkeypatch.setattr(inspect, "signature", unavailable)
+        metadata = {"args": "keyword value", "kwargs": "other keyword value"}
+        assert wrapped(10, **metadata) == (10, metadata)
+>       assert approval.call_args.kwargs["arguments"] == {"args": [10], "kwargs": metadata}
+E       AssertionError: assert {'args': 'key...eyword value'} == {'args': [10]...yword value'}}
+E
+E         Differing items:
+E         {'kwargs': 'other keyword value'} != {'kwargs': {'args': 'keyword value', 'kwargs': 'other keyword value'}}
+E         {'args': 'keyword value'} != {'args': [10]}
+E         Use -v to get more diff
+
+tests/test_adapter_arguments.py:89: AssertionError
+___ test_invalid_mixed_binding_fails_before_approval[autogen-sync-duplicate] ___
+
+gated_call = (<function gated_call.<locals>.gate at 0x10b8140e0>, <MagicMock id='4511513040'>, <MagicMock name='mock.create_approval' id='4514317136'>)
+kwargs = {'amount': 20, 'recipient': 'recipient'}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"amount": 20, "recipient": "recipient"},
+            {"unexpected": "value"},
+            {"recipient": "recipient", "unexpected": "value"},
+        ],
+        ids=["duplicate", "missing-required", "unexpected"],
+    )
+    def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+        gate, client, _ = gated_call
+        calls = []
+
+        def action(amount, *, recipient):
+            calls.append((amount, recipient))
+
+        with pytest.raises(TypeError):
+            gate(action)(10, **kwargs)
+        assert calls == []
+>       client.create_approval.assert_not_called()
+
+tests/test_adapter_arguments.py:111:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='mock.create_approval' id='4514317136'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'create_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='action', arguments={'amount': 20, 'recipient': 'recipient'}, risk_level='high', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+_ test_invalid_mixed_binding_fails_before_approval[autogen-sync-missing-required] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d067420>, <MagicMock id='4513687952'>, <MagicMock name='mock.create_approval' id='4513688592'>)
+kwargs = {'unexpected': 'value'}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"amount": 20, "recipient": "recipient"},
+            {"unexpected": "value"},
+            {"recipient": "recipient", "unexpected": "value"},
+        ],
+        ids=["duplicate", "missing-required", "unexpected"],
+    )
+    def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+        gate, client, _ = gated_call
+        calls = []
+
+        def action(amount, *, recipient):
+            calls.append((amount, recipient))
+
+        with pytest.raises(TypeError):
+            gate(action)(10, **kwargs)
+        assert calls == []
+>       client.create_approval.assert_not_called()
+
+tests/test_adapter_arguments.py:111:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='mock.create_approval' id='4513688592'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'create_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='action', arguments={'unexpected': 'value'}, risk_level='high', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+__ test_invalid_mixed_binding_fails_before_approval[autogen-sync-unexpected] ___
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d065120>, <MagicMock id='4514370960'>, <MagicMock name='mock.create_approval' id='4514373392'>)
+kwargs = {'recipient': 'recipient', 'unexpected': 'value'}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"amount": 20, "recipient": "recipient"},
+            {"unexpected": "value"},
+            {"recipient": "recipient", "unexpected": "value"},
+        ],
+        ids=["duplicate", "missing-required", "unexpected"],
+    )
+    def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+        gate, client, _ = gated_call
+        calls = []
+
+        def action(amount, *, recipient):
+            calls.append((amount, recipient))
+
+        with pytest.raises(TypeError):
+            gate(action)(10, **kwargs)
+        assert calls == []
+>       client.create_approval.assert_not_called()
+
+tests/test_adapter_arguments.py:111:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='mock.create_approval' id='4514373392'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'create_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='action', arguments={'recipient': 'recipient', 'unexpected': 'value'}, risk_level='high', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+___ test_invalid_mixed_binding_fails_before_approval[crewai-sync-duplicate] ____
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d066020>, <MagicMock id='4514202960'>, <MagicMock name='mock.create_approval' id='4514204496'>)
+kwargs = {'amount': 20, 'recipient': 'recipient'}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"amount": 20, "recipient": "recipient"},
+            {"unexpected": "value"},
+            {"recipient": "recipient", "unexpected": "value"},
+        ],
+        ids=["duplicate", "missing-required", "unexpected"],
+    )
+    def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+        gate, client, _ = gated_call
+        calls = []
+
+        def action(amount, *, recipient):
+            calls.append((amount, recipient))
+
+        with pytest.raises(TypeError):
+            gate(action)(10, **kwargs)
+        assert calls == []
+>       client.create_approval.assert_not_called()
+
+tests/test_adapter_arguments.py:111:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='mock.create_approval' id='4514204496'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'create_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='action', arguments={'amount': 20, 'recipient': 'recipient'}, risk_level='high', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+_ test_invalid_mixed_binding_fails_before_approval[crewai-sync-missing-required] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d066f20>, <MagicMock id='4511893584'>, <MagicMock name='mock.create_approval' id='4513356816'>)
+kwargs = {'unexpected': 'value'}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"amount": 20, "recipient": "recipient"},
+            {"unexpected": "value"},
+            {"recipient": "recipient", "unexpected": "value"},
+        ],
+        ids=["duplicate", "missing-required", "unexpected"],
+    )
+    def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+        gate, client, _ = gated_call
+        calls = []
+
+        def action(amount, *, recipient):
+            calls.append((amount, recipient))
+
+        with pytest.raises(TypeError):
+            gate(action)(10, **kwargs)
+        assert calls == []
+>       client.create_approval.assert_not_called()
+
+tests/test_adapter_arguments.py:111:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='mock.create_approval' id='4513356816'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'create_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='action', arguments={'unexpected': 'value'}, risk_level='high', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+___ test_invalid_mixed_binding_fails_before_approval[crewai-sync-unexpected] ___
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d064a40>, <MagicMock id='4513691792'>, <MagicMock name='mock.create_approval' id='4513680848'>)
+kwargs = {'recipient': 'recipient', 'unexpected': 'value'}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"amount": 20, "recipient": "recipient"},
+            {"unexpected": "value"},
+            {"recipient": "recipient", "unexpected": "value"},
+        ],
+        ids=["duplicate", "missing-required", "unexpected"],
+    )
+    def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+        gate, client, _ = gated_call
+        calls = []
+
+        def action(amount, *, recipient):
+            calls.append((amount, recipient))
+
+        with pytest.raises(TypeError):
+            gate(action)(10, **kwargs)
+        assert calls == []
+>       client.create_approval.assert_not_called()
+
+tests/test_adapter_arguments.py:111:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='mock.create_approval' id='4513680848'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'create_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='action', arguments={'recipient': 'recipient', 'unexpected': 'value'}, risk_level='high', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+__ test_invalid_mixed_binding_fails_before_approval[langgraph-sync-duplicate] __
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d0671a0>, <MagicMock id='4513201616'>, <MagicMock name='mock.create_approval' id='4513913872'>)
+kwargs = {'amount': 20, 'recipient': 'recipient'}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"amount": 20, "recipient": "recipient"},
+            {"unexpected": "value"},
+            {"recipient": "recipient", "unexpected": "value"},
+        ],
+        ids=["duplicate", "missing-required", "unexpected"],
+    )
+    def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+        gate, client, _ = gated_call
+        calls = []
+
+        def action(amount, *, recipient):
+            calls.append((amount, recipient))
+
+        with pytest.raises(TypeError):
+            gate(action)(10, **kwargs)
+        assert calls == []
+>       client.create_approval.assert_not_called()
+
+tests/test_adapter_arguments.py:111:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='mock.create_approval' id='4513913872'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'create_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='action', arguments={'amount': 20, 'recipient': 'recipient'}, risk_level='high', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+_ test_invalid_mixed_binding_fails_before_approval[langgraph-sync-missing-required] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d066de0>, <MagicMock id='4513112464'>, <MagicMock name='mock.create_approval' id='4513817872'>)
+kwargs = {'unexpected': 'value'}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"amount": 20, "recipient": "recipient"},
+            {"unexpected": "value"},
+            {"recipient": "recipient", "unexpected": "value"},
+        ],
+        ids=["duplicate", "missing-required", "unexpected"],
+    )
+    def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+        gate, client, _ = gated_call
+        calls = []
+
+        def action(amount, *, recipient):
+            calls.append((amount, recipient))
+
+        with pytest.raises(TypeError):
+            gate(action)(10, **kwargs)
+        assert calls == []
+>       client.create_approval.assert_not_called()
+
+tests/test_adapter_arguments.py:111:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='mock.create_approval' id='4513817872'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'create_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='action', arguments={'unexpected': 'value'}, risk_level='high', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+_ test_invalid_mixed_binding_fails_before_approval[langgraph-sync-unexpected] __
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d065620>, <MagicMock id='4513868688'>, <MagicMock name='mock.create_approval' id='4513873616'>)
+kwargs = {'recipient': 'recipient', 'unexpected': 'value'}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"amount": 20, "recipient": "recipient"},
+            {"unexpected": "value"},
+            {"recipient": "recipient", "unexpected": "value"},
+        ],
+        ids=["duplicate", "missing-required", "unexpected"],
+    )
+    def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+        gate, client, _ = gated_call
+        calls = []
+
+        def action(amount, *, recipient):
+            calls.append((amount, recipient))
+
+        with pytest.raises(TypeError):
+            gate(action)(10, **kwargs)
+        assert calls == []
+>       client.create_approval.assert_not_called()
+
+tests/test_adapter_arguments.py:111:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='mock.create_approval' id='4513873616'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'create_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='action', arguments={'recipient': 'recipient', 'unexpected': 'value'}, risk_level='high', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+_ test_invalid_mixed_binding_fails_before_approval[openai_agents-sync-duplicate] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d064ae0>, <MagicMock id='4514219024'>, <MagicMock name='mock.create_approval' id='4514214800'>)
+kwargs = {'amount': 20, 'recipient': 'recipient'}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"amount": 20, "recipient": "recipient"},
+            {"unexpected": "value"},
+            {"recipient": "recipient", "unexpected": "value"},
+        ],
+        ids=["duplicate", "missing-required", "unexpected"],
+    )
+    def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+        gate, client, _ = gated_call
+        calls = []
+
+        def action(amount, *, recipient):
+            calls.append((amount, recipient))
+
+        with pytest.raises(TypeError):
+            gate(action)(10, **kwargs)
+        assert calls == []
+>       client.create_approval.assert_not_called()
+
+tests/test_adapter_arguments.py:111:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='mock.create_approval' id='4514214800'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'create_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='action', arguments={'amount': 20, 'recipient': 'recipient'}, risk_level='high', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+_ test_invalid_mixed_binding_fails_before_approval[openai_agents-sync-missing-required] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d064540>, <MagicMock id='4513372304'>, <MagicMock name='mock.create_approval' id='4513378320'>)
+kwargs = {'unexpected': 'value'}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"amount": 20, "recipient": "recipient"},
+            {"unexpected": "value"},
+            {"recipient": "recipient", "unexpected": "value"},
+        ],
+        ids=["duplicate", "missing-required", "unexpected"],
+    )
+    def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+        gate, client, _ = gated_call
+        calls = []
+
+        def action(amount, *, recipient):
+            calls.append((amount, recipient))
+
+        with pytest.raises(TypeError):
+            gate(action)(10, **kwargs)
+        assert calls == []
+>       client.create_approval.assert_not_called()
+
+tests/test_adapter_arguments.py:111:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='mock.create_approval' id='4513378320'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'create_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='action', arguments={'unexpected': 'value'}, risk_level='high', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+_ test_invalid_mixed_binding_fails_before_approval[openai_agents-sync-unexpected] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d0653a0>, <MagicMock id='4514160528'>, <MagicMock name='mock.create_approval' id='4514156624'>)
+kwargs = {'recipient': 'recipient', 'unexpected': 'value'}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"amount": 20, "recipient": "recipient"},
+            {"unexpected": "value"},
+            {"recipient": "recipient", "unexpected": "value"},
+        ],
+        ids=["duplicate", "missing-required", "unexpected"],
+    )
+    def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+        gate, client, _ = gated_call
+        calls = []
+
+        def action(amount, *, recipient):
+            calls.append((amount, recipient))
+
+        with pytest.raises(TypeError):
+            gate(action)(10, **kwargs)
+        assert calls == []
+>       client.create_approval.assert_not_called()
+
+tests/test_adapter_arguments.py:111:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='mock.create_approval' id='4514156624'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'create_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='action', arguments={'recipient': 'recipient', 'unexpected': 'value'}, risk_level='high', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+__ test_invalid_mixed_binding_fails_before_approval[autogen-async-duplicate] ___
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d0671a0>, <MagicMock id='4513908816'>, <AsyncMock name='mock.acreate_approval' id='4513923024'>)
+kwargs = {'amount': 20, 'recipient': 'recipient'}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"amount": 20, "recipient": "recipient"},
+            {"unexpected": "value"},
+            {"recipient": "recipient", "unexpected": "value"},
+        ],
+        ids=["duplicate", "missing-required", "unexpected"],
+    )
+    def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+        gate, client, _ = gated_call
+        calls = []
+
+        def action(amount, *, recipient):
+            calls.append((amount, recipient))
+
+        with pytest.raises(TypeError):
+            gate(action)(10, **kwargs)
+        assert calls == []
+        client.create_approval.assert_not_called()
+>       client.acreate_approval.assert_not_called()
+
+tests/test_adapter_arguments.py:112:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <AsyncMock name='mock.acreate_approval' id='4513923024'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'acreate_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='action', arguments={'amount': 20, 'recipient': 'recipient'}, risk_level='high', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+_ test_invalid_mixed_binding_fails_before_approval[autogen-async-missing-required] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d066c00>, <MagicMock id='4513823888'>, <AsyncMock name='mock.acreate_approval' id='4513909456'>)
+kwargs = {'unexpected': 'value'}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"amount": 20, "recipient": "recipient"},
+            {"unexpected": "value"},
+            {"recipient": "recipient", "unexpected": "value"},
+        ],
+        ids=["duplicate", "missing-required", "unexpected"],
+    )
+    def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+        gate, client, _ = gated_call
+        calls = []
+
+        def action(amount, *, recipient):
+            calls.append((amount, recipient))
+
+        with pytest.raises(TypeError):
+            gate(action)(10, **kwargs)
+        assert calls == []
+        client.create_approval.assert_not_called()
+>       client.acreate_approval.assert_not_called()
+
+tests/test_adapter_arguments.py:112:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <AsyncMock name='mock.acreate_approval' id='4513909456'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'acreate_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='action', arguments={'unexpected': 'value'}, risk_level='high', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+__ test_invalid_mixed_binding_fails_before_approval[autogen-async-unexpected] __
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d0653a0>, <MagicMock id='4513316560'>, <AsyncMock name='mock.acreate_approval' id='4513968720'>)
+kwargs = {'recipient': 'recipient', 'unexpected': 'value'}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"amount": 20, "recipient": "recipient"},
+            {"unexpected": "value"},
+            {"recipient": "recipient", "unexpected": "value"},
+        ],
+        ids=["duplicate", "missing-required", "unexpected"],
+    )
+    def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+        gate, client, _ = gated_call
+        calls = []
+
+        def action(amount, *, recipient):
+            calls.append((amount, recipient))
+
+        with pytest.raises(TypeError):
+            gate(action)(10, **kwargs)
+        assert calls == []
+        client.create_approval.assert_not_called()
+>       client.acreate_approval.assert_not_called()
+
+tests/test_adapter_arguments.py:112:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <AsyncMock name='mock.acreate_approval' id='4513968720'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'acreate_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='action', arguments={'recipient': 'recipient', 'unexpected': 'value'}, risk_level='high', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+_ test_invalid_mixed_binding_fails_before_approval[langgraph-async-duplicate] __
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d066020>, <MagicMock id='4513374800'>, <AsyncMock name='mock.acreate_approval' id='4513376592'>)
+kwargs = {'amount': 20, 'recipient': 'recipient'}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"amount": 20, "recipient": "recipient"},
+            {"unexpected": "value"},
+            {"recipient": "recipient", "unexpected": "value"},
+        ],
+        ids=["duplicate", "missing-required", "unexpected"],
+    )
+    def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+        gate, client, _ = gated_call
+        calls = []
+
+        def action(amount, *, recipient):
+            calls.append((amount, recipient))
+
+        with pytest.raises(TypeError):
+            gate(action)(10, **kwargs)
+        assert calls == []
+        client.create_approval.assert_not_called()
+>       client.acreate_approval.assert_not_called()
+
+tests/test_adapter_arguments.py:112:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <AsyncMock name='mock.acreate_approval' id='4513376592'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'acreate_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='action', arguments={'amount': 20, 'recipient': 'recipient'}, risk_level='high', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+_ test_invalid_mixed_binding_fails_before_approval[langgraph-async-missing-required] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d0679c0>, <MagicMock id='4514068048'>, <AsyncMock name='mock.acreate_approval' id='4514065232'>)
+kwargs = {'unexpected': 'value'}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"amount": 20, "recipient": "recipient"},
+            {"unexpected": "value"},
+            {"recipient": "recipient", "unexpected": "value"},
+        ],
+        ids=["duplicate", "missing-required", "unexpected"],
+    )
+    def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+        gate, client, _ = gated_call
+        calls = []
+
+        def action(amount, *, recipient):
+            calls.append((amount, recipient))
+
+        with pytest.raises(TypeError):
+            gate(action)(10, **kwargs)
+        assert calls == []
+        client.create_approval.assert_not_called()
+>       client.acreate_approval.assert_not_called()
+
+tests/test_adapter_arguments.py:112:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <AsyncMock name='mock.acreate_approval' id='4514065232'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'acreate_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='action', arguments={'unexpected': 'value'}, risk_level='high', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+_ test_invalid_mixed_binding_fails_before_approval[langgraph-async-unexpected] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d066160>, <MagicMock id='4513864976'>, <AsyncMock name='mock.acreate_approval' id='4513867472'>)
+kwargs = {'recipient': 'recipient', 'unexpected': 'value'}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"amount": 20, "recipient": "recipient"},
+            {"unexpected": "value"},
+            {"recipient": "recipient", "unexpected": "value"},
+        ],
+        ids=["duplicate", "missing-required", "unexpected"],
+    )
+    def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+        gate, client, _ = gated_call
+        calls = []
+
+        def action(amount, *, recipient):
+            calls.append((amount, recipient))
+
+        with pytest.raises(TypeError):
+            gate(action)(10, **kwargs)
+        assert calls == []
+        client.create_approval.assert_not_called()
+>       client.acreate_approval.assert_not_called()
+
+tests/test_adapter_arguments.py:112:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <AsyncMock name='mock.acreate_approval' id='4513867472'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'acreate_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='action', arguments={'recipient': 'recipient', 'unexpected': 'value'}, risk_level='high', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+_ test_invalid_mixed_binding_fails_before_approval[openai_agents-async-duplicate] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d065a80>, <MagicMock id='4513788432'>, <AsyncMock name='mock.acreate_approval' id='4513789264'>)
+kwargs = {'amount': 20, 'recipient': 'recipient'}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"amount": 20, "recipient": "recipient"},
+            {"unexpected": "value"},
+            {"recipient": "recipient", "unexpected": "value"},
+        ],
+        ids=["duplicate", "missing-required", "unexpected"],
+    )
+    def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+        gate, client, _ = gated_call
+        calls = []
+
+        def action(amount, *, recipient):
+            calls.append((amount, recipient))
+
+        with pytest.raises(TypeError):
+            gate(action)(10, **kwargs)
+        assert calls == []
+        client.create_approval.assert_not_called()
+>       client.acreate_approval.assert_not_called()
+
+tests/test_adapter_arguments.py:112:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <AsyncMock name='mock.acreate_approval' id='4513789264'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'acreate_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='action', arguments={'amount': 20, 'recipient': 'recipient'}, risk_level='high', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+_ test_invalid_mixed_binding_fails_before_approval[openai_agents-async-missing-required] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d067920>, <MagicMock id='4513352080'>, <AsyncMock name='mock.acreate_approval' id='4513352400'>)
+kwargs = {'unexpected': 'value'}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"amount": 20, "recipient": "recipient"},
+            {"unexpected": "value"},
+            {"recipient": "recipient", "unexpected": "value"},
+        ],
+        ids=["duplicate", "missing-required", "unexpected"],
+    )
+    def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+        gate, client, _ = gated_call
+        calls = []
+
+        def action(amount, *, recipient):
+            calls.append((amount, recipient))
+
+        with pytest.raises(TypeError):
+            gate(action)(10, **kwargs)
+        assert calls == []
+        client.create_approval.assert_not_called()
+>       client.acreate_approval.assert_not_called()
+
+tests/test_adapter_arguments.py:112:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <AsyncMock name='mock.acreate_approval' id='4513352400'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'acreate_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='action', arguments={'unexpected': 'value'}, risk_level='high', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+_ test_invalid_mixed_binding_fails_before_approval[openai_agents-async-unexpected] _
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d0651c0>, <MagicMock id='4514218704'>, <AsyncMock name='mock.acreate_approval' id='4514228560'>)
+kwargs = {'recipient': 'recipient', 'unexpected': 'value'}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"amount": 20, "recipient": "recipient"},
+            {"unexpected": "value"},
+            {"recipient": "recipient", "unexpected": "value"},
+        ],
+        ids=["duplicate", "missing-required", "unexpected"],
+    )
+    def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
+        gate, client, _ = gated_call
+        calls = []
+
+        def action(amount, *, recipient):
+            calls.append((amount, recipient))
+
+        with pytest.raises(TypeError):
+            gate(action)(10, **kwargs)
+        assert calls == []
+        client.create_approval.assert_not_called()
+>       client.acreate_approval.assert_not_called()
+
+tests/test_adapter_arguments.py:112:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <AsyncMock name='mock.acreate_approval' id='4514228560'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'acreate_approval' to not have been called. Called 1 times.
+E           Calls: [call(function_name='action', arguments={'recipient': 'recipient', 'unexpected': 'value'}, risk_level='high', approvers=None, timeout_seconds=None)].
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:900: AssertionError
+____________ test_mixed_binding_preserves_raw_values[autogen-sync] _____________
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d065a80>, <MagicMock id='4514684496'>, <MagicMock name='mock.create_approval' id='4514958736'>)
+
+    def test_mixed_binding_preserves_raw_values(gated_call):
+        gate, _, approval = gated_call
+        value = object()
+
+        def action(payload, *, recipient):
+            assert payload is value
+            return recipient
+
+        assert gate(action)(value, recipient="recipient") == "recipient"
+>       assert approval.call_args.kwargs["arguments"]["payload"] is value
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'payload'
+
+tests/test_adapter_arguments.py:145: KeyError
+_____________ test_mixed_binding_preserves_raw_values[crewai-sync] _____________
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d1b02c0>, <MagicMock id='4514677328'>, <MagicMock name='mock.create_approval' id='4514679632'>)
+
+    def test_mixed_binding_preserves_raw_values(gated_call):
+        gate, _, approval = gated_call
+        value = object()
+
+        def action(payload, *, recipient):
+            assert payload is value
+            return recipient
+
+        assert gate(action)(value, recipient="recipient") == "recipient"
+>       assert approval.call_args.kwargs["arguments"]["payload"] is value
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'payload'
+
+tests/test_adapter_arguments.py:145: KeyError
+___________ test_mixed_binding_preserves_raw_values[langgraph-sync] ____________
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d1b00e0>, <MagicMock id='4514913808'>, <MagicMock name='mock.create_approval' id='4515002128'>)
+
+    def test_mixed_binding_preserves_raw_values(gated_call):
+        gate, _, approval = gated_call
+        value = object()
+
+        def action(payload, *, recipient):
+            assert payload is value
+            return recipient
+
+        assert gate(action)(value, recipient="recipient") == "recipient"
+>       assert approval.call_args.kwargs["arguments"]["payload"] is value
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'payload'
+
+tests/test_adapter_arguments.py:145: KeyError
+_________ test_mixed_binding_preserves_raw_values[openai_agents-sync] __________
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d1b0180>, <MagicMock id='4513726416'>, <MagicMock name='mock.create_approval' id='4514897936'>)
+
+    def test_mixed_binding_preserves_raw_values(gated_call):
+        gate, _, approval = gated_call
+        value = object()
+
+        def action(payload, *, recipient):
+            assert payload is value
+            return recipient
+
+        assert gate(action)(value, recipient="recipient") == "recipient"
+>       assert approval.call_args.kwargs["arguments"]["payload"] is value
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'payload'
+
+tests/test_adapter_arguments.py:145: KeyError
+____________ test_mixed_binding_preserves_raw_values[autogen-async] ____________
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d1b0400>, <MagicMock id='4513921616'>, <AsyncMock name='mock.acreate_approval' id='4513919696'>)
+
+    def test_mixed_binding_preserves_raw_values(gated_call):
+        gate, _, approval = gated_call
+        value = object()
+
+        def action(payload, *, recipient):
+            assert payload is value
+            return recipient
+
+        assert gate(action)(value, recipient="recipient") == "recipient"
+>       assert approval.call_args.kwargs["arguments"]["payload"] is value
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'payload'
+
+tests/test_adapter_arguments.py:145: KeyError
+___________ test_mixed_binding_preserves_raw_values[langgraph-async] ___________
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d1b0e00>, <MagicMock id='4514169360'>, <AsyncMock name='mock.acreate_approval' id='4514174672'>)
+
+    def test_mixed_binding_preserves_raw_values(gated_call):
+        gate, _, approval = gated_call
+        value = object()
+
+        def action(payload, *, recipient):
+            assert payload is value
+            return recipient
+
+        assert gate(action)(value, recipient="recipient") == "recipient"
+>       assert approval.call_args.kwargs["arguments"]["payload"] is value
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'payload'
+
+tests/test_adapter_arguments.py:145: KeyError
+_________ test_mixed_binding_preserves_raw_values[openai_agents-async] _________
+
+gated_call = (<function gated_call.<locals>.gate at 0x10d1b02c0>, <MagicMock id='4513966160'>, <AsyncMock name='mock.acreate_approval' id='4513971792'>)
+
+    def test_mixed_binding_preserves_raw_values(gated_call):
+        gate, _, approval = gated_call
+        value = object()
+
+        def action(payload, *, recipient):
+            assert payload is value
+            return recipient
+
+        assert gate(action)(value, recipient="recipient") == "recipient"
+>       assert approval.call_args.kwargs["arguments"]["payload"] is value
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'payload'
+
+tests/test_adapter_arguments.py:145: KeyError
+=========================== short test summary info ============================
+FAILED tests/test_adapter_arguments.py::test_mixed_inputs_include_defaults_and_variadics[autogen-sync]
+FAILED tests/test_adapter_arguments.py::test_mixed_inputs_include_defaults_and_variadics[crewai-sync]
+FAILED tests/test_adapter_arguments.py::test_mixed_inputs_include_defaults_and_variadics[langgraph-sync]
+FAILED tests/test_adapter_arguments.py::test_mixed_inputs_include_defaults_and_variadics[openai_agents-sync]
+FAILED tests/test_adapter_arguments.py::test_mixed_inputs_include_defaults_and_variadics[autogen-async]
+FAILED tests/test_adapter_arguments.py::test_mixed_inputs_include_defaults_and_variadics[langgraph-async]
+FAILED tests/test_adapter_arguments.py::test_mixed_inputs_include_defaults_and_variadics[openai_agents-async]
+FAILED tests/test_adapter_arguments.py::test_unavailable_signature_preserves_keyword_collisions[autogen-sync-TypeError]
+FAILED tests/test_adapter_arguments.py::test_unavailable_signature_preserves_keyword_collisions[autogen-sync-ValueError]
+FAILED tests/test_adapter_arguments.py::test_unavailable_signature_preserves_keyword_collisions[crewai-sync-TypeError]
+FAILED tests/test_adapter_arguments.py::test_unavailable_signature_preserves_keyword_collisions[crewai-sync-ValueError]
+FAILED tests/test_adapter_arguments.py::test_unavailable_signature_preserves_keyword_collisions[langgraph-sync-TypeError]
+FAILED tests/test_adapter_arguments.py::test_unavailable_signature_preserves_keyword_collisions[langgraph-sync-ValueError]
+FAILED tests/test_adapter_arguments.py::test_unavailable_signature_preserves_keyword_collisions[openai_agents-sync-TypeError]
+FAILED tests/test_adapter_arguments.py::test_unavailable_signature_preserves_keyword_collisions[openai_agents-sync-ValueError]
+FAILED tests/test_adapter_arguments.py::test_unavailable_signature_preserves_keyword_collisions[autogen-async-TypeError]
+FAILED tests/test_adapter_arguments.py::test_unavailable_signature_preserves_keyword_collisions[autogen-async-ValueError]
+FAILED tests/test_adapter_arguments.py::test_unavailable_signature_preserves_keyword_collisions[langgraph-async-TypeError]
+FAILED tests/test_adapter_arguments.py::test_unavailable_signature_preserves_keyword_collisions[langgraph-async-ValueError]
+FAILED tests/test_adapter_arguments.py::test_unavailable_signature_preserves_keyword_collisions[openai_agents-async-TypeError]
+FAILED tests/test_adapter_arguments.py::test_unavailable_signature_preserves_keyword_collisions[openai_agents-async-ValueError]
+FAILED tests/test_adapter_arguments.py::test_invalid_mixed_binding_fails_before_approval[autogen-sync-duplicate]
+FAILED tests/test_adapter_arguments.py::test_invalid_mixed_binding_fails_before_approval[autogen-sync-missing-required]
+FAILED tests/test_adapter_arguments.py::test_invalid_mixed_binding_fails_before_approval[autogen-sync-unexpected]
+FAILED tests/test_adapter_arguments.py::test_invalid_mixed_binding_fails_before_approval[crewai-sync-duplicate]
+FAILED tests/test_adapter_arguments.py::test_invalid_mixed_binding_fails_before_approval[crewai-sync-missing-required]
+FAILED tests/test_adapter_arguments.py::test_invalid_mixed_binding_fails_before_approval[crewai-sync-unexpected]
+FAILED tests/test_adapter_arguments.py::test_invalid_mixed_binding_fails_before_approval[langgraph-sync-duplicate]
+FAILED tests/test_adapter_arguments.py::test_invalid_mixed_binding_fails_before_approval[langgraph-sync-missing-required]
+FAILED tests/test_adapter_arguments.py::test_invalid_mixed_binding_fails_before_approval[langgraph-sync-unexpected]
+FAILED tests/test_adapter_arguments.py::test_invalid_mixed_binding_fails_before_approval[openai_agents-sync-duplicate]
+FAILED tests/test_adapter_arguments.py::test_invalid_mixed_binding_fails_before_approval[openai_agents-sync-missing-required]
+FAILED tests/test_adapter_arguments.py::test_invalid_mixed_binding_fails_before_approval[openai_agents-sync-unexpected]
+FAILED tests/test_adapter_arguments.py::test_invalid_mixed_binding_fails_before_approval[autogen-async-duplicate]
+FAILED tests/test_adapter_arguments.py::test_invalid_mixed_binding_fails_before_approval[autogen-async-missing-required]
+FAILED tests/test_adapter_arguments.py::test_invalid_mixed_binding_fails_before_approval[autogen-async-unexpected]
+FAILED tests/test_adapter_arguments.py::test_invalid_mixed_binding_fails_before_approval[langgraph-async-duplicate]
+FAILED tests/test_adapter_arguments.py::test_invalid_mixed_binding_fails_before_approval[langgraph-async-missing-required]
+FAILED tests/test_adapter_arguments.py::test_invalid_mixed_binding_fails_before_approval[langgraph-async-unexpected]
+FAILED tests/test_adapter_arguments.py::test_invalid_mixed_binding_fails_before_approval[openai_agents-async-duplicate]
+FAILED tests/test_adapter_arguments.py::test_invalid_mixed_binding_fails_before_approval[openai_agents-async-missing-required]
+FAILED tests/test_adapter_arguments.py::test_invalid_mixed_binding_fails_before_approval[openai_agents-async-unexpected]
+FAILED tests/test_adapter_arguments.py::test_mixed_binding_preserves_raw_values[autogen-sync]
+FAILED tests/test_adapter_arguments.py::test_mixed_binding_preserves_raw_values[crewai-sync]
+FAILED tests/test_adapter_arguments.py::test_mixed_binding_preserves_raw_values[langgraph-sync]
+FAILED tests/test_adapter_arguments.py::test_mixed_binding_preserves_raw_values[openai_agents-sync]
+FAILED tests/test_adapter_arguments.py::test_mixed_binding_preserves_raw_values[autogen-async]
+FAILED tests/test_adapter_arguments.py::test_mixed_binding_preserves_raw_values[langgraph-async]
+FAILED tests/test_adapter_arguments.py::test_mixed_binding_preserves_raw_values[openai_agents-async]
+49 failed, 21 passed in 0.53s

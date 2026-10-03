@@ -1,0 +1,8 @@
+UTC start: 2026-10-03T02:42:03+00:00
+Command: rg -n 'Primary codebase|6 services|gitleaks.*detect-secrets' /Users/sellers/AGENTS.md
+Exit: 0
+
+6:- Primary codebase: **RegEngine** (`~/Documents/GitHub/RegEngine`) — 6 FastAPI services + Next.js frontend, deployed to Railway + Vercel.
+33:- Backend: Railway (6 services).
+41:- `reghealth`  → curl /health on all 6 services
+59:- Pre-commit's `gitleaks` and `detect-secrets` hooks are non-negotiable.

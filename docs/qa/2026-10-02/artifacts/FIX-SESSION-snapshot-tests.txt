@@ -1,0 +1,309 @@
+UTC start: 2026-10-03T02:38:39+00:00
+Command: rg -n -A 45 -B 12 'execution_arguments_match_approved_snapshot|BE-004|_serialize|serializable|default|method|self' tests/test_qa_backend.py tests/test_decorator.py tests/test_serializable.py
+Exit: 0
+
+tests/test_qa_backend.py-42-            headers=client._headers(),
+tests/test_qa_backend.py-43-            transport=httpx.MockTransport(handler),
+tests/test_qa_backend.py-44-        )
+tests/test_qa_backend.py-45-        clients.append(client)
+tests/test_qa_backend.py-46-        return client
+tests/test_qa_backend.py-47-
+tests/test_qa_backend.py-48-    yield make
+tests/test_qa_backend.py-49-    for client in clients:
+tests/test_qa_backend.py-50-        client.close()
+tests/test_qa_backend.py-51-        asyncio.run(client.aclose())
+tests/test_qa_backend.py-52-
+tests/test_qa_backend.py-53-
+tests/test_qa_backend.py:54:def invoke(client, mode, method, *args, **kwargs):
+tests/test_qa_backend.py-55-    if mode == "async":
+tests/test_qa_backend.py:56:        return asyncio.run(getattr(client, "a" + method)(*args, **kwargs))
+tests/test_qa_backend.py:57:    return getattr(client, method)(*args, **kwargs)
+tests/test_qa_backend.py-58-
+tests/test_qa_backend.py-59-
+tests/test_qa_backend.py-60-@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py-61-@pytest.mark.parametrize("status", [400, 401, 403, 404, 409, 422, 429, 500, 503])
+tests/test_qa_backend.py-62-def test_http_errors_preserve_status_without_retry(client_factory, mode, status):
+tests/test_qa_backend.py-63-    calls = []
+tests/test_qa_backend.py-64-
+tests/test_qa_backend.py-65-    def handler(request):
+tests/test_qa_backend.py-66-        calls.append(request)
+tests/test_qa_backend.py-67-        return httpx.Response(status, json={"detail": "synthetic failure"})
+tests/test_qa_backend.py-68-
+tests/test_qa_backend.py-69-    client = client_factory(handler)
+tests/test_qa_backend.py-70-    with pytest.raises(SentinelAPIError) as error:
+tests/test_qa_backend.py-71-        invoke(client, mode, "create_approval", "task", {}, idempotency_key="qa-replay")
+tests/test_qa_backend.py-72-    assert error.value.status_code == status
+tests/test_qa_backend.py-73-    assert "synthetic failure" in str(error.value)
+tests/test_qa_backend.py-74-    assert len(calls) == 1
+tests/test_qa_backend.py-75-
+tests/test_qa_backend.py-76-
+tests/test_qa_backend.py-77-@pytest.mark.parametrize("body", ["plain text", ["error"], {"message": "failure"}])
+tests/test_qa_backend.py-78-def test_error_body_shapes_are_not_swallowed(client_factory, body):
+tests/test_qa_backend.py-79-    def handler(request):
+tests/test_qa_backend.py-80-        if isinstance(body, str):
+tests/test_qa_backend.py-81-            return httpx.Response(502, text=body)
+tests/test_qa_backend.py-82-        return httpx.Response(502, json=body)
+tests/test_qa_backend.py-83-
+tests/test_qa_backend.py-84-    with pytest.raises(SentinelAPIError) as error:
+tests/test_qa_backend.py-85-        client_factory(handler).get_approval("action")
+tests/test_qa_backend.py-86-    assert error.value.status_code == 502
+tests/test_qa_backend.py-87-    expected = body["message"] if isinstance(body, dict) else str(body)
+tests/test_qa_backend.py-88-    assert expected in str(error.value)
+tests/test_qa_backend.py-89-
+tests/test_qa_backend.py-90-
+tests/test_qa_backend.py-91-@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py-92-@pytest.mark.parametrize("error_type", [httpx.ReadTimeout, httpx.ConnectError])
+tests/test_qa_backend.py-93-def test_transport_failure_never_replays_approval(client_factory, mode, error_type):
+tests/test_qa_backend.py-94-    calls = []
+tests/test_qa_backend.py-95-
+tests/test_qa_backend.py-96-    def handler(request):
+tests/test_qa_backend.py-97-        calls.append(request)
+tests/test_qa_backend.py-98-        raise error_type("synthetic transport failure", request=request)
+tests/test_qa_backend.py-99-
+tests/test_qa_backend.py-100-    with pytest.raises(error_type):
+tests/test_qa_backend.py-101-        invoke(client_factory(handler), mode, "create_approval", "task", {})
+tests/test_qa_backend.py-102-    assert len(calls) == 1
+--
+tests/test_qa_backend.py-252-        {"status": "rejected", "decision": "approved"},
+tests/test_qa_backend.py-253-    ],
+tests/test_qa_backend.py-254-)
+tests/test_qa_backend.py-255-def test_unapproved_decisions_never_execute(monkeypatch, mode, decision):
+tests/test_qa_backend.py-256-    decorator_client(monkeypatch, mode, decision=decision)
+tests/test_qa_backend.py-257-    operation = MagicMock()
+tests/test_qa_backend.py-258-    with pytest.raises(ApprovalRejected):
+tests/test_qa_backend.py-259-        wrap_call(mode, operation)()
+tests/test_qa_backend.py-260-    operation.assert_not_called()
+tests/test_qa_backend.py-261-
+tests/test_qa_backend.py-262-
+tests/test_qa_backend.py-263-@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py:264:def test_default_timeout_never_executes(monkeypatch, mode):
+tests/test_qa_backend.py-265-    decorator_client(monkeypatch, mode, failure=ApprovalTimeout("action", 1))
+tests/test_qa_backend.py-266-    operation = MagicMock()
+tests/test_qa_backend.py-267-    with pytest.raises(ApprovalTimeout):
+tests/test_qa_backend.py-268-        wrap_call(mode, operation)()
+tests/test_qa_backend.py-269-    operation.assert_not_called()
+tests/test_qa_backend.py-270-
+tests/test_qa_backend.py-271-
+tests/test_qa_backend.py-272-@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py-273-@pytest.mark.parametrize(
+tests/test_qa_backend.py-274-    "failure", [SentinelAPIError(403, "denied"), httpx.ReadTimeout("synthetic")]
+tests/test_qa_backend.py-275-)
+tests/test_qa_backend.py-276-def test_execute_fallback_does_not_bypass_api_or_network_failures(monkeypatch, mode, failure):
+tests/test_qa_backend.py-277-    decorator_client(monkeypatch, mode, failure=failure)
+tests/test_qa_backend.py-278-    operation = MagicMock()
+tests/test_qa_backend.py-279-    with pytest.raises(type(failure)):
+tests/test_qa_backend.py-280-        wrap_call(mode, operation, fallback="execute")()
+tests/test_qa_backend.py-281-    operation.assert_not_called()
+tests/test_qa_backend.py-282-
+tests/test_qa_backend.py-283-
+tests/test_qa_backend.py-284-@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py-285-@pytest.mark.parametrize("outcome", ["approved", "rejected", "timeout", "operation-error"])
+tests/test_qa_backend.py-286-@pytest.mark.xfail(
+tests/test_qa_backend.py-287-    strict=True, raises=AssertionError, reason="BE-002: decorator-owned clients are never closed"
+tests/test_qa_backend.py-288-)
+tests/test_qa_backend.py-289-def test_decorator_closes_client_on_every_exit(monkeypatch, mode, outcome):
+tests/test_qa_backend.py-290-    client = decorator_client(
+tests/test_qa_backend.py-291-        monkeypatch,
+tests/test_qa_backend.py-292-        mode,
+tests/test_qa_backend.py-293-        decision={"status": "rejected" if outcome == "rejected" else "approved"},
+tests/test_qa_backend.py-294-        failure=ApprovalTimeout("action", 1) if outcome == "timeout" else None,
+tests/test_qa_backend.py-295-    )
+tests/test_qa_backend.py-296-
+tests/test_qa_backend.py-297-    def operation():
+tests/test_qa_backend.py-298-        if outcome == "operation-error":
+tests/test_qa_backend.py-299-            raise ValueError("synthetic operation error")
+tests/test_qa_backend.py-300-        return "ok"
+tests/test_qa_backend.py-301-
+tests/test_qa_backend.py-302-    with contextlib.suppress(ApprovalRejected, ApprovalTimeout, ValueError):
+tests/test_qa_backend.py-303-        wrap_call(mode, operation)()
+tests/test_qa_backend.py-304-    if mode == "async":
+tests/test_qa_backend.py-305-        client.aclose.assert_awaited_once()
+tests/test_qa_backend.py-306-    else:
+tests/test_qa_backend.py-307-        client.close.assert_called_once()
+tests/test_qa_backend.py-308-
+tests/test_qa_backend.py-309-
+--
+tests/test_qa_backend.py-322-    with pytest.raises(ValueError, match="synthetic operation error"):
+tests/test_qa_backend.py-323-        wrap_call(mode, operation, fallback="execute")()
+tests/test_qa_backend.py-324-    audit = client.aemit_audit_event if mode == "async" else client.emit_audit_event
+tests/test_qa_backend.py-325-    audit.assert_called_once()
+tests/test_qa_backend.py-326-    assert audit.call_args.args[0] == "action"
+tests/test_qa_backend.py-327-    assert "synthetic operation error" in audit.call_args.kwargs["error"]
+tests/test_qa_backend.py-328-
+tests/test_qa_backend.py-329-
+tests/test_qa_backend.py-330-@pytest.mark.asyncio
+tests/test_qa_backend.py-331-@pytest.mark.xfail(
+tests/test_qa_backend.py-332-    strict=True,
+tests/test_qa_backend.py-333-    raises=AssertionError,
+tests/test_qa_backend.py:334:    reason="BE-004: mutable arguments can change while approval is pending",
+tests/test_qa_backend.py-335-)
+tests/test_qa_backend.py:336:async def test_execution_arguments_match_approved_snapshot(client_factory, monkeypatch):
+tests/test_qa_backend.py-337-    approval_requested = asyncio.Event()
+tests/test_qa_backend.py-338-    mutation_done = asyncio.Event()
+tests/test_qa_backend.py-339-    observed = {}
+tests/test_qa_backend.py-340-    arguments = {"amount": 10}
+tests/test_qa_backend.py-341-
+tests/test_qa_backend.py-342-    async def handler(request):
+tests/test_qa_backend.py-343-        if request.url.path == "/v1/approvals":
+tests/test_qa_backend.py-344-            observed["approved"] = json.loads(request.content)["arguments"]["payload"]["amount"]
+tests/test_qa_backend.py-345-            return httpx.Response(200, json={"action_id": "action"})
+tests/test_qa_backend.py-346-        if request.url.path.endswith("/wait"):
+tests/test_qa_backend.py-347-            approval_requested.set()
+tests/test_qa_backend.py-348-            await mutation_done.wait()
+tests/test_qa_backend.py-349-            return httpx.Response(200, json={"status": "approved"})
+tests/test_qa_backend.py-350-        return httpx.Response(200, json={})
+tests/test_qa_backend.py-351-
+tests/test_qa_backend.py-352-    client = client_factory(handler)
+tests/test_qa_backend.py-353-    monkeypatch.setattr(decorator_module, "SentinelClient", lambda config: client)
+tests/test_qa_backend.py-354-
+tests/test_qa_backend.py-355-    @oversight()
+tests/test_qa_backend.py-356-    async def operation(payload):
+tests/test_qa_backend.py-357-        observed["executed"] = payload["amount"]
+tests/test_qa_backend.py-358-
+tests/test_qa_backend.py-359-    async def concurrent_mutation():
+tests/test_qa_backend.py-360-        await approval_requested.wait()
+tests/test_qa_backend.py-361-        arguments["amount"] = 999
+tests/test_qa_backend.py-362-        mutation_done.set()
+tests/test_qa_backend.py-363-
+tests/test_qa_backend.py-364-    await asyncio.gather(operation(arguments), concurrent_mutation())
+tests/test_qa_backend.py-365-    assert observed["executed"] == observed["approved"]
+tests/test_qa_backend.py-366-
+tests/test_qa_backend.py-367-
+tests/test_qa_backend.py-368-@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py-369-@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+tests/test_qa_backend.py-370-def test_nonfinite_numbers_are_rejected_before_transport(client_factory, mode, value):
+tests/test_qa_backend.py-371-    handler = MagicMock(return_value=httpx.Response(200, json={"action_id": "action"}))
+tests/test_qa_backend.py-372-    with pytest.raises(ValueError):
+tests/test_qa_backend.py-373-        invoke(client_factory(handler), mode, "create_approval", "task", {"amount": value})
+tests/test_qa_backend.py-374-    handler.assert_not_called()
+tests/test_qa_backend.py-375-
+tests/test_qa_backend.py-376-
+tests/test_qa_backend.py-377-def test_json_payload_roundtrip_property(client_factory):
+tests/test_qa_backend.py-378-    hypothesis = pytest.importorskip("hypothesis")
+tests/test_qa_backend.py-379-    from hypothesis import strategies as st
+tests/test_qa_backend.py-380-
+tests/test_qa_backend.py-381-    received = []
+--
+tests/test_qa_backend.py-422-    client = client_factory(handler)
+tests/test_qa_backend.py-423-    await asyncio.gather(
+tests/test_qa_backend.py-424-        *(
+tests/test_qa_backend.py-425-            client.acreate_approval("task", {"request": index}, idempotency_key=f"request-{index}")
+tests/test_qa_backend.py-426-            for index in range(10)
+tests/test_qa_backend.py-427-        )
+tests/test_qa_backend.py-428-    )
+tests/test_qa_backend.py-429-    assert received == {f"request-{index}": index for index in range(10)}
+tests/test_qa_backend.py-430-
+tests/test_qa_backend.py-431-
+tests/test_qa_backend.py-432-@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py-433-@pytest.mark.parametrize(
+tests/test_qa_backend.py:434:    ("method", "args", "verb", "path", "payload"),
+tests/test_qa_backend.py-435-    [
+tests/test_qa_backend.py-436-        ("get_tenant", (), "GET", "/v1/tenants/me", None),
+tests/test_qa_backend.py-437-        (
+tests/test_qa_backend.py:438:            "set_default_approvers",
+tests/test_qa_backend.py-439-            (["qa@example.invalid"],),
+tests/test_qa_backend.py-440-            "PATCH",
+tests/test_qa_backend.py-441-            "/v1/tenants/me",
+tests/test_qa_backend.py:442:            {"default_approvers": ["qa@example.invalid"]},
+tests/test_qa_backend.py-443-        ),
+tests/test_qa_backend.py-444-        (
+tests/test_qa_backend.py-445-            "register_sms_contact",
+tests/test_qa_backend.py-446-            ("+15555550101", "Synthetic", "test"),
+tests/test_qa_backend.py-447-            "POST",
+tests/test_qa_backend.py-448-            "/v1/approver-contacts",
+tests/test_qa_backend.py-449-            {
+tests/test_qa_backend.py-450-                "phone_number": "+15555550101",
+tests/test_qa_backend.py-451-                "display_name": "Synthetic",
+tests/test_qa_backend.py-452-                "consent_source": "test",
+tests/test_qa_backend.py-453-                "consent_note": "",
+tests/test_qa_backend.py-454-                "consent_attested": True,
+tests/test_qa_backend.py-455-            },
+tests/test_qa_backend.py-456-        ),
+tests/test_qa_backend.py-457-        ("list_sms_contacts", (), "GET", "/v1/approver-contacts", None),
+tests/test_qa_backend.py-458-        ("revoke_sms_contact", ("contact",), "DELETE", "/v1/approver-contacts/contact", None),
+tests/test_qa_backend.py-459-        ("list_audit_events", (), "GET", "/v1/audit-events", None),
+tests/test_qa_backend.py-460-        (
+tests/test_qa_backend.py-461-            "emit_audit_event",
+tests/test_qa_backend.py-462-            ("action", "synthetic result", "synthetic error"),
+tests/test_qa_backend.py-463-            "POST",
+tests/test_qa_backend.py-464-            "/v1/audit-events",
+tests/test_qa_backend.py-465-            {
+tests/test_qa_backend.py-466-                "action_id": "action",
+tests/test_qa_backend.py-467-                "execution_result": "synthetic result",
+tests/test_qa_backend.py-468-                "error": "synthetic error",
+tests/test_qa_backend.py-469-            },
+tests/test_qa_backend.py-470-        ),
+tests/test_qa_backend.py-471-    ],
+tests/test_qa_backend.py-472-)
+tests/test_qa_backend.py:473:def test_supporting_endpoint_contracts(client_factory, mode, method, args, verb, path, payload):
+tests/test_qa_backend.py-474-    seen = []
+tests/test_qa_backend.py-475-
+tests/test_qa_backend.py-476-    def handler(request):
+tests/test_qa_backend.py-477-        seen.append(request)
+tests/test_qa_backend.py:478:        return httpx.Response(200, json=[] if method.startswith("list_") else {})
+tests/test_qa_backend.py-479-
+tests/test_qa_backend.py:480:    invoke(client_factory(handler), mode, method, *args)
+tests/test_qa_backend.py-481-    assert len(seen) == 1
+tests/test_qa_backend.py:482:    assert seen[0].method == verb
+tests/test_qa_backend.py-483-    assert seen[0].url.path == path
+tests/test_qa_backend.py-484-    if payload is not None:
+tests/test_qa_backend.py-485-        assert json.loads(seen[0].content) == payload
+tests/test_qa_backend.py-486-
+tests/test_qa_backend.py-487-
+tests/test_qa_backend.py-488-@pytest.mark.parametrize("mode", ["sync", "async"])
+tests/test_qa_backend.py-489-def test_audit_transport_errors_remain_best_effort(client_factory, mode):
+tests/test_qa_backend.py-490-    def handler(request):
+tests/test_qa_backend.py-491-        raise httpx.ConnectError("synthetic audit failure", request=request)
+tests/test_qa_backend.py-492-
+tests/test_qa_backend.py-493-    assert invoke(client_factory(handler), mode, "emit_audit_event", "action") is None
+tests/test_qa_backend.py-494-
+tests/test_qa_backend.py-495-
+tests/test_qa_backend.py-496-@pytest.mark.xfail(
+tests/test_qa_backend.py-497-    strict=True, raises=AssertionError, reason="BE-006: config repr contains the credential value"
+tests/test_qa_backend.py-498-)
+tests/test_qa_backend.py-499-def test_config_repr_omits_credential():
+tests/test_qa_backend.py-500-    synthetic_marker = "qa-only-credential-marker"
+tests/test_qa_backend.py-501-    config = SentinelConfig(api_key=synthetic_marker, api_url="https://one.invalid")
+tests/test_qa_backend.py-502-    assert synthetic_marker not in repr(config)
+--
+tests/test_serializable.py:1:"""Regression test for 0.1.8 — fail fast on un-serializable arguments."""
+tests/test_serializable.py-2-
+tests/test_serializable.py-3-import pytest
+tests/test_serializable.py-4-
+tests/test_serializable.py:5:from sentinel.client import _ensure_json_serializable
+tests/test_serializable.py-6-
+tests/test_serializable.py-7-
+tests/test_serializable.py-8-def test_plain_dict_ok():
+tests/test_serializable.py:9:    _ensure_json_serializable({"amount": 100, "recipient": "alice"})
+tests/test_serializable.py-10-
+tests/test_serializable.py-11-
+tests/test_serializable.py-12-def test_nested_dict_ok():
+tests/test_serializable.py:13:    _ensure_json_serializable({"meta": {"tags": ["a", "b"], "n": 1}})
+tests/test_serializable.py-14-
+tests/test_serializable.py-15-
+tests/test_serializable.py-16-def test_primitives_ok():
+tests/test_serializable.py-17-    for v in (None, True, 1, 1.5, "str", [], {}, [1, 2, 3]):
+tests/test_serializable.py:18:        _ensure_json_serializable(v)
+tests/test_serializable.py-19-
+tests/test_serializable.py-20-
+tests/test_serializable.py-21-def test_set_raises_typeerror():
+tests/test_serializable.py:22:    with pytest.raises(TypeError, match="JSON-serializable"):
+tests/test_serializable.py:23:        _ensure_json_serializable({1, 2, 3})
+tests/test_serializable.py-24-
+tests/test_serializable.py-25-
+tests/test_serializable.py-26-def test_bytes_raises_typeerror():
+tests/test_serializable.py:27:    with pytest.raises(TypeError, match="JSON-serializable"):
+tests/test_serializable.py:28:        _ensure_json_serializable(b"bytes")
+tests/test_serializable.py-29-
+tests/test_serializable.py-30-
+tests/test_serializable.py-31-def test_object_raises_typeerror():
+tests/test_serializable.py-32-    class Foo:
+tests/test_serializable.py-33-        pass
+tests/test_serializable.py-34-
+tests/test_serializable.py:35:    with pytest.raises(TypeError, match="JSON-serializable"):
+tests/test_serializable.py:36:        _ensure_json_serializable(Foo())
+tests/test_serializable.py-37-
+tests/test_serializable.py-38-
+tests/test_serializable.py:39:def test_nested_unserializable_raises():
+tests/test_serializable.py:40:    with pytest.raises(TypeError, match="JSON-serializable"):
+tests/test_serializable.py:41:        _ensure_json_serializable({"ok": "yes", "bad": {1, 2}})

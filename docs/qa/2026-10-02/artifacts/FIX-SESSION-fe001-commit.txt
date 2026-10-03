@@ -1,0 +1,19 @@
+UTC start: 2026-10-03T02:40:43+00:00
+Command: git commit -m 'fix(FE-001): propagate LangChain approval gate errors' -m 'Root cause: LangChain defaults to swallowing callback exceptions, allowing rejected or failed approval checks to execute tools.' -m 'Fix: enable raise_error on SentinelCallbackHandler and document fail-closed behavior and explicit decorator-only timeout fallback.' -m 'Proof: tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure and ::test_real_langchain_http_gate_failures_block_execution exercise sync/async host execution, timeout, network, malformed JSON and non-2xx responses. Adapter suite: 88 passed, 7 unrelated xfailed. Independent review: 36 real-host cases passed.'
+Exit: 0
+
+[qa/2026-10-02-fixes ca17f70] fix(FE-001): propagate LangChain approval gate errors
+ Committer: Christopher L Sellers <sellers@Christophers-MacBook-Pro.local>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly. Run the
+following command and follow the instructions in your editor to edit
+your configuration file:
+
+    git config --global --edit
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 3 files changed, 85 insertions(+), 9 deletions(-)

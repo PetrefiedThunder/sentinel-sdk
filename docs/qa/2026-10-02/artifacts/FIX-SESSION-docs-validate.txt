@@ -1,0 +1,5 @@
+UTC start: 2026-10-03T02:49:14+00:00
+Command: python3 -c 'from pathlib import Path; import re; qa=Path("docs/qa/2026-10-02"); doc=(qa/"FIXES.md").read_text(); rows=[s for s in doc.splitlines() if re.match(r"\| (FE|BE|UX)-\d",s)]; assert len(rows)==5; assert "FixCounts: fixed=2 partial=0 deferred=1" in doc; assert "319 | 0 | 16 | 0" in doc; assert (qa/"SUMMARY.md").read_text().count("Fix pass: see FIXES.md")==1; missing=[]; links=[]; [links.extend(re.findall(r"\]\(([^)]+)\)", (qa/p).read_text())) for p in ("FIXES.md","FIX-SESSION-LOG.md")]; [missing.append(x) for x in links if not x.startswith(("http", "/")) and not (qa/x).exists()]; assert not missing,missing; print("5 finding rows, priority counts, baseline/final totals, SUMMARY marker and all local evidence links verified.")'
+Exit: 0
+
+5 finding rows, priority counts, baseline/final totals, SUMMARY marker and all local evidence links verified.

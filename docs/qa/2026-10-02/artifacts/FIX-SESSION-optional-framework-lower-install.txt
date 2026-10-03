@@ -1,0 +1,31 @@
+UTC start: 2026-10-03T02:41:40+00:00
+Command: uv pip install --target /private/tmp/sentinel-fix-langchain03 langchain-core==0.3.0
+Exit: 0
+
+Using CPython 3.11.15 interpreter at: .venv/bin/python3
+Resolved 23 packages in 885ms
+Prepared 4 packages in 110ms
+Installed 23 packages in 25ms
+ + annotated-types==0.8.0
+ + anyio==4.15.1
+ + certifi==2026.7.22
+ + charset-normalizer==3.5.2
+ + h11==0.16.0
+ + httpcore==1.0.9
+ + httpx==0.28.1
+ + idna==3.20
+ + jsonpatch==1.33
+ + jsonpointer==3.1.1
+ + langchain-core==0.3.0
+ + langsmith==0.1.147
+ + orjson==3.12.0
+ + packaging==24.2
+ + pydantic==2.13.5
+ + pydantic-core==2.46.5
+ + pyyaml==6.0.3
+ + requests==2.34.2
+ + requests-toolbelt==1.0.0
+ + tenacity==8.5.0
+ + typing-extensions==4.16.0
+ + typing-inspection==0.4.4
+ + urllib3==2.8.0

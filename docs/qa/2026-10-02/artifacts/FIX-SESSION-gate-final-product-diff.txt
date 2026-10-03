@@ -1,0 +1,221 @@
+UTC start: 2026-10-03T02:47:11+00:00
+Command: git diff ede988f -- sentinel README.md
+Exit: 0
+
+diff --git a/README.md b/README.md
+index 0450dc9..67bf46a 100644
+--- a/README.md
++++ b/README.md
+@@ -198,6 +198,12 @@ agent.run("…", callbacks=[SentinelCallbackHandler(risk_level="high")])
+
+ Install with `pip install sentinel-oversight[langchain]`.
+
++The handler fails closed: rejection, timeout, network errors, malformed responses,
++and HTTP errors propagate to LangChain and prevent tool execution. Keep its
++`raise_error=True` setting enabled. The decorator's explicit `fallback="execute"`
++(or `SENTINEL_FALLBACK=execute`) applies only to `@oversight` timeouts; the
++LangChain handler does not use that fallback.
++
+ ## OpenAI Agents SDK
+
+ ```python
+diff --git a/sentinel/adapters/_arguments.py b/sentinel/adapters/_arguments.py
+new file mode 100644
+index 0000000..dfe8b38
+--- /dev/null
++++ b/sentinel/adapters/_arguments.py
+@@ -0,0 +1,21 @@
++from __future__ import annotations
++
++import inspect
++from typing import TYPE_CHECKING, Any
++
++if TYPE_CHECKING:
++    from collections.abc import Callable
++
++
++def approval_arguments(fn: Callable, args: tuple, kwargs: dict) -> dict[str, Any]:
++    """Include both argument sets while preserving existing nonmixed payloads."""
++    if not args or not kwargs:
++        return kwargs if kwargs else {"args": list(args)}
++
++    try:
++        signature = inspect.signature(fn)
++    except (TypeError, ValueError):
++        return {"args": list(args), "kwargs": kwargs}
++
++    bound = signature.bind(*args, **kwargs)
++    return dict(bound.arguments)
+diff --git a/sentinel/adapters/autogen.py b/sentinel/adapters/autogen.py
+index 76d7dac..307d8e3 100644
+--- a/sentinel/adapters/autogen.py
++++ b/sentinel/adapters/autogen.py
+@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Any
+
+ from ..client import SentinelClient
+ from ..exceptions import ApprovalRejected
++from ._arguments import approval_arguments
+
+ if TYPE_CHECKING:
+     from collections.abc import Callable
+@@ -48,7 +49,7 @@ def gated(
+
+             @functools.wraps(fn)
+             async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+-                arguments = kwargs if kwargs else {"args": list(args)}
++                arguments = approval_arguments(fn, args, kwargs)
+                 approval = await sentinel_client.acreate_approval(
+                     function_name=derived_name,
+                     arguments=arguments,
+@@ -72,7 +73,7 @@ def gated(
+
+         @functools.wraps(fn)
+         def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+-            arguments = kwargs if kwargs else {"args": list(args)}
++            arguments = approval_arguments(fn, args, kwargs)
+             approval = sentinel_client.create_approval(
+                 function_name=derived_name,
+                 arguments=arguments,
+diff --git a/sentinel/adapters/crewai.py b/sentinel/adapters/crewai.py
+index 197aedf..3730afd 100644
+--- a/sentinel/adapters/crewai.py
++++ b/sentinel/adapters/crewai.py
+@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING, Any
+
+ from ..client import SentinelClient
+ from ..exceptions import ApprovalRejected
++from ._arguments import approval_arguments
+
+ if TYPE_CHECKING:
+     from collections.abc import Callable
+@@ -55,8 +56,7 @@ def gated(
+     original = _extract_callable(tool)
+
+     def wrapper(*args: Any, **kwargs: Any) -> Any:
+-        # CrewAI tools are usually called with kwargs; fall back to positional.
+-        arguments = kwargs if kwargs else {"args": list(args)}
++        arguments = approval_arguments(original, args, kwargs)
+         approval = sentinel_client.create_approval(
+             function_name=derived_name,
+             arguments=arguments,
+diff --git a/sentinel/adapters/langchain.py b/sentinel/adapters/langchain.py
+index a1669f5..0cb715b 100644
+--- a/sentinel/adapters/langchain.py
++++ b/sentinel/adapters/langchain.py
+@@ -19,6 +19,9 @@ class SentinelCallbackHandler:
+     time so the langchain dependency stays optional.
+     """
+
++    # Approval is an execution gate: LangChain must not swallow its errors.
++    raise_error = True
++
+     def __new__(cls, *args, **kwargs):
+         try:
+             from langchain_core.callbacks import BaseCallbackHandler  # type: ignore
+diff --git a/sentinel/adapters/langgraph.py b/sentinel/adapters/langgraph.py
+index e7e91db..b225908 100644
+--- a/sentinel/adapters/langgraph.py
++++ b/sentinel/adapters/langgraph.py
+@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING, Any
+
+ from ..client import SentinelClient
+ from ..exceptions import ApprovalRejected
++from ._arguments import approval_arguments
+
+ if TYPE_CHECKING:
+     from collections.abc import Callable, Iterable
+@@ -72,7 +73,7 @@ class SentinelToolGate:
+
+             @functools.wraps(fn)
+             async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+-                arguments = kwargs if kwargs else {"args": list(args)}
++                arguments = approval_arguments(fn, args, kwargs)
+                 approval = await self.client.acreate_approval(
+                     function_name=derived_name,
+                     arguments=arguments,
+@@ -96,7 +97,7 @@ class SentinelToolGate:
+
+         @functools.wraps(fn)
+         def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+-            arguments = kwargs if kwargs else {"args": list(args)}
++            arguments = approval_arguments(fn, args, kwargs)
+             approval = self.client.create_approval(
+                 function_name=derived_name,
+                 arguments=arguments,
+diff --git a/sentinel/adapters/openai_agents.py b/sentinel/adapters/openai_agents.py
+index 37d9e7c..5a2dc88 100644
+--- a/sentinel/adapters/openai_agents.py
++++ b/sentinel/adapters/openai_agents.py
+@@ -38,6 +38,7 @@ if TYPE_CHECKING:
+
+ from ..client import SentinelClient
+ from ..exceptions import ApprovalRejected
++from ._arguments import approval_arguments
+
+
+ def gated(
+@@ -106,7 +107,7 @@ def _wrap_plain_callable(
+
+         @functools.wraps(fn)
+         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+-            arguments = kwargs if kwargs else {"args": list(args)}
++            arguments = approval_arguments(fn, args, kwargs)
+             await _arequire_approval(
+                 sentinel_client,
+                 derived_name,
+@@ -121,7 +122,7 @@ def _wrap_plain_callable(
+
+     @functools.wraps(fn)
+     def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+-        arguments = kwargs if kwargs else {"args": list(args)}
++        arguments = approval_arguments(fn, args, kwargs)
+         approval = sentinel_client.create_approval(
+             function_name=derived_name,
+             arguments=arguments,
+diff --git a/sentinel/decorator.py b/sentinel/decorator.py
+index 0962bf6..d8dc748 100644
+--- a/sentinel/decorator.py
++++ b/sentinel/decorator.py
+@@ -34,7 +34,7 @@ def _serialize_arguments(value: Any) -> Any:
+
+ def _bound_arguments(fn: Callable, args: tuple, kwargs: dict) -> dict:
+     signature = inspect.signature(fn)
+-    bound = signature.bind_partial(*args, **kwargs)
++    bound = signature.bind(*args, **kwargs)
+     bound.apply_defaults()
+     return _serialize_arguments(dict(bound.arguments))
+
+@@ -78,7 +78,15 @@ def oversight(
+                     decision = await client.await_for_decision(action_id, timeout=timeout_seconds)
+                 except ApprovalTimeout:
+                     if fb == "execute":
+-                        result = await fn(*args, **kwargs)
++                        try:
++                            result = await fn(*args, **kwargs)
++                        except Exception as e:
++                            await client.aemit_audit_event(
++                                action_id,
++                                execution_result=None,
++                                error=f"timeout-fallback-execute: {_truncate_repr(e)}",
++                            )
++                            raise
+                         await client.aemit_audit_event(
+                             action_id,
+                             execution_result=_truncate_repr(result),
+@@ -127,7 +135,15 @@ def oversight(
+                 decision = client.wait_for_decision(action_id, timeout=timeout_seconds)
+             except ApprovalTimeout:
+                 if fb == "execute":
+-                    result = fn(*args, **kwargs)
++                    try:
++                        result = fn(*args, **kwargs)
++                    except Exception as e:
++                        client.emit_audit_event(
++                            action_id,
++                            execution_result=None,
++                            error=f"timeout-fallback-execute: {_truncate_repr(e)}",
++                        )
++                        raise
+                     client.emit_audit_event(
+                         action_id,
+                         execution_result=_truncate_repr(result),

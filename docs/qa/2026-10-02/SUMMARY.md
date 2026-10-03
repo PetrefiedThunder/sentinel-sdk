@@ -68,3 +68,5 @@ These are suggested product changes for follow-up work, not changes made by this
 The five mandatory documents, three separate QA pass logs/reports, independent review, pinned optional QA-tool requirements, sanitized command runner, command outputs, coverage JSON, JUnit reports and dependency audit JSON are under `docs/qa/2026-10-02/`. Four new test/configuration files are under `tests/`. Build distributions and temporary isolated environments remain under `/private/tmp`; their manifests/results are saved as text evidence. No screenshots are needed for the SDK-only surface.
 
 Final handoff checks: [document/count/link validation](artifacts/COORD-validate-handoff.txt), [unchanged product scope](artifacts/COORD-tracked-scope.txt), [redacted current-snapshot secret scan](artifacts/COORD-final-secret-scan.txt), [sanitized scan summary](artifacts/secret-scan-summary.json). Independent final document consistency review passed in [GATE-REPORT.md](GATE-REPORT.md).
+
+Fix pass: see FIXES.md

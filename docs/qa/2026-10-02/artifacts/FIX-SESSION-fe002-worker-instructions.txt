@@ -1,0 +1,5 @@
+UTC start: 2026-10-03T02:41:01+00:00
+Command: rg --files --hidden -g AGENTS.md -g '!**/.git/**' -g '!**/.venv/**'
+Exit: 1
+
+Local instruction/skill inspection completed. External instruction text is omitted from committed evidence; this task used the session rules and named Sentinel checkout. The command outcome above is unchanged.

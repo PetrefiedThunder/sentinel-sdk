@@ -1,0 +1,866 @@
+UTC start: 2026-10-03T02:43:54+00:00
+Command: .venv/bin/python -m pytest -q tests/test_adapter_arguments.py -k omitted_nonserializable_default
+Exit: 1
+
+FFFFFFF                                                                  [100%]
+=================================== FAILURES ===================================
+___ test_omitted_nonserializable_default_stays_out_of_approval[autogen-sync] ___
+
+arguments = {'amount': 10, 'recipient': 'recipient', 'dependency': <object object at 0x108653050>}
+
+    def _ensure_json_serializable(arguments: Any) -> None:
+        """Fail fast if `arguments` can't be JSON-encoded.
+
+        Without this check the POST silently succeeds (httpx converts the value
+        via its own serializer, or the server stores something useless), and
+        the agent then hangs until `timeout_seconds` waiting on a decision it
+        can never get. Raise immediately with the offending type so the caller
+        sees the real error.
+        """
+        try:
+>           json.dumps(arguments)
+
+sentinel/client.py:56:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/__init__.py:231: in dumps
+    return _default_encoder.encode(obj)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py:200: in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py:258: in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <json.encoder.JSONEncoder object at 0x108f30390>
+o = <object object at 0x108653050>
+
+    def default(self, o):
+        """Implement this method in a subclass such that it returns
+        a serializable object for ``o``, or calls the base implementation
+        (to raise a ``TypeError``).
+
+        For example, to support arbitrary iterators, you could
+        implement default like this::
+
+            def default(self, o):
+                try:
+                    iterable = iter(o)
+                except TypeError:
+                    pass
+                else:
+                    return list(iterable)
+                # Let the base class default method raise the TypeError
+                return super().default(o)
+
+        """
+>       raise TypeError(f'Object of type {o.__class__.__name__} '
+                        f'is not JSON serializable')
+E       TypeError: Object of type object is not JSON serializable
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py:180: TypeError
+
+The above exception was the direct cause of the following exception:
+
+gated_call = (<function gated_call.<locals>.gate at 0x10abffa60>, <MagicMock id='4475542864'>, <MagicMock name='mock.create_approval' id='4475548944'>)
+
+    def test_omitted_nonserializable_default_stays_out_of_approval(gated_call):
+        """FE-002 must not add an unpassed internal dependency to the JSON payload."""
+        gate, _, approval = gated_call
+        dependency = object()
+
+        def create_approval(**kwargs):
+            _ensure_json_serializable(kwargs["arguments"])
+            return {"action_id": "qa-action"}
+
+        approval.side_effect = create_approval
+
+        def action(amount, *, recipient, dependency=dependency):
+            return amount, recipient, dependency
+
+>       result = gate(action)(10, recipient="recipient")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_adapter_arguments.py:163:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/test_adapter_arguments.py:44: in invoke
+    result = wrapped(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+sentinel/adapters/autogen.py:77: in sync_wrapper
+    approval = sentinel_client.create_approval(
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:1124: in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:1128: in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:1189: in _execute_mock_call
+    result = effect(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_adapter_arguments.py:155: in create_approval
+    _ensure_json_serializable(kwargs["arguments"])
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+arguments = {'amount': 10, 'recipient': 'recipient', 'dependency': <object object at 0x108653050>}
+
+    def _ensure_json_serializable(arguments: Any) -> None:
+        """Fail fast if `arguments` can't be JSON-encoded.
+
+        Without this check the POST silently succeeds (httpx converts the value
+        via its own serializer, or the server stores something useless), and
+        the agent then hangs until `timeout_seconds` waiting on a decision it
+        can never get. Raise immediately with the offending type so the caller
+        sees the real error.
+        """
+        try:
+            json.dumps(arguments)
+        except TypeError as e:
+>           raise TypeError(
+                f"@oversight arguments must be JSON-serializable. "
+                f"Got an un-serializable value: {e}. "
+                f"Convert sets/objects/bytes to plain dict/list/str/int/float/bool/None before the call."
+            ) from e
+E           TypeError: @oversight arguments must be JSON-serializable. Got an un-serializable value: Object of type object is not JSON serializable. Convert sets/objects/bytes to plain dict/list/str/int/float/bool/None before the call.
+
+sentinel/client.py:58: TypeError
+___ test_omitted_nonserializable_default_stays_out_of_approval[crewai-sync] ____
+
+arguments = {'amount': 10, 'recipient': 'recipient', 'dependency': <object object at 0x10b05faa0>}
+
+    def _ensure_json_serializable(arguments: Any) -> None:
+        """Fail fast if `arguments` can't be JSON-encoded.
+
+        Without this check the POST silently succeeds (httpx converts the value
+        via its own serializer, or the server stores something useless), and
+        the agent then hangs until `timeout_seconds` waiting on a decision it
+        can never get. Raise immediately with the offending type so the caller
+        sees the real error.
+        """
+        try:
+>           json.dumps(arguments)
+
+sentinel/client.py:56:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/__init__.py:231: in dumps
+    return _default_encoder.encode(obj)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py:200: in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py:258: in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <json.encoder.JSONEncoder object at 0x108f30390>
+o = <object object at 0x10b05faa0>
+
+    def default(self, o):
+        """Implement this method in a subclass such that it returns
+        a serializable object for ``o``, or calls the base implementation
+        (to raise a ``TypeError``).
+
+        For example, to support arbitrary iterators, you could
+        implement default like this::
+
+            def default(self, o):
+                try:
+                    iterable = iter(o)
+                except TypeError:
+                    pass
+                else:
+                    return list(iterable)
+                # Let the base class default method raise the TypeError
+                return super().default(o)
+
+        """
+>       raise TypeError(f'Object of type {o.__class__.__name__} '
+                        f'is not JSON serializable')
+E       TypeError: Object of type object is not JSON serializable
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py:180: TypeError
+
+The above exception was the direct cause of the following exception:
+
+gated_call = (<function gated_call.<locals>.gate at 0x10abfeca0>, <MagicMock id='4480676816'>, <MagicMock name='mock.create_approval' id='4480663952'>)
+
+    def test_omitted_nonserializable_default_stays_out_of_approval(gated_call):
+        """FE-002 must not add an unpassed internal dependency to the JSON payload."""
+        gate, _, approval = gated_call
+        dependency = object()
+
+        def create_approval(**kwargs):
+            _ensure_json_serializable(kwargs["arguments"])
+            return {"action_id": "qa-action"}
+
+        approval.side_effect = create_approval
+
+        def action(amount, *, recipient, dependency=dependency):
+            return amount, recipient, dependency
+
+>       result = gate(action)(10, recipient="recipient")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_adapter_arguments.py:163:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/test_adapter_arguments.py:44: in invoke
+    result = wrapped(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+sentinel/adapters/crewai.py:60: in wrapper
+    approval = sentinel_client.create_approval(
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:1124: in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:1128: in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:1189: in _execute_mock_call
+    result = effect(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_adapter_arguments.py:155: in create_approval
+    _ensure_json_serializable(kwargs["arguments"])
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+arguments = {'amount': 10, 'recipient': 'recipient', 'dependency': <object object at 0x10b05faa0>}
+
+    def _ensure_json_serializable(arguments: Any) -> None:
+        """Fail fast if `arguments` can't be JSON-encoded.
+
+        Without this check the POST silently succeeds (httpx converts the value
+        via its own serializer, or the server stores something useless), and
+        the agent then hangs until `timeout_seconds` waiting on a decision it
+        can never get. Raise immediately with the offending type so the caller
+        sees the real error.
+        """
+        try:
+            json.dumps(arguments)
+        except TypeError as e:
+>           raise TypeError(
+                f"@oversight arguments must be JSON-serializable. "
+                f"Got an un-serializable value: {e}. "
+                f"Convert sets/objects/bytes to plain dict/list/str/int/float/bool/None before the call."
+            ) from e
+E           TypeError: @oversight arguments must be JSON-serializable. Got an un-serializable value: Object of type object is not JSON serializable. Convert sets/objects/bytes to plain dict/list/str/int/float/bool/None before the call.
+
+sentinel/client.py:58: TypeError
+__ test_omitted_nonserializable_default_stays_out_of_approval[langgraph-sync] __
+
+arguments = {'amount': 10, 'recipient': 'recipient', 'dependency': <object object at 0x108652820>}
+
+    def _ensure_json_serializable(arguments: Any) -> None:
+        """Fail fast if `arguments` can't be JSON-encoded.
+
+        Without this check the POST silently succeeds (httpx converts the value
+        via its own serializer, or the server stores something useless), and
+        the agent then hangs until `timeout_seconds` waiting on a decision it
+        can never get. Raise immediately with the offending type so the caller
+        sees the real error.
+        """
+        try:
+>           json.dumps(arguments)
+
+sentinel/client.py:56:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/__init__.py:231: in dumps
+    return _default_encoder.encode(obj)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py:200: in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py:258: in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <json.encoder.JSONEncoder object at 0x108f30390>
+o = <object object at 0x108652820>
+
+    def default(self, o):
+        """Implement this method in a subclass such that it returns
+        a serializable object for ``o``, or calls the base implementation
+        (to raise a ``TypeError``).
+
+        For example, to support arbitrary iterators, you could
+        implement default like this::
+
+            def default(self, o):
+                try:
+                    iterable = iter(o)
+                except TypeError:
+                    pass
+                else:
+                    return list(iterable)
+                # Let the base class default method raise the TypeError
+                return super().default(o)
+
+        """
+>       raise TypeError(f'Object of type {o.__class__.__name__} '
+                        f'is not JSON serializable')
+E       TypeError: Object of type object is not JSON serializable
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py:180: TypeError
+
+The above exception was the direct cause of the following exception:
+
+gated_call = (<function gated_call.<locals>.gate at 0x10abfed40>, <MagicMock id='4478695184'>, <MagicMock name='mock.create_approval' id='4478686800'>)
+
+    def test_omitted_nonserializable_default_stays_out_of_approval(gated_call):
+        """FE-002 must not add an unpassed internal dependency to the JSON payload."""
+        gate, _, approval = gated_call
+        dependency = object()
+
+        def create_approval(**kwargs):
+            _ensure_json_serializable(kwargs["arguments"])
+            return {"action_id": "qa-action"}
+
+        approval.side_effect = create_approval
+
+        def action(amount, *, recipient, dependency=dependency):
+            return amount, recipient, dependency
+
+>       result = gate(action)(10, recipient="recipient")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_adapter_arguments.py:163:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/test_adapter_arguments.py:44: in invoke
+    result = wrapped(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+sentinel/adapters/langgraph.py:101: in sync_wrapper
+    approval = self.client.create_approval(
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:1124: in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:1128: in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:1189: in _execute_mock_call
+    result = effect(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_adapter_arguments.py:155: in create_approval
+    _ensure_json_serializable(kwargs["arguments"])
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+arguments = {'amount': 10, 'recipient': 'recipient', 'dependency': <object object at 0x108652820>}
+
+    def _ensure_json_serializable(arguments: Any) -> None:
+        """Fail fast if `arguments` can't be JSON-encoded.
+
+        Without this check the POST silently succeeds (httpx converts the value
+        via its own serializer, or the server stores something useless), and
+        the agent then hangs until `timeout_seconds` waiting on a decision it
+        can never get. Raise immediately with the offending type so the caller
+        sees the real error.
+        """
+        try:
+            json.dumps(arguments)
+        except TypeError as e:
+>           raise TypeError(
+                f"@oversight arguments must be JSON-serializable. "
+                f"Got an un-serializable value: {e}. "
+                f"Convert sets/objects/bytes to plain dict/list/str/int/float/bool/None before the call."
+            ) from e
+E           TypeError: @oversight arguments must be JSON-serializable. Got an un-serializable value: Object of type object is not JSON serializable. Convert sets/objects/bytes to plain dict/list/str/int/float/bool/None before the call.
+
+sentinel/client.py:58: TypeError
+_ test_omitted_nonserializable_default_stays_out_of_approval[openai_agents-sync] _
+
+arguments = {'amount': 10, 'recipient': 'recipient', 'dependency': <object object at 0x10ae6fb30>}
+
+    def _ensure_json_serializable(arguments: Any) -> None:
+        """Fail fast if `arguments` can't be JSON-encoded.
+
+        Without this check the POST silently succeeds (httpx converts the value
+        via its own serializer, or the server stores something useless), and
+        the agent then hangs until `timeout_seconds` waiting on a decision it
+        can never get. Raise immediately with the offending type so the caller
+        sees the real error.
+        """
+        try:
+>           json.dumps(arguments)
+
+sentinel/client.py:56:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/__init__.py:231: in dumps
+    return _default_encoder.encode(obj)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py:200: in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py:258: in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <json.encoder.JSONEncoder object at 0x108f30390>
+o = <object object at 0x10ae6fb30>
+
+    def default(self, o):
+        """Implement this method in a subclass such that it returns
+        a serializable object for ``o``, or calls the base implementation
+        (to raise a ``TypeError``).
+
+        For example, to support arbitrary iterators, you could
+        implement default like this::
+
+            def default(self, o):
+                try:
+                    iterable = iter(o)
+                except TypeError:
+                    pass
+                else:
+                    return list(iterable)
+                # Let the base class default method raise the TypeError
+                return super().default(o)
+
+        """
+>       raise TypeError(f'Object of type {o.__class__.__name__} '
+                        f'is not JSON serializable')
+E       TypeError: Object of type object is not JSON serializable
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py:180: TypeError
+
+The above exception was the direct cause of the following exception:
+
+gated_call = (<function gated_call.<locals>.gate at 0x10ac44180>, <MagicMock id='4479921296'>, <MagicMock name='mock.create_approval' id='4479918608'>)
+
+    def test_omitted_nonserializable_default_stays_out_of_approval(gated_call):
+        """FE-002 must not add an unpassed internal dependency to the JSON payload."""
+        gate, _, approval = gated_call
+        dependency = object()
+
+        def create_approval(**kwargs):
+            _ensure_json_serializable(kwargs["arguments"])
+            return {"action_id": "qa-action"}
+
+        approval.side_effect = create_approval
+
+        def action(amount, *, recipient, dependency=dependency):
+            return amount, recipient, dependency
+
+>       result = gate(action)(10, recipient="recipient")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_adapter_arguments.py:163:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/test_adapter_arguments.py:44: in invoke
+    result = wrapped(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+sentinel/adapters/openai_agents.py:126: in sync_wrapper
+    approval = sentinel_client.create_approval(
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:1124: in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:1128: in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:1189: in _execute_mock_call
+    result = effect(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_adapter_arguments.py:155: in create_approval
+    _ensure_json_serializable(kwargs["arguments"])
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+arguments = {'amount': 10, 'recipient': 'recipient', 'dependency': <object object at 0x10ae6fb30>}
+
+    def _ensure_json_serializable(arguments: Any) -> None:
+        """Fail fast if `arguments` can't be JSON-encoded.
+
+        Without this check the POST silently succeeds (httpx converts the value
+        via its own serializer, or the server stores something useless), and
+        the agent then hangs until `timeout_seconds` waiting on a decision it
+        can never get. Raise immediately with the offending type so the caller
+        sees the real error.
+        """
+        try:
+            json.dumps(arguments)
+        except TypeError as e:
+>           raise TypeError(
+                f"@oversight arguments must be JSON-serializable. "
+                f"Got an un-serializable value: {e}. "
+                f"Convert sets/objects/bytes to plain dict/list/str/int/float/bool/None before the call."
+            ) from e
+E           TypeError: @oversight arguments must be JSON-serializable. Got an un-serializable value: Object of type object is not JSON serializable. Convert sets/objects/bytes to plain dict/list/str/int/float/bool/None before the call.
+
+sentinel/client.py:58: TypeError
+__ test_omitted_nonserializable_default_stays_out_of_approval[autogen-async] ___
+
+arguments = {'amount': 10, 'recipient': 'recipient', 'dependency': <object object at 0x1086533c0>}
+
+    def _ensure_json_serializable(arguments: Any) -> None:
+        """Fail fast if `arguments` can't be JSON-encoded.
+
+        Without this check the POST silently succeeds (httpx converts the value
+        via its own serializer, or the server stores something useless), and
+        the agent then hangs until `timeout_seconds` waiting on a decision it
+        can never get. Raise immediately with the offending type so the caller
+        sees the real error.
+        """
+        try:
+>           json.dumps(arguments)
+
+sentinel/client.py:56:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/__init__.py:231: in dumps
+    return _default_encoder.encode(obj)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py:200: in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py:258: in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <json.encoder.JSONEncoder object at 0x108f30390>
+o = <object object at 0x1086533c0>
+
+    def default(self, o):
+        """Implement this method in a subclass such that it returns
+        a serializable object for ``o``, or calls the base implementation
+        (to raise a ``TypeError``).
+
+        For example, to support arbitrary iterators, you could
+        implement default like this::
+
+            def default(self, o):
+                try:
+                    iterable = iter(o)
+                except TypeError:
+                    pass
+                else:
+                    return list(iterable)
+                # Let the base class default method raise the TypeError
+                return super().default(o)
+
+        """
+>       raise TypeError(f'Object of type {o.__class__.__name__} '
+                        f'is not JSON serializable')
+E       TypeError: Object of type object is not JSON serializable
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py:180: TypeError
+
+The above exception was the direct cause of the following exception:
+
+gated_call = (<function gated_call.<locals>.gate at 0x10ac57060>, <MagicMock id='4477982416'>, <AsyncMock name='mock.acreate_approval' id='4477979280'>)
+
+    def test_omitted_nonserializable_default_stays_out_of_approval(gated_call):
+        """FE-002 must not add an unpassed internal dependency to the JSON payload."""
+        gate, _, approval = gated_call
+        dependency = object()
+
+        def create_approval(**kwargs):
+            _ensure_json_serializable(kwargs["arguments"])
+            return {"action_id": "qa-action"}
+
+        approval.side_effect = create_approval
+
+        def action(amount, *, recipient, dependency=dependency):
+            return amount, recipient, dependency
+
+>       result = gate(action)(10, recipient="recipient")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_adapter_arguments.py:163:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/test_adapter_arguments.py:45: in invoke
+    return asyncio.run(result) if asynchronous else result
+           ^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/asyncio/runners.py:190: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/asyncio/base_events.py:654: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+sentinel/adapters/autogen.py:53: in async_wrapper
+    approval = await sentinel_client.acreate_approval(
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:2253: in _execute_mock_call
+    result = effect(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_adapter_arguments.py:155: in create_approval
+    _ensure_json_serializable(kwargs["arguments"])
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+arguments = {'amount': 10, 'recipient': 'recipient', 'dependency': <object object at 0x1086533c0>}
+
+    def _ensure_json_serializable(arguments: Any) -> None:
+        """Fail fast if `arguments` can't be JSON-encoded.
+
+        Without this check the POST silently succeeds (httpx converts the value
+        via its own serializer, or the server stores something useless), and
+        the agent then hangs until `timeout_seconds` waiting on a decision it
+        can never get. Raise immediately with the offending type so the caller
+        sees the real error.
+        """
+        try:
+            json.dumps(arguments)
+        except TypeError as e:
+>           raise TypeError(
+                f"@oversight arguments must be JSON-serializable. "
+                f"Got an un-serializable value: {e}. "
+                f"Convert sets/objects/bytes to plain dict/list/str/int/float/bool/None before the call."
+            ) from e
+E           TypeError: @oversight arguments must be JSON-serializable. Got an un-serializable value: Object of type object is not JSON serializable. Convert sets/objects/bytes to plain dict/list/str/int/float/bool/None before the call.
+
+sentinel/client.py:58: TypeError
+_ test_omitted_nonserializable_default_stays_out_of_approval[langgraph-async] __
+
+arguments = {'amount': 10, 'recipient': 'recipient', 'dependency': <object object at 0x10ae6eb80>}
+
+    def _ensure_json_serializable(arguments: Any) -> None:
+        """Fail fast if `arguments` can't be JSON-encoded.
+
+        Without this check the POST silently succeeds (httpx converts the value
+        via its own serializer, or the server stores something useless), and
+        the agent then hangs until `timeout_seconds` waiting on a decision it
+        can never get. Raise immediately with the offending type so the caller
+        sees the real error.
+        """
+        try:
+>           json.dumps(arguments)
+
+sentinel/client.py:56:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/__init__.py:231: in dumps
+    return _default_encoder.encode(obj)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py:200: in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py:258: in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <json.encoder.JSONEncoder object at 0x108f30390>
+o = <object object at 0x10ae6eb80>
+
+    def default(self, o):
+        """Implement this method in a subclass such that it returns
+        a serializable object for ``o``, or calls the base implementation
+        (to raise a ``TypeError``).
+
+        For example, to support arbitrary iterators, you could
+        implement default like this::
+
+            def default(self, o):
+                try:
+                    iterable = iter(o)
+                except TypeError:
+                    pass
+                else:
+                    return list(iterable)
+                # Let the base class default method raise the TypeError
+                return super().default(o)
+
+        """
+>       raise TypeError(f'Object of type {o.__class__.__name__} '
+                        f'is not JSON serializable')
+E       TypeError: Object of type object is not JSON serializable
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py:180: TypeError
+
+The above exception was the direct cause of the following exception:
+
+gated_call = (<function gated_call.<locals>.gate at 0x10abfed40>, <MagicMock id='4483792400'>, <AsyncMock name='mock.acreate_approval' id='4483780944'>)
+
+    def test_omitted_nonserializable_default_stays_out_of_approval(gated_call):
+        """FE-002 must not add an unpassed internal dependency to the JSON payload."""
+        gate, _, approval = gated_call
+        dependency = object()
+
+        def create_approval(**kwargs):
+            _ensure_json_serializable(kwargs["arguments"])
+            return {"action_id": "qa-action"}
+
+        approval.side_effect = create_approval
+
+        def action(amount, *, recipient, dependency=dependency):
+            return amount, recipient, dependency
+
+>       result = gate(action)(10, recipient="recipient")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_adapter_arguments.py:163:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/test_adapter_arguments.py:45: in invoke
+    return asyncio.run(result) if asynchronous else result
+           ^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/asyncio/runners.py:190: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/asyncio/base_events.py:654: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+sentinel/adapters/langgraph.py:77: in async_wrapper
+    approval = await self.client.acreate_approval(
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:2253: in _execute_mock_call
+    result = effect(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_adapter_arguments.py:155: in create_approval
+    _ensure_json_serializable(kwargs["arguments"])
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+arguments = {'amount': 10, 'recipient': 'recipient', 'dependency': <object object at 0x10ae6eb80>}
+
+    def _ensure_json_serializable(arguments: Any) -> None:
+        """Fail fast if `arguments` can't be JSON-encoded.
+
+        Without this check the POST silently succeeds (httpx converts the value
+        via its own serializer, or the server stores something useless), and
+        the agent then hangs until `timeout_seconds` waiting on a decision it
+        can never get. Raise immediately with the offending type so the caller
+        sees the real error.
+        """
+        try:
+            json.dumps(arguments)
+        except TypeError as e:
+>           raise TypeError(
+                f"@oversight arguments must be JSON-serializable. "
+                f"Got an un-serializable value: {e}. "
+                f"Convert sets/objects/bytes to plain dict/list/str/int/float/bool/None before the call."
+            ) from e
+E           TypeError: @oversight arguments must be JSON-serializable. Got an un-serializable value: Object of type object is not JSON serializable. Convert sets/objects/bytes to plain dict/list/str/int/float/bool/None before the call.
+
+sentinel/client.py:58: TypeError
+_ test_omitted_nonserializable_default_stays_out_of_approval[openai_agents-async] _
+
+arguments = {'amount': 10, 'recipient': 'recipient', 'dependency': <object object at 0x10b17a130>}
+
+    def _ensure_json_serializable(arguments: Any) -> None:
+        """Fail fast if `arguments` can't be JSON-encoded.
+
+        Without this check the POST silently succeeds (httpx converts the value
+        via its own serializer, or the server stores something useless), and
+        the agent then hangs until `timeout_seconds` waiting on a decision it
+        can never get. Raise immediately with the offending type so the caller
+        sees the real error.
+        """
+        try:
+>           json.dumps(arguments)
+
+sentinel/client.py:56:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/__init__.py:231: in dumps
+    return _default_encoder.encode(obj)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py:200: in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py:258: in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <json.encoder.JSONEncoder object at 0x108f30390>
+o = <object object at 0x10b17a130>
+
+    def default(self, o):
+        """Implement this method in a subclass such that it returns
+        a serializable object for ``o``, or calls the base implementation
+        (to raise a ``TypeError``).
+
+        For example, to support arbitrary iterators, you could
+        implement default like this::
+
+            def default(self, o):
+                try:
+                    iterable = iter(o)
+                except TypeError:
+                    pass
+                else:
+                    return list(iterable)
+                # Let the base class default method raise the TypeError
+                return super().default(o)
+
+        """
+>       raise TypeError(f'Object of type {o.__class__.__name__} '
+                        f'is not JSON serializable')
+E       TypeError: Object of type object is not JSON serializable
+
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/json/encoder.py:180: TypeError
+
+The above exception was the direct cause of the following exception:
+
+gated_call = (<function gated_call.<locals>.gate at 0x10ac57100>, <MagicMock id='4481806288'>, <AsyncMock name='mock.acreate_approval' id='4481809232'>)
+
+    def test_omitted_nonserializable_default_stays_out_of_approval(gated_call):
+        """FE-002 must not add an unpassed internal dependency to the JSON payload."""
+        gate, _, approval = gated_call
+        dependency = object()
+
+        def create_approval(**kwargs):
+            _ensure_json_serializable(kwargs["arguments"])
+            return {"action_id": "qa-action"}
+
+        approval.side_effect = create_approval
+
+        def action(amount, *, recipient, dependency=dependency):
+            return amount, recipient, dependency
+
+>       result = gate(action)(10, recipient="recipient")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_adapter_arguments.py:163:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/test_adapter_arguments.py:45: in invoke
+    return asyncio.run(result) if asynchronous else result
+           ^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/asyncio/runners.py:190: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/asyncio/base_events.py:654: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+sentinel/adapters/openai_agents.py:111: in async_wrapper
+    await _arequire_approval(
+sentinel/adapters/openai_agents.py:155: in _arequire_approval
+    approval = await sentinel_client.acreate_approval(
+/private/tmp/sentinel-qa-home/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/lib/python3.11/unittest/mock.py:2253: in _execute_mock_call
+    result = effect(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_adapter_arguments.py:155: in create_approval
+    _ensure_json_serializable(kwargs["arguments"])
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+arguments = {'amount': 10, 'recipient': 'recipient', 'dependency': <object object at 0x10b17a130>}
+
+    def _ensure_json_serializable(arguments: Any) -> None:
+        """Fail fast if `arguments` can't be JSON-encoded.
+
+        Without this check the POST silently succeeds (httpx converts the value
+        via its own serializer, or the server stores something useless), and
+        the agent then hangs until `timeout_seconds` waiting on a decision it
+        can never get. Raise immediately with the offending type so the caller
+        sees the real error.
+        """
+        try:
+            json.dumps(arguments)
+        except TypeError as e:
+>           raise TypeError(
+                f"@oversight arguments must be JSON-serializable. "
+                f"Got an un-serializable value: {e}. "
+                f"Convert sets/objects/bytes to plain dict/list/str/int/float/bool/None before the call."
+            ) from e
+E           TypeError: @oversight arguments must be JSON-serializable. Got an un-serializable value: Object of type object is not JSON serializable. Convert sets/objects/bytes to plain dict/list/str/int/float/bool/None before the call.
+
+sentinel/client.py:58: TypeError
+=========================== short test summary info ============================
+FAILED tests/test_adapter_arguments.py::test_omitted_nonserializable_default_stays_out_of_approval[autogen-sync]
+FAILED tests/test_adapter_arguments.py::test_omitted_nonserializable_default_stays_out_of_approval[crewai-sync]
+FAILED tests/test_adapter_arguments.py::test_omitted_nonserializable_default_stays_out_of_approval[langgraph-sync]
+FAILED tests/test_adapter_arguments.py::test_omitted_nonserializable_default_stays_out_of_approval[openai_agents-sync]
+FAILED tests/test_adapter_arguments.py::test_omitted_nonserializable_default_stays_out_of_approval[autogen-async]
+FAILED tests/test_adapter_arguments.py::test_omitted_nonserializable_default_stays_out_of_approval[langgraph-async]
+FAILED tests/test_adapter_arguments.py::test_omitted_nonserializable_default_stays_out_of_approval[openai_agents-async]
+7 failed, 70 deselected in 0.37s
