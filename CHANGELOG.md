@@ -4,6 +4,13 @@ All notable changes to the Sentinel Python SDK (`sentinel-oversight` on PyPI).
 This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- Send API-compatible string execution results when synchronous or asynchronous
+  `@oversight` calls fail after approval or explicit timeout fallback. Preserve
+  the original exception and the fallback reason in accepted failure audits.
+
 ## [0.1.9] — 2026-05-26
 
 ### Added
