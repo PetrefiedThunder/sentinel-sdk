@@ -1,0 +1,8 @@
+UTC start: 2026-10-03T01:52:17+00:00
+Command: uv build --out-dir /private/tmp/sentinel-qa-dist
+Exit: 0
+
+Building source distribution...
+Building wheel from source distribution...
+Successfully built /private/tmp/sentinel-qa-dist/sentinel_oversight-0.1.9.tar.gz
+Successfully built /private/tmp/sentinel-qa-dist/sentinel_oversight-0.1.9-py3-none-any.whl

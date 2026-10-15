@@ -1,0 +1,23 @@
+UTC start: 2026-10-03T01:53:47+00:00
+Command: .venv/bin/python -c 'import asyncio; from unittest.mock import MagicMock; from langchain_core.tools import tool; from sentinel.adapters.langchain import SentinelCallbackHandler; from sentinel.exceptions import ApprovalRejected; calls=[]
+@tool
+def local_action(value:int)->str:
+    """Local QA no-network action."""
+    calls.append(value)
+    return "executed"
+client=MagicMock(); client.create_approval.return_value={"action_id":"qa-action"}; client.wait_for_decision.return_value={"status":"rejected"}; handler=SentinelCallbackHandler(client=client); handler.raise_error=True
+for asynchronous in (False,True):
+    try:
+        value=local_action.ainvoke({"value":7},config={"callbacks":[handler]}) if asynchronous else local_action.invoke({"value":7},config={"callbacks":[handler]})
+        if asynchronous: asyncio.run(value)
+    except ApprovalRejected: print("propagated rejected decision", "ainvoke" if asynchronous else "invoke")
+assert calls==[],calls
+assert client.create_approval.call_count==2
+print("Tool calls with test-only raise_error override:",calls)'
+Exit: 0
+
+Error in SentinelCallbackHandler.on_tool_start callback: ApprovalRejected('Tool execution not approved')
+Error in SentinelCallbackHandler.on_tool_start callback: ApprovalRejected('Tool execution not approved')
+propagated rejected decision invoke
+propagated rejected decision ainvoke
+Tool calls with test-only raise_error override: []

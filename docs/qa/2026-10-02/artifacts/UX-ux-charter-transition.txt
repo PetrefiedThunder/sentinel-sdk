@@ -1,0 +1,4 @@
+UTC start: 2026-10-03T01:52:44+00:00
+Command: python3 -c 'from datetime import datetime, timezone; from pathlib import Path; stamp=datetime.now(timezone.utc).isoformat(); p=Path("docs/qa/2026-10-02/UX-LOG.md"); p.write_text(p.read_text()+"- "+stamp+" — UX-C1 END: 9 tests passed, 2 strict expected failures. README poll-interval environment setting is ignored; first quickstart needs an external payment symbol/setup. Approval and rejection flows work when that dependency is stubbed.\n- "+stamp+" — UX-C2 START (15-minute ceiling): adapted Nielsen 10-heuristic review of SDK discoverability, invalid-call error prevention, lifecycle guidance, documented versus local-only guarantees, and exception recovery. Verify any new finding offline and record UI-only checks as not applicable.\n")'
+Exit: 0
+

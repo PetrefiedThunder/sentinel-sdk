@@ -1,0 +1,27 @@
+UTC start: 2026-10-03T01:52:08+00:00
+Command: .venv/bin/python -m pytest tests/test_decorator.py tests/test_idempotency.py tests/test_langgraph_adapter.py tests/test_list_and_timeout.py tests/test_openai_agents_adapter.py tests/test_semantic_kernel_adapter.py tests/test_serializable.py --cov=sentinel --cov-branch --cov-report=term-missing --cov-report=json:docs/qa/2026-10-02/artifacts/coverage-before.json --junitxml=docs/qa/2026-10-02/artifacts/baseline-junit.xml -q
+Exit: 0
+
+.........................................................                [100%]
+================================ tests coverage ================================
+______________ coverage: platform darwin, python 3.11.15-final-0 _______________
+
+Name                                   Stmts   Miss Branch BrPart  Cover   Missing
+----------------------------------------------------------------------------------
+sentinel/__init__.py                       6      0      0      0   100%
+sentinel/adapters/__init__.py              0      0      0      0   100%
+sentinel/adapters/anthropic.py            57     57     16      0     0%   44-174
+sentinel/adapters/autogen.py              34     34      6      0     0%   20-95
+sentinel/adapters/crewai.py               39     39     16      0     0%   26-108
+sentinel/adapters/langchain.py            28     28      4      0     0%   7-68
+sentinel/adapters/langgraph.py            47      0     12      0   100%
+sentinel/adapters/openai_agents.py        66      4     20      2    93%   174, 179-180, 183
+sentinel/adapters/semantic_kernel.py      54      4     14      2    91%   135, 152, 155-156
+sentinel/client.py                       221    107     44      6    51%   69-78, 104, 118, 127-129, 132-134, 163-165, 200-221, 225-227, 236-238, 258-267, 270-272, 275-277, 280-283, 312-321, 348-350, 360->362, 362->364, 374-394, 397-399, 402-404, 414-423, 426-428, 431-433, 436-439, 450, 452, 463-469
+sentinel/config.py                        26      2      0      0    92%   16-17
+sentinel/decorator.py                     95     25     24      5    70%   21, 29, 32, 79-88, 94-98, 103-105, 128-137, 143-147, 152
+sentinel/exceptions.py                    23     12      4      0    41%   13-20, 36-43
+----------------------------------------------------------------------------------
+TOTAL                                    696    312    160     15    54%
+Coverage JSON written to file docs/qa/2026-10-02/artifacts/coverage-before.json
+57 passed in 0.77s

@@ -1,0 +1,10 @@
+UTC start: 2026-10-03T01:53:31+00:00
+Command: python3 -c 'from pathlib import Path; import subprocess,shutil; root=Path.cwd(); dest=Path("/private/tmp/sentinel-qa-snapshot"); names=set(subprocess.check_output(["git","ls-files"],text=True).splitlines()); names.update(str(p) for p in Path("tests").glob("*.py")); names.update(str(p) for p in Path("docs/qa/2026-10-02").rglob("*") if p.is_file()); forbidden=(".env",".pem",".key","credentials"); count=0;
+for name in sorted(names):
+ p=Path(name)
+ if any(part.startswith(".env") or part.lower().endswith((".pem",".key")) or "credential" in part.lower() for part in p.parts): continue
+ target=dest/p; target.parent.mkdir(parents=True,exist_ok=True); shutil.copyfile(root/p,target); count+=1
+print("Copied",count,"explicit source/QA files to",dest,"for local current-snapshot scan; no git history or environment files.")'
+Exit: 0
+
+Copied 123 explicit source/QA files to /private/tmp/sentinel-qa-snapshot for local current-snapshot scan; no git history or environment files.

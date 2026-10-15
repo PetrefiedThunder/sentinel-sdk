@@ -1,0 +1,227 @@
+UTC start: 2026-10-03T01:51:14+00:00
+Command: python3 -c 'from pathlib import Path; paths=["tests/test_decorator.py","tests/test_list_and_timeout.py"]; [(print("FILE",p),print("".join(f"{i}: {line}" for i,line in enumerate(Path(p).read_text().splitlines(True),1)))) for p in paths]'
+Exit: 0
+
+FILE tests/test_decorator.py
+1: from unittest.mock import MagicMock, patch
+2: 
+3: import pytest
+4: 
+5: from sentinel import ApprovalRejected, SentinelClient, SentinelConfigError, configure, oversight
+6: 
+7: 
+8: @patch("sentinel.decorator.SentinelClient")
+9: def test_approval_success(mock_client_cls):
+10:     mock_client = MagicMock()
+11:     mock_client.create_approval.return_value = {"action_id": "act_1"}
+12:     mock_client.wait_for_decision.return_value = {"status": "approved"}
+13:     mock_client_cls.return_value = mock_client
+14: 
+15:     @oversight(risk_level="high")
+16:     def transfer_funds(amount, to):
+17:         return {"amount": amount, "to": to}
+18: 
+19:     result = transfer_funds(100, to="alice")
+20:     assert result == {"amount": 100, "to": "alice"}
+21:     mock_client.create_approval.assert_called_once_with(
+22:         function_name="transfer_funds",
+23:         arguments={"amount": 100, "to": "alice"},
+24:         risk_level="high",
+25:         approvers=None,
+26:         timeout_seconds=None,
+27:     )
+28:     mock_client.wait_for_decision.assert_called_once_with("act_1", timeout=None)
+29:     mock_client.emit_audit_event.assert_called_once()
+30: 
+31: 
+32: @patch("sentinel.decorator.SentinelClient")
+33: def test_rejection(mock_client_cls):
+34:     mock_client = MagicMock()
+35:     mock_client.create_approval.return_value = {"action_id": "act_2"}
+36:     mock_client.wait_for_decision.return_value = {
+37:         "status": "rejected",
+38:         "reason": "too risky",
+39:     }
+40:     mock_client_cls.return_value = mock_client
+41: 
+42:     ran = {"v": False}
+43: 
+44:     @oversight()
+45:     def dangerous():
+46:         ran["v"] = True
+47:         return "done"
+48: 
+49:     with pytest.raises(ApprovalRejected) as exc:
+50:         dangerous()
+51:     assert "too risky" in str(exc.value)
+52:     assert ran["v"] is False
+53: 
+54: 
+55: def test_requires_api_key_before_network_calls():
+56:     configure(api_key=None)
+57:     with pytest.raises(SentinelConfigError):
+58:         SentinelClient().create_approval(function_name="dangerous", arguments={})
+
+FILE tests/test_list_and_timeout.py
+1: """list_approvals / list_audit_events_page parity + timeout_seconds int coercion.
+2: 
+3: All HTTP is mocked with httpx.MockTransport so these run offline. The live API
+4: (https://api.pauseapi.app/openapi.json) types ApprovalCreate.timeout_seconds as
+5: an integer (default 300) and 422s on a fractional value, and the GET
+6: /v1/approvals + GET /v1/audit-events endpoints accept status/action_id, limit,
+7: and cursor query params returning a {data, has_more, next_cursor} envelope.
+8: """
+9: 
+10: import json
+11: from urllib.parse import parse_qs
+12: 
+13: import httpx
+14: import pytest
+15: 
+16: from sentinel import PageResult, SentinelClient
+17: from sentinel.config import SentinelConfig
+18: 
+19: _PAGE_BODY = {
+20:     "data": [{"action_id": "act_1"}, {"action_id": "act_2"}],
+21:     "has_more": True,
+22:     "next_cursor": "cur_abc",
+23: }
+24: 
+25: 
+26: def _make_client(captured: list, *, body=_PAGE_BODY, status_code=200) -> SentinelClient:
+27:     """Real SentinelClient backed by an httpx MockTransport that records requests."""
+28:     client = SentinelClient(SentinelConfig(api_key="sk_test", api_url="https://api.test"))
+29: 
+30:     def handler(request: httpx.Request) -> httpx.Response:
+31:         captured.append(request)
+32:         return httpx.Response(status_code, json=body)
+33: 
+34:     client._client = httpx.Client(
+35:         base_url="https://api.test",
+36:         headers=client._headers(),
+37:         transport=httpx.MockTransport(handler),
+38:     )
+39:     client._aclient = httpx.AsyncClient(
+40:         base_url="https://api.test",
+41:         headers=client._headers(),
+42:         transport=httpx.MockTransport(handler),
+43:     )
+44:     return client
+45: 
+46: 
+47: def _query(request: httpx.Request) -> dict:
+48:     return {k: v[0] for k, v in parse_qs(request.url.query.decode()).items()}
+49: 
+50: 
+51: # ------------- timeout_seconds int coercion -------------
+52: def test_create_approval_coerces_fractional_timeout_to_int():
+53:     captured = []
+54:     client = _make_client(captured, body={"action_id": "act_1", "status": "pending"})
+55:     client.create_approval(function_name="t", arguments={"a": 1}, timeout_seconds=1.9)
+56:     payload = json.loads(captured[0].content)
+57:     assert payload["timeout_seconds"] == 1
+58:     assert isinstance(payload["timeout_seconds"], int)
+59: 
+60: 
+61: def test_create_approval_coerces_float_config_default_to_int():
+62:     captured = []
+63:     # config default timeout is a float (300.0); the wire value must be an int.
+64:     client = _make_client(captured, body={"action_id": "act_1", "status": "pending"})
+65:     client.config.timeout_seconds = 300.0
+66:     client.create_approval(function_name="t", arguments={"a": 1})
+67:     payload = json.loads(captured[0].content)
+68:     assert payload["timeout_seconds"] == 300
+69:     assert isinstance(payload["timeout_seconds"], int)
+70: 
+71: 
+72: @pytest.mark.asyncio
+73: async def test_acreate_approval_coerces_fractional_timeout_to_int():
+74:     captured = []
+75:     client = _make_client(captured, body={"action_id": "act_1", "status": "pending"})
+76:     await client.acreate_approval(function_name="t", arguments={"a": 1}, timeout_seconds=2.7)
+77:     payload = json.loads(captured[0].content)
+78:     assert payload["timeout_seconds"] == 2
+79:     assert isinstance(payload["timeout_seconds"], int)
+80: 
+81: 
+82: # ------------- list_approvals -------------
+83: def test_list_approvals_returns_typed_page():
+84:     captured = []
+85:     client = _make_client(captured)
+86:     page = client.list_approvals()
+87:     assert isinstance(page, PageResult)
+88:     assert page.data == _PAGE_BODY["data"]
+89:     assert page.has_more is True
+90:     assert page.next_cursor == "cur_abc"
+91: 
+92: 
+93: def test_list_approvals_sends_default_limit():
+94:     captured = []
+95:     client = _make_client(captured)
+96:     client.list_approvals()
+97:     q = _query(captured[0])
+98:     assert captured[0].url.path == "/v1/approvals"
+99:     assert q["limit"] == "50"
+100:     assert "cursor" not in q
+101:     assert "status" not in q
+102: 
+103: 
+104: def test_list_approvals_sends_status_limit_cursor():
+105:     captured = []
+106:     client = _make_client(captured)
+107:     client.list_approvals(status="pending", limit=10, cursor="cur_xyz")
+108:     q = _query(captured[0])
+109:     assert q["status"] == "pending"
+110:     assert q["limit"] == "10"
+111:     assert q["cursor"] == "cur_xyz"
+112: 
+113: 
+114: def test_list_approvals_tolerates_bare_list():
+115:     captured = []
+116:     client = _make_client(captured, body=[{"action_id": "act_1"}])
+117:     page = client.list_approvals()
+118:     assert page.data == [{"action_id": "act_1"}]
+119:     assert page.has_more is False
+120:     assert page.next_cursor is None
+121: 
+122: 
+123: @pytest.mark.asyncio
+124: async def test_alist_approvals_returns_typed_page():
+125:     captured = []
+126:     client = _make_client(captured)
+127:     page = await client.alist_approvals(status="approved", limit=5, cursor="c1")
+128:     assert isinstance(page, PageResult)
+129:     assert page.next_cursor == "cur_abc"
+130:     q = _query(captured[0])
+131:     assert q == {"status": "approved", "limit": "5", "cursor": "c1"}
+132: 
+133: 
+134: # ------------- list_audit_events_page -------------
+135: def test_list_audit_events_page_sends_default_limit():
+136:     captured = []
+137:     client = _make_client(captured)
+138:     page = client.list_audit_events_page()
+139:     assert isinstance(page, PageResult)
+140:     q = _query(captured[0])
+141:     assert captured[0].url.path == "/v1/audit-events"
+142:     assert q["limit"] == "50"
+143: 
+144: 
+145: def test_list_audit_events_page_sends_action_id_limit_cursor():
+146:     captured = []
+147:     client = _make_client(captured)
+148:     client.list_audit_events_page(action_id="act_9", limit=100, cursor="cur_2")
+149:     q = _query(captured[0])
+150:     assert q == {"action_id": "act_9", "limit": "100", "cursor": "cur_2"}
+151: 
+152: 
+153: @pytest.mark.asyncio
+154: async def test_alist_audit_events_page_returns_typed_page():
+155:     captured = []
+156:     client = _make_client(captured)
+157:     page = await client.alist_audit_events_page(limit=25)
+158:     assert isinstance(page, PageResult)
+159:     assert page.has_more is True
+160:     q = _query(captured[0])
+161:     assert q["limit"] == "25"
+

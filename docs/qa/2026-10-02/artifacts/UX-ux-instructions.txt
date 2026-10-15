@@ -1,0 +1,4 @@
+UTC start: 2026-10-03T01:50:57+00:00
+Command: rg --files -g AGENTS.md -g '!docs/qa/**' -g '!**/.venv*/**' -g '!**/node_modules/**'
+Exit: 1
+

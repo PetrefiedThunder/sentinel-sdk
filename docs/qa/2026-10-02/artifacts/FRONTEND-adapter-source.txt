@@ -1,0 +1,941 @@
+UTC start: 2026-10-03T01:50:46+00:00
+Command: python3 -c 'from pathlib import Path; files=list(Path("sentinel/adapters").glob("*.py")); [(print("\nFILE",str(p)),print("".join(f"{i}: {s}" for i,s in enumerate(p.open(),1)))) for p in files]'
+Exit: 0
+
+
+FILE sentinel/adapters/crewai.py
+1: """CrewAI adapter — wrap a CrewAI tool with Sentinel approval.
+2: 
+3: CrewAI tools are typically built with @tool() or BaseTool. Wrap them with
+4: `gated()` to require human approval before each invocation:
+5: 
+6:     from crewai import Agent, Task, Crew
+7:     from crewai.tools import tool
+8:     from sentinel.adapters.crewai import gated
+9: 
+10:     @tool("wire_transfer")
+11:     def _wire_transfer(amount: int, recipient: str) -> dict:
+12:         return stripe.transfers.create(amount=amount, destination=recipient)
+13: 
+14:     wire_transfer = gated(
+15:         _wire_transfer,
+16:         risk_level="high",
+17:         approvers=["ops@acme.com"],
+18:     )
+19: 
+20:     agent = Agent(tools=[wire_transfer], ...)
+21: 
+22: The adapter wraps the underlying callable so CrewAI calls it normally —
+23: Sentinel intercepts inside the wrapper and pauses for human approval.
+24: """
+25: 
+26: from __future__ import annotations
+27: 
+28: from typing import TYPE_CHECKING, Any
+29: 
+30: from ..client import SentinelClient
+31: from ..exceptions import ApprovalRejected
+32: 
+33: if TYPE_CHECKING:
+34:     from collections.abc import Callable
+35: 
+36: 
+37: def gated(
+38:     tool: Any,
+39:     *,
+40:     client: SentinelClient | None = None,
+41:     risk_level: str = "high",
+42:     approvers: list[str] | None = None,
+43:     timeout_seconds: float | None = None,
+44:     function_name: str | None = None,
+45: ) -> Any:
+46:     """Wrap a CrewAI tool (BaseTool instance or @tool-decorated callable)
+47:     so each invocation pauses for Sentinel approval.
+48: 
+49:     Returns an object with the same external interface — CrewAI can call
+50:     it exactly like the original tool.
+51:     """
+52:     sentinel_client = client or SentinelClient()
+53:     derived_name = function_name or _derive_tool_name(tool)
+54: 
+55:     original = _extract_callable(tool)
+56: 
+57:     def wrapper(*args: Any, **kwargs: Any) -> Any:
+58:         # CrewAI tools are usually called with kwargs; fall back to positional.
+59:         arguments = kwargs if kwargs else {"args": list(args)}
+60:         approval = sentinel_client.create_approval(
+61:             function_name=derived_name,
+62:             arguments=arguments,
+63:             risk_level=risk_level,
+64:             approvers=approvers,
+65:             timeout_seconds=timeout_seconds,
+66:         )
+67:         action_id = approval.get("action_id") or approval.get("id")
+68:         decision = sentinel_client.wait_for_decision(action_id, timeout=timeout_seconds)
+69:         status = decision.get("status") or decision.get("decision")
+70:         if status != "approved":
+71:             raise ApprovalRejected(
+72:                 reason=decision.get("reason", "Tool execution not approved"),
+73:                 action_id=action_id,
+74:             )
+75:         return original(*args, **kwargs)
+76: 
+77:     # Preserve the CrewAI BaseTool object if we were handed one — only
+78:     # swap out the underlying _run / func reference.
+79:     if hasattr(tool, "_run") and callable(tool._run):
+80:         tool._run = wrapper  # type: ignore[attr-defined]
+81:         return tool
+82:     if hasattr(tool, "func") and callable(tool.func):
+83:         tool.func = wrapper  # type: ignore[attr-defined]
+84:         return tool
+85:     # Plain callable — return the wrapper directly
+86:     wrapper.__name__ = getattr(original, "__name__", derived_name)
+87:     return wrapper
+88: 
+89: 
+90: def _extract_callable(tool: Any) -> Callable:
+91:     if hasattr(tool, "_run") and callable(tool._run):
+92:         return tool._run
+93:     if hasattr(tool, "func") and callable(tool.func):
+94:         return tool.func
+95:     if callable(tool):
+96:         return tool
+97:     raise TypeError(
+98:         f"Don't know how to extract a callable from {type(tool).__name__}. "
+99:         "Pass a CrewAI BaseTool instance or a @tool-decorated function."
+100:     )
+101: 
+102: 
+103: def _derive_tool_name(tool: Any) -> str:
+104:     for attr in ("name", "tool_name", "__name__"):
+105:         value = getattr(tool, attr, None)
+106:         if isinstance(value, str) and value:
+107:             return value
+108:     return "crewai_tool"
+
+
+FILE sentinel/adapters/__init__.py
+
+
+FILE sentinel/adapters/semantic_kernel.py
+1: """Semantic Kernel adapter — gate kernel function/tool invocation behind
+2: Sentinel approval.
+3: 
+4: Semantic Kernel (the `semantic-kernel` package) runs every `KernelFunction`
+5: through a *function-invocation filter* pipeline. A filter is an async callable
+6: ``(context, next)`` where calling ``await next(context)`` executes the function;
+7: not calling it skips execution. That makes filters the natural place to pause
+8: for human approval before any plugin/@kernel_function runs.
+9: 
+10:     from semantic_kernel import Kernel
+11:     from sentinel.adapters.semantic_kernel import gate_kernel
+12: 
+13:     kernel = Kernel()
+14:     kernel.add_plugin(OpsPlugin(), plugin_name="ops")
+15: 
+16:     gate_kernel(kernel, risk_level="high", approvers=["ops@acme.com"])
+17:     # Every function the kernel invokes now pauses for Sentinel approval.
+18: 
+19: Use ``function_allowlist`` to gate only specific functions, or
+20: ``function_denylist`` to exempt specific ones; ungated functions call through
+21: directly with no approval round-trip. Names are matched against both the bare
+22: function name (e.g. ``wire_transfer``) and the qualified ``plugin.function``
+23: form (e.g. ``ops.wire_transfer``).
+24: 
+25: If you build the filter yourself, ``sentinel_filter()`` returns the raw filter
+26: callable to register via ``kernel.add_filter(FilterTypes.FUNCTION_INVOCATION, ...)``
+27: or the ``@kernel.filter`` decorator.
+28: 
+29: This module never imports `semantic-kernel`, so it works without the package
+30: installed and across versions.
+31: """
+32: 
+33: from __future__ import annotations
+34: 
+35: from typing import TYPE_CHECKING, Any
+36: 
+37: if TYPE_CHECKING:
+38:     from collections.abc import Awaitable, Callable, Iterable
+39: 
+40: from ..client import SentinelClient
+41: from ..exceptions import ApprovalRejected
+42: 
+43: 
+44: def gate_kernel(
+45:     kernel: Any,
+46:     *,
+47:     client: SentinelClient | None = None,
+48:     risk_level: str = "high",
+49:     approvers: list[str] | None = None,
+50:     timeout_seconds: float | None = None,
+51:     function_allowlist: Iterable[str] | None = None,
+52:     function_denylist: Iterable[str] | None = None,
+53: ) -> Any:
+54:     """Register a Sentinel function-invocation filter on a Semantic Kernel
+55:     ``Kernel`` so each function invocation pauses for human approval.
+56: 
+57:     Returns the same ``kernel`` object so calls can be chained. The kernel is
+58:     passed in untyped — this adapter never imports ``semantic-kernel``.
+59:     """
+60:     sk_filter = sentinel_filter(
+61:         client=client,
+62:         risk_level=risk_level,
+63:         approvers=approvers,
+64:         timeout_seconds=timeout_seconds,
+65:         function_allowlist=function_allowlist,
+66:         function_denylist=function_denylist,
+67:     )
+68:     # `FilterTypes.FUNCTION_INVOCATION` == "function_invocation"; add_filter
+69:     # accepts the enum or its string value, so pass the string to avoid
+70:     # importing semantic-kernel here.
+71:     kernel.add_filter("function_invocation", sk_filter)
+72:     return kernel
+73: 
+74: 
+75: def sentinel_filter(
+76:     *,
+77:     client: SentinelClient | None = None,
+78:     risk_level: str = "high",
+79:     approvers: list[str] | None = None,
+80:     timeout_seconds: float | None = None,
+81:     function_allowlist: Iterable[str] | None = None,
+82:     function_denylist: Iterable[str] | None = None,
+83: ) -> Callable[[Any, Callable[[Any], Awaitable[None]]], Awaitable[None]]:
+84:     """Build a Semantic Kernel function-invocation filter that requires
+85:     Sentinel approval before each gated function runs.
+86: 
+87:     The returned async callable matches Semantic Kernel's filter signature
+88:     ``async def filter(context, next)`` and can be registered with
+89:     ``kernel.add_filter(FilterTypes.FUNCTION_INVOCATION, ...)`` or the
+90:     ``@kernel.filter(FilterTypes.FUNCTION_INVOCATION)`` decorator.
+91:     """
+92:     sentinel_client = client or SentinelClient()
+93:     allow = set(function_allowlist) if function_allowlist is not None else None
+94:     deny = set(function_denylist) if function_denylist is not None else None
+95: 
+96:     def _should_gate(name: str, qualified_name: str) -> bool:
+97:         if allow is not None:
+98:             return name in allow or qualified_name in allow
+99:         if deny is not None:
+100:             return name not in deny and qualified_name not in deny
+101:         return True
+102: 
+103:     async def filter(context: Any, next: Callable[[Any], Awaitable[None]]) -> None:
+104:         name = _function_name(context)
+105:         qualified_name = _qualified_function_name(context)
+106:         if not _should_gate(name, qualified_name):
+107:             await next(context)
+108:             return
+109: 
+110:         approval = await sentinel_client.acreate_approval(
+111:             function_name=qualified_name,
+112:             arguments=_arguments(context),
+113:             risk_level=risk_level,
+114:             approvers=approvers,
+115:             timeout_seconds=timeout_seconds,
+116:         )
+117:         action_id = approval.get("action_id") or approval.get("id")
+118:         decision = await sentinel_client.await_for_decision(action_id, timeout=timeout_seconds)
+119:         status = decision.get("status") or decision.get("decision")
+120:         if status != "approved":
+121:             raise ApprovalRejected(
+122:                 reason=decision.get("reason", "Function execution not approved"),
+123:                 action_id=action_id,
+124:             )
+125:         await next(context)
+126: 
+127:     return filter
+128: 
+129: 
+130: def _function_name(context: Any) -> str:
+131:     function = getattr(context, "function", None)
+132:     name = getattr(function, "name", None)
+133:     if isinstance(name, str) and name:
+134:         return name
+135:     return "semantic_kernel_function"
+136: 
+137: 
+138: def _qualified_function_name(context: Any) -> str:
+139:     function = getattr(context, "function", None)
+140:     name = _function_name(context)
+141:     plugin = getattr(function, "plugin_name", None)
+142:     if isinstance(plugin, str) and plugin:
+143:         return f"{plugin}.{name}"
+144:     return name
+145: 
+146: 
+147: def _arguments(context: Any) -> dict[str, Any]:
+148:     """KernelArguments behaves like a mapping; coerce it to a plain JSON-safe
+149:     dict, dropping the non-serializable execution-settings entry SK adds."""
+150:     arguments = getattr(context, "arguments", None)
+151:     if arguments is None:
+152:         return {}
+153:     try:
+154:         items = dict(arguments)
+155:     except (TypeError, ValueError):
+156:         return {"args": str(arguments)}
+157:     return {k: v for k, v in items.items() if k != "execution_settings"}
+
+
+FILE sentinel/adapters/autogen.py
+1: """AutoGen adapter — wrap a function registered with AutoGen so each call
+2: pauses for Sentinel approval.
+3: 
+4: Works with both classic AutoGen (`pyautogen` / `autogen-agentchat`) and the
+5: newer `autogen-core` — anywhere you register a Python callable as a tool.
+6: 
+7:     from autogen_agentchat.agents import AssistantAgent
+8:     from sentinel.adapters.autogen import gated
+9: 
+10:     @gated(risk_level="high", approvers=["ops@acme.com"])
+11:     def wire_transfer(amount: int, recipient: str) -> dict:
+12:         return stripe.transfers.create(amount=amount, destination=recipient)
+13: 
+14:     agent = AssistantAgent(tools=[wire_transfer], ...)
+15: 
+16: Async functions are supported transparently — the returned wrapper preserves
+17: sync vs. async semantics of the original.
+18: """
+19: 
+20: from __future__ import annotations
+21: 
+22: import asyncio
+23: import functools
+24: from typing import TYPE_CHECKING, Any
+25: 
+26: from ..client import SentinelClient
+27: from ..exceptions import ApprovalRejected
+28: 
+29: if TYPE_CHECKING:
+30:     from collections.abc import Callable
+31: 
+32: 
+33: def gated(
+34:     *,
+35:     client: SentinelClient | None = None,
+36:     risk_level: str = "high",
+37:     approvers: list[str] | None = None,
+38:     timeout_seconds: float | None = None,
+39:     function_name: str | None = None,
+40: ) -> Callable[[Callable], Callable]:
+41:     """Decorator that gates an AutoGen-registered function behind Sentinel."""
+42: 
+43:     def decorator(fn: Callable) -> Callable:
+44:         sentinel_client = client or SentinelClient()
+45:         derived_name = function_name or getattr(fn, "__name__", "autogen_tool")
+46: 
+47:         if asyncio.iscoroutinefunction(fn):
+48: 
+49:             @functools.wraps(fn)
+50:             async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+51:                 arguments = kwargs if kwargs else {"args": list(args)}
+52:                 approval = await sentinel_client.acreate_approval(
+53:                     function_name=derived_name,
+54:                     arguments=arguments,
+55:                     risk_level=risk_level,
+56:                     approvers=approvers,
+57:                     timeout_seconds=timeout_seconds,
+58:                 )
+59:                 action_id = approval.get("action_id") or approval.get("id")
+60:                 decision = await sentinel_client.await_for_decision(
+61:                     action_id, timeout=timeout_seconds
+62:                 )
+63:                 status = decision.get("status") or decision.get("decision")
+64:                 if status != "approved":
+65:                     raise ApprovalRejected(
+66:                         reason=decision.get("reason", "Tool execution not approved"),
+67:                         action_id=action_id,
+68:                     )
+69:                 return await fn(*args, **kwargs)
+70: 
+71:             return async_wrapper
+72: 
+73:         @functools.wraps(fn)
+74:         def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+75:             arguments = kwargs if kwargs else {"args": list(args)}
+76:             approval = sentinel_client.create_approval(
+77:                 function_name=derived_name,
+78:                 arguments=arguments,
+79:                 risk_level=risk_level,
+80:                 approvers=approvers,
+81:                 timeout_seconds=timeout_seconds,
+82:             )
+83:             action_id = approval.get("action_id") or approval.get("id")
+84:             decision = sentinel_client.wait_for_decision(action_id, timeout=timeout_seconds)
+85:             status = decision.get("status") or decision.get("decision")
+86:             if status != "approved":
+87:                 raise ApprovalRejected(
+88:                     reason=decision.get("reason", "Tool execution not approved"),
+89:                     action_id=action_id,
+90:                 )
+91:             return fn(*args, **kwargs)
+92: 
+93:         return sync_wrapper
+94: 
+95:     return decorator
+
+
+FILE sentinel/adapters/anthropic.py
+1: """Anthropic Claude tool-use adapter.
+2: 
+3: Wraps a dict mapping {tool_name: callable} so each tool execution pauses
+4: for Sentinel approval before running. Drop-in replacement for the
+5: manual `tool_use` loop you'd write against the Claude API.
+6: 
+7:     import anthropic
+8:     from sentinel.adapters.anthropic import GatedToolExecutor
+9: 
+10:     def wire_transfer(amount: int, recipient: str) -> dict:
+11:         return stripe.transfers.create(amount=amount, destination=recipient)
+12: 
+13:     def check_balance(account: str) -> dict:
+14:         return {"balance": 12345}
+15: 
+16:     executor = GatedToolExecutor(
+17:         tools={
+18:             "wire_transfer": wire_transfer,   # gated
+19:             "check_balance": check_balance,   # also gated by default
+20:         },
+21:         gated_tools={"wire_transfer"},        # only these require approval
+22:         risk_level="high",
+23:         approvers=["ops@acme.com"],
+24:     )
+25: 
+26:     client = anthropic.Anthropic()
+27:     response = client.messages.create(...)
+28: 
+29:     # When Claude returns a tool_use block, hand it to the executor:
+30:     while response.stop_reason == "tool_use":
+31:         tool_results = executor.run_tool_uses(response.content)
+32:         response = client.messages.create(
+33:             ...,
+34:             messages=[
+35:                 ...previous,
+36:                 {"role": "assistant", "content": response.content},
+37:                 {"role": "user", "content": tool_results},
+38:             ],
+39:         )
+40: 
+41: The executor returns tool_result blocks ready to feed back into the API.
+42: """
+43: 
+44: from __future__ import annotations
+45: 
+46: from typing import TYPE_CHECKING, Any
+47: 
+48: from ..client import SentinelClient
+49: from ..exceptions import ApprovalRejected
+50: 
+51: if TYPE_CHECKING:
+52:     from collections.abc import Callable, Iterable
+53: 
+54: 
+55: class GatedToolExecutor:
+56:     """Executes Claude `tool_use` blocks with Sentinel approval gating.
+57: 
+58:     `gated_tools` controls which tool names require approval. If None,
+59:     ALL tools are gated. If empty set, no tools are gated (no-op).
+60:     """
+61: 
+62:     def __init__(
+63:         self,
+64:         tools: dict[str, Callable[..., Any]],
+65:         *,
+66:         gated_tools: Iterable[str] | None = None,
+67:         client: SentinelClient | None = None,
+68:         risk_level: str = "high",
+69:         approvers: list[str] | None = None,
+70:         timeout_seconds: float | None = None,
+71:     ):
+72:         self.tools = tools
+73:         self.gated_tools: set[str] | None = set(gated_tools) if gated_tools is not None else None
+74:         self.client = client or SentinelClient()
+75:         self.risk_level = risk_level
+76:         self.approvers = approvers
+77:         self.timeout_seconds = timeout_seconds
+78: 
+79:     def _should_gate(self, tool_name: str) -> bool:
+80:         if self.gated_tools is None:
+81:             return True
+82:         return tool_name in self.gated_tools
+83: 
+84:     def run_tool_uses(self, content_blocks: Any) -> list[dict[str, Any]]:
+85:         """Process every tool_use block in `content_blocks` and return
+86:         tool_result blocks in the same order. `content_blocks` is whatever
+87:         the Anthropic SDK returned (.content); items can be dicts or the
+88:         SDK's ToolUseBlock instances — we read by attribute or key."""
+89:         results: list[dict[str, Any]] = []
+90:         for block in content_blocks:
+91:             block_type = _get(block, "type")
+92:             if block_type != "tool_use":
+93:                 continue
+94:             tool_use_id = _get(block, "id")
+95:             tool_name = _get(block, "name")
+96:             tool_input = _get(block, "input") or {}
+97: 
+98:             if tool_name not in self.tools:
+99:                 results.append(
+100:                     {
+101:                         "type": "tool_result",
+102:                         "tool_use_id": tool_use_id,
+103:                         "is_error": True,
+104:                         "content": f"No handler registered for tool '{tool_name}'.",
+105:                     }
+106:                 )
+107:                 continue
+108: 
+109:             try:
+110:                 if self._should_gate(tool_name):
+111:                     self._await_approval(tool_name, tool_input)
+112:                 output = self.tools[tool_name](**tool_input)
+113:                 results.append(
+114:                     {
+115:                         "type": "tool_result",
+116:                         "tool_use_id": tool_use_id,
+117:                         "content": _stringify(output),
+118:                     }
+119:                 )
+120:             except ApprovalRejected as e:
+121:                 results.append(
+122:                     {
+123:                         "type": "tool_result",
+124:                         "tool_use_id": tool_use_id,
+125:                         "is_error": True,
+126:                         "content": f"Human approval was not granted: {e.reason}",
+127:                     }
+128:                 )
+129:             except Exception as e:
+130:                 results.append(
+131:                     {
+132:                         "type": "tool_result",
+133:                         "tool_use_id": tool_use_id,
+134:                         "is_error": True,
+135:                         "content": f"{type(e).__name__}: {e}",
+136:                     }
+137:                 )
+138: 
+139:         return results
+140: 
+141:     def _await_approval(self, tool_name: str, tool_input: dict[str, Any]) -> None:
+142:         approval = self.client.create_approval(
+143:             function_name=tool_name,
+144:             arguments=tool_input or {},
+145:             risk_level=self.risk_level,
+146:             approvers=self.approvers,
+147:             timeout_seconds=self.timeout_seconds,
+148:         )
+149:         action_id = approval.get("action_id") or approval.get("id")
+150:         decision = self.client.wait_for_decision(action_id, timeout=self.timeout_seconds)
+151:         status = decision.get("status") or decision.get("decision")
+152:         if status != "approved":
+153:             raise ApprovalRejected(
+154:                 reason=decision.get("reason", "Tool execution not approved"),
+155:                 action_id=action_id,
+156:             )
+157: 
+158: 
+159: def _get(obj: Any, name: str) -> Any:
+160:     """Read a field from either a dict or a Pydantic-style model."""
+161:     if isinstance(obj, dict):
+162:         return obj.get(name)
+163:     return getattr(obj, name, None)
+164: 
+165: 
+166: def _stringify(value: Any) -> str:
+167:     if isinstance(value, str):
+168:         return value
+169:     try:
+170:         import json
+171: 
+172:         return json.dumps(value, default=str)
+173:     except Exception:
+174:         return str(value)
+
+
+FILE sentinel/adapters/langchain.py
+1: """LangChain adapter for Sentinel.
+2: 
+3: Provides a callback handler that creates an approval request when a tool starts
+4: and blocks until a decision is reached.
+5: """
+6: 
+7: from __future__ import annotations
+8: 
+9: from typing import Any
+10: 
+11: from ..client import SentinelClient
+12: from ..exceptions import ApprovalRejected
+13: 
+14: 
+15: class SentinelCallbackHandler:
+16:     """LangChain callback handler that gates tool execution behind Sentinel approvals.
+17: 
+18:     Inherits from langchain_core.callbacks.BaseCallbackHandler at instantiation
+19:     time so the langchain dependency stays optional.
+20:     """
+21: 
+22:     def __new__(cls, *args, **kwargs):
+23:         try:
+24:             from langchain_core.callbacks import BaseCallbackHandler  # type: ignore
+25:         except ImportError as e:
+26:             raise ImportError(
+27:                 "langchain-core is required for SentinelCallbackHandler. "
+28:                 "Install with: pip install sentinel-oversight[langchain]"
+29:             ) from e
+30: 
+31:         # Dynamically create a subclass mixing in BaseCallbackHandler.
+32:         if not issubclass(cls, BaseCallbackHandler):
+33:             new_cls = type(cls.__name__, (cls, BaseCallbackHandler), {})
+34:             instance = object.__new__(new_cls)
+35:             return instance
+36:         return object.__new__(cls)
+37: 
+38:     def __init__(
+39:         self,
+40:         client: SentinelClient | None = None,
+41:         risk_level: str = "medium",
+42:         approvers: list | None = None,
+43:         timeout_seconds: float | None = None,
+44:     ):
+45:         self.client = client or SentinelClient()
+46:         self.risk_level = risk_level
+47:         self.approvers = approvers
+48:         self.timeout_seconds = timeout_seconds
+49: 
+50:     def on_tool_start(
+51:         self,
+52:         serialized: dict,
+53:         input_str: str,
+54:         **kwargs: Any,
+55:     ) -> None:
+56:         tool_name = (serialized or {}).get("name", "unknown_tool")
+57:         approval = self.client.create_approval(
+58:             function_name=tool_name,
+59:             arguments={"input": input_str},
+60:             risk_level=self.risk_level,
+61:             approvers=self.approvers,
+62:             timeout_seconds=self.timeout_seconds,
+63:         )
+64:         action_id = approval.get("action_id") or approval.get("id")
+65:         decision = self.client.wait_for_decision(action_id, timeout=self.timeout_seconds)
+66:         status = decision.get("status") or decision.get("decision")
+67:         if status != "approved":
+68:             raise ApprovalRejected(
+69:                 reason=decision.get("reason", "Tool execution not approved"),
+70:                 action_id=action_id,
+71:             )
+
+
+FILE sentinel/adapters/langgraph.py
+1: """LangGraph adapter — gate tool executions in a LangGraph graph behind
+2: Sentinel approval.
+3: 
+4: `SentinelToolGate` wraps plain Python callables (the functions you pass to
+5: graph nodes or tool nodes), so this adapter never imports langgraph and has
+6: zero dependencies on it — it works with any LangGraph version.
+7: 
+8:     from sentinel.adapters.langgraph import SentinelToolGate
+9: 
+10:     gate = SentinelToolGate(risk_level="high", approvers=["ops@acme.com"])
+11: 
+12:     def my_tool_fn(state):
+13:         return run_dangerous_thing(state)
+14: 
+15:     graph.add_node("tools", gate.wrap(my_tool_fn))
+16: 
+17: Async functions are supported transparently — the returned wrapper preserves
+18: sync vs. async semantics of the original. Use `tool_allowlist` to gate only
+19: specific tools, or `tool_denylist` to exempt specific tools; ungated tools
+20: call through directly with no approval round-trip.
+21: """
+22: 
+23: from __future__ import annotations
+24: 
+25: import asyncio
+26: import functools
+27: from typing import TYPE_CHECKING, Any
+28: 
+29: from ..client import SentinelClient
+30: from ..exceptions import ApprovalRejected
+31: 
+32: if TYPE_CHECKING:
+33:     from collections.abc import Callable, Iterable
+34: 
+35: 
+36: class SentinelToolGate:
+37:     """Wraps LangGraph node/tool callables so each call pauses for Sentinel
+38:     approval before executing."""
+39: 
+40:     def __init__(
+41:         self,
+42:         client: SentinelClient | None = None,
+43:         risk_level: str = "high",
+44:         approvers: list[str] | None = None,
+45:         timeout_seconds: float | None = None,
+46:         tool_allowlist: Iterable[str] | None = None,
+47:         tool_denylist: Iterable[str] | None = None,
+48:     ):
+49:         self.client = client or SentinelClient()
+50:         self.risk_level = risk_level
+51:         self.approvers = approvers
+52:         self.timeout_seconds = timeout_seconds
+53:         self.tool_allowlist = set(tool_allowlist) if tool_allowlist is not None else None
+54:         self.tool_denylist = set(tool_denylist) if tool_denylist is not None else None
+55: 
+56:     def _should_gate(self, tool_name: str) -> bool:
+57:         if self.tool_allowlist is not None:
+58:             return tool_name in self.tool_allowlist
+59:         if self.tool_denylist is not None:
+60:             return tool_name not in self.tool_denylist
+61:         return True
+62: 
+63:     def wrap(self, fn: Callable, function_name: str | None = None) -> Callable:
+64:         """Return a wrapper around ``fn`` that requires Sentinel approval
+65:         before each invocation. Preserves sync vs. async semantics."""
+66:         derived_name = function_name or getattr(fn, "__name__", "langgraph_tool")
+67: 
+68:         if not self._should_gate(derived_name):
+69:             return fn
+70: 
+71:         if asyncio.iscoroutinefunction(fn):
+72: 
+73:             @functools.wraps(fn)
+74:             async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+75:                 arguments = kwargs if kwargs else {"args": list(args)}
+76:                 approval = await self.client.acreate_approval(
+77:                     function_name=derived_name,
+78:                     arguments=arguments,
+79:                     risk_level=self.risk_level,
+80:                     approvers=self.approvers,
+81:                     timeout_seconds=self.timeout_seconds,
+82:                 )
+83:                 action_id = approval.get("action_id") or approval.get("id")
+84:                 decision = await self.client.await_for_decision(
+85:                     action_id, timeout=self.timeout_seconds
+86:                 )
+87:                 status = decision.get("status") or decision.get("decision")
+88:                 if status != "approved":
+89:                     raise ApprovalRejected(
+90:                         reason=decision.get("reason", "Tool execution not approved"),
+91:                         action_id=action_id,
+92:                     )
+93:                 return await fn(*args, **kwargs)
+94: 
+95:             return async_wrapper
+96: 
+97:         @functools.wraps(fn)
+98:         def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+99:             arguments = kwargs if kwargs else {"args": list(args)}
+100:             approval = self.client.create_approval(
+101:                 function_name=derived_name,
+102:                 arguments=arguments,
+103:                 risk_level=self.risk_level,
+104:                 approvers=self.approvers,
+105:                 timeout_seconds=self.timeout_seconds,
+106:             )
+107:             action_id = approval.get("action_id") or approval.get("id")
+108:             decision = self.client.wait_for_decision(action_id, timeout=self.timeout_seconds)
+109:             status = decision.get("status") or decision.get("decision")
+110:             if status != "approved":
+111:                 raise ApprovalRejected(
+112:                     reason=decision.get("reason", "Tool execution not approved"),
+113:                     action_id=action_id,
+114:                 )
+115:             return fn(*args, **kwargs)
+116: 
+117:         return sync_wrapper
+
+
+FILE sentinel/adapters/openai_agents.py
+1: """OpenAI Agents SDK adapter — wrap an Agents SDK tool with Sentinel approval.
+2: 
+3: Tools in the OpenAI Agents SDK (`openai-agents` package) are typically built
+4: with @function_tool, which produces a FunctionTool whose async
+5: `on_invoke_tool(ctx, args_json)` callback executes the tool. Wrap a tool with
+6: `gated()` to require human approval before each invocation:
+7: 
+8:     from agents import Agent, Runner, function_tool
+9:     from sentinel.adapters.openai_agents import gated
+10: 
+11:     @function_tool
+12:     def wire_transfer(amount: int, recipient: str) -> dict:
+13:         return stripe.transfers.create(amount=amount, destination=recipient)
+14: 
+15:     agent = Agent(
+16:         name="ops",
+17:         tools=[gated(wire_transfer, risk_level="high", approvers=["ops@acme.com"])],
+18:     )
+19:     result = Runner.run_sync(agent, "...")
+20: 
+21: The adapter swaps the tool's `on_invoke_tool` callback for one that pauses
+22: for Sentinel approval, so the Agents SDK calls the tool normally. Plain
+23: callables (functions not yet wrapped by @function_tool) are also accepted —
+24: they get the same gating applied directly. This module never imports
+25: `openai-agents`, so it works without the package installed and across
+26: versions.
+27: """
+28: 
+29: from __future__ import annotations
+30: 
+31: import asyncio
+32: import functools
+33: import json
+34: from typing import TYPE_CHECKING, Any
+35: 
+36: if TYPE_CHECKING:
+37:     from collections.abc import Callable
+38: 
+39: from ..client import SentinelClient
+40: from ..exceptions import ApprovalRejected
+41: 
+42: 
+43: def gated(
+44:     tool: Any,
+45:     *,
+46:     client: SentinelClient | None = None,
+47:     risk_level: str = "high",
+48:     approvers: list[str] | None = None,
+49:     timeout_seconds: float | None = None,
+50:     function_name: str | None = None,
+51: ) -> Any:
+52:     """Wrap an OpenAI Agents SDK tool (FunctionTool instance or plain
+53:     callable) so each invocation pauses for Sentinel approval.
+54: 
+55:     Returns the same FunctionTool object with its `on_invoke_tool` callback
+56:     gated, or a gated wrapper if a plain callable was passed.
+57:     """
+58:     sentinel_client = client or SentinelClient()
+59:     derived_name = function_name or _derive_tool_name(tool)
+60: 
+61:     if hasattr(tool, "on_invoke_tool") and callable(tool.on_invoke_tool):
+62:         original = tool.on_invoke_tool
+63: 
+64:         @functools.wraps(original)
+65:         async def gated_invoke(ctx: Any, args_json: str) -> Any:
+66:             arguments = _parse_arguments(args_json)
+67:             await _arequire_approval(
+68:                 sentinel_client,
+69:                 derived_name,
+70:                 arguments,
+71:                 risk_level=risk_level,
+72:                 approvers=approvers,
+73:                 timeout_seconds=timeout_seconds,
+74:             )
+75:             return await original(ctx, args_json)
+76: 
+77:         tool.on_invoke_tool = gated_invoke
+78:         return tool
+79: 
+80:     if callable(tool):
+81:         return _wrap_plain_callable(
+82:             tool,
+83:             sentinel_client,
+84:             derived_name,
+85:             risk_level=risk_level,
+86:             approvers=approvers,
+87:             timeout_seconds=timeout_seconds,
+88:         )
+89: 
+90:     raise TypeError(
+91:         f"Don't know how to gate {type(tool).__name__}. "
+92:         "Pass a FunctionTool (from @function_tool) or a plain callable."
+93:     )
+94: 
+95: 
+96: def _wrap_plain_callable(
+97:     fn: Callable,
+98:     sentinel_client: SentinelClient,
+99:     derived_name: str,
+100:     *,
+101:     risk_level: str,
+102:     approvers: list[str] | None,
+103:     timeout_seconds: float | None,
+104: ) -> Callable:
+105:     if asyncio.iscoroutinefunction(fn):
+106: 
+107:         @functools.wraps(fn)
+108:         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+109:             arguments = kwargs if kwargs else {"args": list(args)}
+110:             await _arequire_approval(
+111:                 sentinel_client,
+112:                 derived_name,
+113:                 arguments,
+114:                 risk_level=risk_level,
+115:                 approvers=approvers,
+116:                 timeout_seconds=timeout_seconds,
+117:             )
+118:             return await fn(*args, **kwargs)
+119: 
+120:         return async_wrapper
+121: 
+122:     @functools.wraps(fn)
+123:     def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+124:         arguments = kwargs if kwargs else {"args": list(args)}
+125:         approval = sentinel_client.create_approval(
+126:             function_name=derived_name,
+127:             arguments=arguments,
+128:             risk_level=risk_level,
+129:             approvers=approvers,
+130:             timeout_seconds=timeout_seconds,
+131:         )
+132:         action_id = approval.get("action_id") or approval.get("id")
+133:         decision = sentinel_client.wait_for_decision(action_id, timeout=timeout_seconds)
+134:         status = decision.get("status") or decision.get("decision")
+135:         if status != "approved":
+136:             raise ApprovalRejected(
+137:                 reason=decision.get("reason", "Tool execution not approved"),
+138:                 action_id=action_id,
+139:             )
+140:         return fn(*args, **kwargs)
+141: 
+142:     return sync_wrapper
+143: 
+144: 
+145: async def _arequire_approval(
+146:     sentinel_client: SentinelClient,
+147:     derived_name: str,
+148:     arguments: dict[str, Any],
+149:     *,
+150:     risk_level: str,
+151:     approvers: list[str] | None,
+152:     timeout_seconds: float | None,
+153: ) -> None:
+154:     approval = await sentinel_client.acreate_approval(
+155:         function_name=derived_name,
+156:         arguments=arguments,
+157:         risk_level=risk_level,
+158:         approvers=approvers,
+159:         timeout_seconds=timeout_seconds,
+160:     )
+161:     action_id = approval.get("action_id") or approval.get("id")
+162:     decision = await sentinel_client.await_for_decision(action_id, timeout=timeout_seconds)
+163:     status = decision.get("status") or decision.get("decision")
+164:     if status != "approved":
+165:         raise ApprovalRejected(
+166:             reason=decision.get("reason", "Tool execution not approved"),
+167:             action_id=action_id,
+168:         )
+169: 
+170: 
+171: def _parse_arguments(args_json: Any) -> dict[str, Any]:
+172:     """on_invoke_tool receives the tool arguments as a JSON string."""
+173:     if isinstance(args_json, dict):
+174:         return args_json
+175:     if not args_json:
+176:         return {}
+177:     try:
+178:         parsed = json.loads(args_json)
+179:     except (TypeError, ValueError):
+180:         return {"raw": str(args_json)}
+181:     if isinstance(parsed, dict):
+182:         return parsed
+183:     return {"args": parsed}
+184: 
+185: 
+186: def _derive_tool_name(tool: Any) -> str:
+187:     for attr in ("name", "tool_name", "__name__"):
+188:         value = getattr(tool, attr, None)
+189:         if isinstance(value, str) and value:
+190:             return value
+191:     return "openai_agents_tool"
+

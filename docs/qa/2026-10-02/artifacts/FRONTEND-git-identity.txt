@@ -1,0 +1,12 @@
+UTC start: 2026-10-03T01:50:39+00:00
+Command: python3 -c 'import subprocess; [(print(x), subprocess.run(x.split(), check=False)) for x in ["git worktree list", "git status --short --branch", "git remote -v"]]'
+Exit: 0
+
+/Users/sellers/Projects/qa-sweep-2026-10-02/sentinel-sdk c302fe8 [qa/2026-10-02-sweep]
+## qa/2026-10-02-sweep
+?? docs/
+origin	https://github.com/PetrefiedThunder/sentinel-sdk.git (fetch) [blob:none]
+origin	https://github.com/PetrefiedThunder/sentinel-sdk.git (push)
+git worktree list
+git status --short --branch
+git remote -v

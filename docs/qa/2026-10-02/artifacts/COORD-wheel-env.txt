@@ -1,0 +1,6 @@
+UTC start: 2026-10-03T01:52:43+00:00
+Command: uv venv --python 3.11 /private/tmp/sentinel-qa-wheel-env
+Exit: 0
+
+Using CPython 3.11.15
+Creating virtual environment at: /private/tmp/sentinel-qa-wheel-env

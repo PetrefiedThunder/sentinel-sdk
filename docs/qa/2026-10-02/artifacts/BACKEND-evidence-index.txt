@@ -1,0 +1,52 @@
+UTC start: 2026-10-03T01:54:27+00:00
+Command: python3 -c 'from pathlib import Path; files=sorted(Path("docs/qa/2026-10-02/artifacts").glob("BACKEND-*.txt")); [(print(p.name),print("\n".join(p.read_text().splitlines()[:3]))) for p in files]'
+Exit: 0
+
+BACKEND-core-source.txt
+UTC start: 2026-10-03T01:50:36+00:00
+Command: python3 -c 'from pathlib import Path; files=["pyproject.toml","sentinel/client.py","sentinel/decorator.py","sentinel/config.py","sentinel/exceptions.py","sentinel/__init__.py"]; [(print("FILE",f),print("".join(f"{i}: {line}" for i,line in enumerate(Path(f).read_text().splitlines(keepends=True),1)))) for f in files]'
+Exit: 0
+BACKEND-existing-tests.txt
+UTC start: 2026-10-03T01:50:41+00:00
+Command: python3 -c 'from pathlib import Path; files=["tests/test_decorator.py","tests/test_idempotency.py","tests/test_list_and_timeout.py","tests/test_serializable.py"]; [(print("FILE",f),print("".join(f"{i}: {line}" for i,line in enumerate(Path(f).read_text().splitlines(keepends=True),1)))) for f in files]'
+Exit: 0
+BACKEND-focused-corrected.txt
+UTC start: 2026-10-03T01:53:25+00:00
+Command: .venv/bin/python -m pytest tests/test_qa_backend.py -q -rxX
+Exit: 0
+BACKEND-focused-final.txt
+UTC start: 2026-10-03T01:54:09+00:00
+Command: .venv/bin/python -m pytest tests/test_qa_backend.py -q -rxX
+Exit: 0
+BACKEND-focused-initial.txt
+UTC start: 2026-10-03T01:52:37+00:00
+Command: .venv/bin/python -m pytest tests/test_qa_backend.py -q -rxX
+Exit: 1
+BACKEND-format-new-tests.txt
+UTC start: 2026-10-03T01:54:09+00:00
+Command: .venv/bin/ruff format tests/test_qa_backend.py
+Exit: 0
+BACKEND-harness-and-ready.txt
+UTC start: 2026-10-03T01:51:20+00:00
+Command: python3 -c 'from pathlib import Path; print("venv_ready",Path(".venv/bin/python").exists()); p=Path("tests/conftest.py"); print(p.read_text() if p.exists() else "no tests/conftest.py"); p=Path("docs/qa/2026-10-02/artifacts/qa_run.py"); print(p.read_text())'
+Exit: 0
+BACKEND-initial-identity.txt
+UTC start: 2026-10-03T01:50:26+00:00
+Command: pwd
+Exit: 0
+BACKEND-negative-controls.txt
+UTC start: 2026-10-03T01:54:14+00:00
+Command: .venv/bin/python -m pytest tests/test_qa_backend.py --runxfail -q --tb=short -k 'legacy_wait_paces_pending_requests or late_approval_does_not_bypass_deadline or decorator_closes_client_on_every_exit or timeout_fallback_exception_is_audited or execution_arguments_match_approved_snapshot or config_repr_omits_credential'
+Exit: 1
+BACKEND-repo-identity.txt
+UTC start: 2026-10-03T01:50:32+00:00
+Command: python3 -c 'import subprocess; cmds=[["git","worktree","list"],["git","status","--short","--branch"],["git","remote","get-url","origin"],["rg","--files","-g","AGENTS.md","-g","pyproject.toml","-g","*.py","-g","README.md"]]; [(print("COMMAND",x,flush=True),subprocess.run(x,check=False)) for x in cmds]'
+Exit: 0
+BACKEND-tests-lint-final.txt
+UTC start: 2026-10-03T01:54:10+00:00
+Command: .venv/bin/ruff check tests/test_qa_backend.py
+Exit: 0
+BACKEND-tests-lint.txt
+UTC start: 2026-10-03T01:53:26+00:00
+Command: .venv/bin/ruff check tests/test_qa_backend.py
+Exit: 1

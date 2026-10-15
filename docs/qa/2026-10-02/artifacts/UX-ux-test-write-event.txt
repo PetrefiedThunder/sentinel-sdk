@@ -1,0 +1,4 @@
+UTC start: 2026-10-03T01:52:17+00:00
+Command: python3 -c 'from datetime import datetime, timezone; from pathlib import Path; p=Path("docs/qa/2026-10-02/UX-LOG.md"); p.write_text(p.read_text()+"- "+datetime.now(timezone.utc).isoformat()+" — apply_patch added tests/test_qa_dx.py: README quickstart executed with mocked approvals and payment symbol, negative rejection path, configuration-table parameters, pre-network missing-key recovery, and preserved function metadata. UX-001 and UX-002 are strict expected failures; no product code edited.\n")'
+Exit: 0
+

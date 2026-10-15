@@ -1,0 +1,149 @@
+UTC start: 2026-10-03T01:55:01+00:00
+Command: .venv/bin/python -m pytest --runxfail -q 'tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[rejected-invoke]' tests/test_qa_backend.py::test_execution_arguments_match_approved_snapshot 'tests/test_qa_backend.py::test_late_approval_does_not_bypass_deadline[sync]' tests/test_qa_backend.py::test_config_repr_omits_credential
+Exit: 1
+
+FFFF                                                                     [100%]
+=================================== FAILURES ===================================
+__ test_real_langchain_tool_does_not_run_after_gate_failure[rejected-invoke] ___
+
+asynchronous = False, failure = 'rejected'
+
+    @pytest.mark.xfail(
+        strict=True,
+        raises=AssertionError,
+        reason="FE-001: LangChain swallows callback rejection and runs tool",
+    )
+    @pytest.mark.parametrize("asynchronous", [False, True], ids=["invoke", "ainvoke"])
+    @pytest.mark.parametrize("failure", ["rejected", "timeout", "transport_error"])
+    def test_real_langchain_tool_does_not_run_after_gate_failure(asynchronous, failure):
+        pytest.importorskip("langchain_core")
+        from langchain_core.tools import tool
+    
+        from sentinel.adapters.langchain import SentinelCallbackHandler
+    
+        calls = []
+    
+        @tool
+        def local_action(value: int) -> str:
+            """Record a local action without contacting any external service."""
+            calls.append(value)
+            return "executed"
+    
+        client = _client({"status": "rejected", "reason": "qa denied"})
+        if failure == "timeout":
+            client.wait_for_decision.side_effect = ApprovalTimeout("qa-action", 1)
+        elif failure == "transport_error":
+            client.create_approval.side_effect = ConnectionError("qa local connection failure")
+        config = {"callbacks": [SentinelCallbackHandler(client=client)]}
+        try:
+            if asynchronous:
+                asyncio.run(local_action.ainvoke({"value": 7}, config=config))
+            else:
+                local_action.invoke({"value": 7}, config=config)
+        except (ApprovalRejected, ApprovalTimeout, ConnectionError):
+            pass
+        client.create_approval.assert_called_once()
+>       assert calls == []
+E       assert [7] == []
+E         
+E         Left contains one more item: 7
+E         Use -v to get more diff
+
+tests/test_qa_adapters.py:199: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  langchain_core.callbacks.manager:manager.py:341 Error in SentinelCallbackHandler.on_tool_start callback: ApprovalRejected('qa denied')
+_______________ test_execution_arguments_match_approved_snapshot _______________
+
+client_factory = <function client_factory.<locals>.make at 0x10cc84f40>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10cbcf590>
+
+    @pytest.mark.asyncio
+    @pytest.mark.xfail(
+        strict=True,
+        raises=AssertionError,
+        reason="BE-004: mutable arguments can change while approval is pending",
+    )
+    async def test_execution_arguments_match_approved_snapshot(client_factory, monkeypatch):
+        approval_requested = asyncio.Event()
+        mutation_done = asyncio.Event()
+        observed = {}
+        arguments = {"amount": 10}
+    
+        async def handler(request):
+            if request.url.path == "/v1/approvals":
+                observed["approved"] = json.loads(request.content)["arguments"]["payload"]["amount"]
+                return httpx.Response(200, json={"action_id": "action"})
+            if request.url.path.endswith("/wait"):
+                approval_requested.set()
+                await mutation_done.wait()
+                return httpx.Response(200, json={"status": "approved"})
+            return httpx.Response(200, json={})
+    
+        client = client_factory(handler)
+        monkeypatch.setattr(decorator_module, "SentinelClient", lambda config: client)
+    
+        @oversight()
+        async def operation(payload):
+            observed["executed"] = payload["amount"]
+    
+        async def concurrent_mutation():
+            await approval_requested.wait()
+            arguments["amount"] = 999
+            mutation_done.set()
+    
+        await asyncio.gather(operation(arguments), concurrent_mutation())
+>       assert observed["executed"] == observed["approved"]
+E       assert 999 == 10
+
+tests/test_qa_backend.py:362: AssertionError
+______________ test_late_approval_does_not_bypass_deadline[sync] _______________
+
+client_factory = <function client_factory.<locals>.make at 0x10cc86480>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ca16050>
+mode = 'sync'
+
+    @pytest.mark.parametrize("mode", ["sync", "async"])
+    @pytest.mark.xfail(
+        strict=True,
+        raises=AssertionError,
+        reason="BE-005: an approved response after the deadline is accepted",
+    )
+    def test_late_approval_does_not_bypass_deadline(client_factory, monkeypatch, mode):
+        clock = {"now": 100}
+        monkeypatch.setattr(client_module, "time", SimpleNamespace(monotonic=lambda: clock["now"]))
+    
+        def handler(request):
+            clock["now"] = 102
+            return httpx.Response(200, json={"status": "approved"})
+    
+        try:
+            invoke(client_factory(handler), mode, "wait_for_decision", "action", timeout=1)
+        except ApprovalTimeout:
+            return
+>       assert False, "approval returned after the caller's one-second deadline"
+E       AssertionError: approval returned after the caller's one-second deadline
+E       assert False
+
+tests/test_qa_backend.py:173: AssertionError
+______________________ test_config_repr_omits_credential _______________________
+
+    @pytest.mark.xfail(
+        strict=True, raises=AssertionError, reason="BE-006: config repr contains the credential value"
+    )
+    def test_config_repr_omits_credential():
+        synthetic_marker = "qa-only-credential-marker"
+        config = SentinelConfig(api_key=synthetic_marker, api_url="https://one.invalid")
+>       assert synthetic_marker not in repr(config)
+E       assert 'qa-only-credential-marker' not in "SentinelCon...ck='reject')"
+E         
+E         'qa-only-credential-marker' is contained here:
+E            api_key='qa-only-credential-marker', timeout_seconds=300.0, poll_interval=2.0, fallback='reject')
+E         ?           +++++++++++++++++++++++++
+
+tests/test_qa_backend.py:499: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_qa_adapters.py::test_real_langchain_tool_does_not_run_after_gate_failure[rejected-invoke]
+FAILED tests/test_qa_backend.py::test_execution_arguments_match_approved_snapshot
+FAILED tests/test_qa_backend.py::test_late_approval_does_not_bypass_deadline[sync]
+FAILED tests/test_qa_backend.py::test_config_repr_omits_credential - assert '...
+4 failed in 0.16s

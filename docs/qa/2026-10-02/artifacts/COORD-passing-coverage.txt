@@ -1,0 +1,29 @@
+UTC start: 2026-10-03T01:56:22+00:00
+Command: .venv/bin/python -m pytest tests -m 'not xfail' --cov=sentinel --cov-branch --cov-report=term-missing --cov-report=json:docs/qa/2026-10-02/artifacts/coverage-passing-only.json -q
+Exit: 0
+
+........................................................................ [ 37%]
+........................................................................ [ 75%]
+................................................                         [100%]
+================================ tests coverage ================================
+______________ coverage: platform darwin, python 3.11.15-final-0 _______________
+
+Name                                   Stmts   Miss Branch BrPart  Cover   Missing
+----------------------------------------------------------------------------------
+sentinel/__init__.py                       6      0      0      0   100%
+sentinel/adapters/__init__.py              0      0      0      0   100%
+sentinel/adapters/anthropic.py            57      4     16      3    90%   82, 110->112, 168, 173-174
+sentinel/adapters/autogen.py              34      1      6      1    95%   69
+sentinel/adapters/crewai.py               39      5     16      4    84%   83-84, 94, 97, 108
+sentinel/adapters/langchain.py            28      3      4      1    88%   25-26, 36
+sentinel/adapters/langgraph.py            47      0     12      0   100%
+sentinel/adapters/openai_agents.py        66      1     20      1    98%   174
+sentinel/adapters/semantic_kernel.py      54      4     14      2    91%   135, 152, 155-156
+sentinel/client.py                       221      5     44     10    94%   104, 127->exit, 132->exit, 215, 220->202, 360->362, 362->364, 388, 393->376, 450, 452
+sentinel/config.py                        26      2      0      0    92%   16-17
+sentinel/decorator.py                     95     15     24      5    83%   21, 29, 32, 81-87, 94-98, 130-136, 143-147
+sentinel/exceptions.py                    23      0      4      1    96%   18->20
+----------------------------------------------------------------------------------
+TOTAL                                    696     40    160     28    92%
+Coverage JSON written to file docs/qa/2026-10-02/artifacts/coverage-passing-only.json
+192 passed, 32 deselected in 0.83s

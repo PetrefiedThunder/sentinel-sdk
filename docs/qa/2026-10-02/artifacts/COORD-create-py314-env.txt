@@ -1,0 +1,6 @@
+UTC start: 2026-10-03T01:54:04+00:00
+Command: uv venv --python /opt/homebrew/bin/python3 /private/tmp/sentinel-qa-py314-env
+Exit: 0
+
+Using CPython 3.14.5 interpreter at: /opt/homebrew/opt/python@3.14/bin/python3.14
+Creating virtual environment at: /private/tmp/sentinel-qa-py314-env

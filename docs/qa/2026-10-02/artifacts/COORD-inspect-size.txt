@@ -1,0 +1,27 @@
+UTC start: 2026-10-03T01:50:48+00:00
+Command: python3 -c 'from pathlib import Path; import subprocess; files=subprocess.check_output(["git","ls-files"],text=True).splitlines(); print("Tracked files:",len(files)); [(print(p,len(Path(p).read_text().splitlines()))) for p in files if p.endswith(".py")]; print("Schema/browser files:",[p for p in files if any(w in p.lower() for w in ["openapi","schema","package.json","html","jsx","tsx","playwright"])])'
+Exit: 0
+
+Tracked files: 36
+sentinel/__init__.py 29
+sentinel/adapters/__init__.py 0
+sentinel/adapters/anthropic.py 174
+sentinel/adapters/autogen.py 95
+sentinel/adapters/crewai.py 108
+sentinel/adapters/langchain.py 71
+sentinel/adapters/langgraph.py 117
+sentinel/adapters/openai_agents.py 191
+sentinel/adapters/semantic_kernel.py 157
+sentinel/client.py 472
+sentinel/config.py 44
+sentinel/decorator.py 156
+sentinel/exceptions.py 43
+tests/__init__.py 0
+tests/test_decorator.py 58
+tests/test_idempotency.py 162
+tests/test_langgraph_adapter.py 154
+tests/test_list_and_timeout.py 161
+tests/test_openai_agents_adapter.py 160
+tests/test_semantic_kernel_adapter.py 164
+tests/test_serializable.py 41
+Schema/browser files: []

@@ -1,0 +1,24 @@
+UTC start: 2026-10-03T01:54:09+00:00
+Command: .venv/bin/python -m pytest tests/test_qa_backend.py -q -rxX
+Exit: 0
+
+...............................xxxx.................xxxxxxxxxxx......... [ 81%]
+...............x                                                         [100%]
+=========================== short test summary info ============================
+XFAIL tests/test_qa_backend.py::test_legacy_wait_paces_pending_requests[sync] - BE-001: legacy polling ignores poll_interval
+XFAIL tests/test_qa_backend.py::test_legacy_wait_paces_pending_requests[async] - BE-001: legacy polling ignores poll_interval
+XFAIL tests/test_qa_backend.py::test_late_approval_does_not_bypass_deadline[sync] - BE-005: an approved response after the deadline is accepted
+XFAIL tests/test_qa_backend.py::test_late_approval_does_not_bypass_deadline[async] - BE-005: an approved response after the deadline is accepted
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[approved-sync] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[approved-async] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[rejected-sync] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[rejected-async] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[timeout-sync] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[timeout-async] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[operation-error-sync] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_decorator_closes_client_on_every_exit[operation-error-async] - BE-002: decorator-owned clients are never closed
+XFAIL tests/test_qa_backend.py::test_timeout_fallback_exception_is_audited[sync] - BE-003: failing timeout fallback does not emit audit evidence
+XFAIL tests/test_qa_backend.py::test_timeout_fallback_exception_is_audited[async] - BE-003: failing timeout fallback does not emit audit evidence
+XFAIL tests/test_qa_backend.py::test_execution_arguments_match_approved_snapshot - BE-004: mutable arguments can change while approval is pending
+XFAIL tests/test_qa_backend.py::test_config_repr_omits_credential - BE-006: config repr contains the credential value
+72 passed, 16 xfailed in 0.56s

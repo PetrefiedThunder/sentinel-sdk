@@ -1,0 +1,5 @@
+UTC start: 2026-10-03T01:58:56+00:00
+Command: python3 -
+Exit: 0
+
+Copied 198 explicit source/QA files; no .git, environment, credentials or ignored environments.

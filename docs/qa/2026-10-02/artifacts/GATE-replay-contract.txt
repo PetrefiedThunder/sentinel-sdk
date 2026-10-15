@@ -1,0 +1,25 @@
+UTC start: 2026-10-03T01:55:15+00:00
+Command: rg -n 'idempoten|replay|once|thread.safe|audit|execute|fallback' README.md tests/test_idempotency.py SECURITY.md
+Exit: 0
+
+SECURITY.md:32:- Webhook signing, magic-link tokens, audit-log integrity
+tests/test_idempotency.py:43:    client.create_approval(function_name="transfer", arguments={"a": 1}, idempotency_key="key-123")
+tests/test_idempotency.py:57:    client.create_approval(function_name="transfer", arguments={"a": 1}, idempotency_key="key-123")
+tests/test_idempotency.py:68:        function_name="transfer", arguments={"a": 1}, idempotency_key="akey-456"
+tests/test_idempotency.py:90:    @oversight(idempotency_key="fixed-key")
+tests/test_idempotency.py:97:        assert call.kwargs["idempotency_key"] == "fixed-key"
+tests/test_idempotency.py:113:    @oversight(idempotency_key=keygen)
+tests/test_idempotency.py:119:    keys = [c.kwargs["idempotency_key"] for c in mock_client.create_approval.call_args_list]
+tests/test_idempotency.py:136:    assert "idempotency_key" not in mock_client.create_approval.call_args.kwargs
+tests/test_idempotency.py:146:    mock_client.aemit_audit_event = AsyncMock()
+tests/test_idempotency.py:155:    @oversight(idempotency_key=keygen)
+tests/test_idempotency.py:161:    keys = [c.kwargs["idempotency_key"] for c in mock_client.acreate_approval.call_args_list]
+README.md:12:approval, and only runs once a human approves.
+README.md:50:`timeout_seconds` → `ApprovalTimeout` is raised (unless `fallback="execute"`).
+README.md:135:Pass `idempotency_key` to safely retry approval creation. The same tenant + key
+README.md:136:replays the original response; reusing a key with a different body returns 409.
+README.md:142:    idempotency_key="transfer-2026-06-09-001",
+README.md:146:`@oversight(idempotency_key=...)` also accepts a callable, invoked once per call.
+README.md:158:| `SENTINEL_FALLBACK`     | `reject`                        | `reject` or `execute` on timeout       |
+README.md:180:Every approval creates a hash-chained audit trail. Fetch it:
+README.md:185:events = client.list_audit_events(action_id="act_…")  # or omit for full log

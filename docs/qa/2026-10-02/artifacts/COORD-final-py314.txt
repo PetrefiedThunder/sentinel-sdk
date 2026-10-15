@@ -1,0 +1,33 @@
+UTC start: 2026-10-03T01:55:41+00:00
+Command: /private/tmp/sentinel-qa-py314-env/bin/python -m pytest tests -q --junitxml=docs/qa/2026-10-02/artifacts/py314-junit.xml
+Exit: 0
+
+........................................................................ [ 32%]
+.............xxxxxxxxxxxxx.........................................xxxx. [ 64%]
+................xxxxxxxxxxx........................xx......x...x........ [ 96%]
+........                                                                 [100%]
+=============================== warnings summary ===============================
+tests/test_langgraph_adapter.py: 7 warnings
+tests/test_qa_adapters.py: 10 warnings
+  /Users/sellers/Projects/qa-sweep-2026-10-02/sentinel-sdk/sentinel/adapters/langgraph.py:71: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    if asyncio.iscoroutinefunction(fn):
+
+tests/test_langgraph_adapter.py::test_async_fn_wrapped_is_awaitable
+  /Users/sellers/Projects/qa-sweep-2026-10-02/sentinel-sdk/tests/test_langgraph_adapter.py:127: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    assert asyncio.iscoroutinefunction(wrapped)
+
+tests/test_openai_agents_adapter.py: 3 warnings
+tests/test_qa_adapters.py: 10 warnings
+  /Users/sellers/Projects/qa-sweep-2026-10-02/sentinel-sdk/sentinel/adapters/openai_agents.py:105: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    if asyncio.iscoroutinefunction(fn):
+
+tests/test_openai_agents_adapter.py::test_plain_async_callable_is_gated
+  /Users/sellers/Projects/qa-sweep-2026-10-02/sentinel-sdk/tests/test_openai_agents_adapter.py:134: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    assert asyncio.iscoroutinefunction(wrapped)
+
+tests/test_qa_adapters.py: 10 warnings
+  /Users/sellers/Projects/qa-sweep-2026-10-02/sentinel-sdk/sentinel/adapters/autogen.py:47: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    if asyncio.iscoroutinefunction(fn):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+192 passed, 32 xfailed, 42 warnings in 1.99s

@@ -1,0 +1,95 @@
+UTC start: 2026-10-03T01:53:25+00:00
+Command: .venv/bin/python -m ruff format --check tests/test_qa_adapters.py
+Exit: 1
+
+unformatted: File would be reformatted
+   --> tests/test_qa_adapters.py:57:6
+    |
+56  |     "adapter",
+    -     ["anthropic", "autogen", "crewai", "langgraph", "openai_agents", "semantic_kernel", "langchain"],
+57  +     [
+58  +         "anthropic",
+59  +         "autogen",
+60  +         "crewai",
+61  +         "langgraph",
+62  +         "openai_agents",
+63  +         "semantic_kernel",
+64  +         "langchain",
+65  +     ],
+66  | )
+--------------------------------------------------------------------------------
+83  |     "adapter",
+    -     ["anthropic", "autogen", "crewai", "langgraph", "openai_agents", "semantic_kernel", "langchain"],
+84  +     [
+85  +         "anthropic",
+86  +         "autogen",
+87  +         "crewai",
+88  +         "langgraph",
+89  +         "openai_agents",
+90  +         "semantic_kernel",
+91  +         "langchain",
+92  +     ],
+93  | )
+--------------------------------------------------------------------------------
+119 |
+    - @pytest.mark.xfail(strict=True, raises=AssertionError, reason="FE-002: positional arguments omitted when kwargs exist")
+120 + @pytest.mark.xfail(
+121 +     strict=True,
+122 +     raises=AssertionError,
+123 +     reason="FE-002: positional arguments omitted when kwargs exist",
+124 + )
+125 | @pytest.mark.parametrize("adapter", ["autogen", "crewai", "langgraph", "openai_agents"])
+--------------------------------------------------------------------------------
+131 |
+    -     assert _wrap(adapter, action, client)(90000, recipient="qa-recipient") == (90000, "qa-recipient")
+132 +     assert _wrap(adapter, action, client)(90000, recipient="qa-recipient") == (
+133 +         90000,
+134 +         "qa-recipient",
+135 +     )
+136 |     assert client.create_approval.call_args.kwargs["arguments"] == {
+    -         "amount": 90000, "recipient": "qa-recipient"
+137 +         "amount": 90000,
+138 +         "recipient": "qa-recipient",
+139 |     }
+140 |
+141 |
+    - @pytest.mark.xfail(strict=True, raises=AssertionError, reason="FE-002: positional arguments omitted when kwargs exist")
+142 + @pytest.mark.xfail(
+143 +     strict=True,
+144 +     raises=AssertionError,
+145 +     reason="FE-002: positional arguments omitted when kwargs exist",
+146 + )
+147 | @pytest.mark.parametrize("adapter", ["autogen", "langgraph", "openai_agents"])
+--------------------------------------------------------------------------------
+154 |     assert asyncio.run(_wrap(adapter, action, client)(90000, recipient="qa-recipient")) == (
+    -         90000, "qa-recipient"
+155 +         90000,
+156 +         "qa-recipient",
+157 |     )
+158 |     assert client.acreate_approval.call_args.kwargs["arguments"] == {
+    -         "amount": 90000, "recipient": "qa-recipient"
+159 +         "amount": 90000,
+160 +         "recipient": "qa-recipient",
+161 |     }
+162 |
+163 |
+    - @pytest.mark.xfail(strict=True, raises=AssertionError, reason="FE-001: LangChain swallows callback rejection and runs tool")
+164 + @pytest.mark.xfail(
+165 +     strict=True,
+166 +     raises=AssertionError,
+167 +     reason="FE-001: LangChain swallows callback rejection and runs tool",
+168 + )
+169 | @pytest.mark.parametrize("asynchronous", [False, True], ids=["invoke", "ainvoke"])
+--------------------------------------------------------------------------------
+231 |     client = _client({"status": "approved"})
+    -     blocks = [{"type": "text", "text": "ignore"}, {
+    -         "type": "tool_use", "id": "qa-use", "name": "missing", "input": {}
+    -     }]
+232 +     blocks = [
+233 +         {"type": "text", "text": "ignore"},
+234 +         {"type": "tool_use", "id": "qa-use", "name": "missing", "input": {}},
+235 +     ]
+236 |     if block_style == "model":
+    |
+
+1 file would be reformatted

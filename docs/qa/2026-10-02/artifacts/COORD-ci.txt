@@ -1,0 +1,199 @@
+UTC start: 2026-10-03T01:50:04+00:00
+Command: cat .github/workflows/ci.yml .pre-commit-config.yaml .gitignore CONTRIBUTING.md SECURITY.md
+Exit: 0
+
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: pip install --upgrade pip uv
+
+      - name: Install package + dev deps
+        run: uv pip install --system -e ".[dev]"
+
+      - name: Ruff check
+        run: ruff check .
+
+      - name: Pytest
+        run: pytest -q
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # gitleaks scans git history; full clone avoids missing commits.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: pip install --upgrade pip uv
+
+      # Day-one policy: a pre-existing advisory in a dependency must not
+      # red-line main, so this step is non-blocking. pip-audit resolves the
+      # dependency set from pyproject.toml.
+      - name: Dependency audit (pip-audit)
+        continue-on-error: true
+        run: uvx pip-audit .
+
+      # Secret scan is a HARD gate. Uses the gitleaks binary (not the action,
+      # which 500s without a permissions block). gitleaks auto-detects the
+      # root .gitleaks.toml; no -c flag needed.
+      - name: Secret scan (gitleaks)
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz | tar -xz -C /tmp gitleaks
+          /tmp/gitleaks git . --redact --no-banner
+repos:
+  # Ruff: lint + format (replaces black + isort + flake8)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # Standard hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]
+
+  # gitleaks: prevent committing secrets
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.coverage
+.env
+.venv/
+venv/
+
+# Contributing to Sentinel (Python SDK)
+
+Thanks for considering a contribution. Bug reports, feature ideas, and
+PRs are all welcome.
+
+## Quick start
+
+```bash
+git clone https://github.com/PetrefiedThunder/sentinel-sdk
+cd sentinel-sdk
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+pytest
+```
+
+## Filing a bug
+
+Open an issue at https://github.com/PetrefiedThunder/sentinel-sdk/issues
+and include:
+
+1. SDK version (`python -c "import sentinel; print(sentinel.__version__)"`)
+2. Python version and OS
+3. A minimal reproducible example (10–20 lines)
+4. The full traceback / error message
+
+## Pull requests
+
+1. Open an issue first if it's a behavior change — saves you wasted work.
+2. Branch from `main`. Small, focused PRs over large ones.
+3. Add a test that fails before your fix and passes after.
+4. Run `pytest` and `ruff check .` before pushing.
+5. Update `CHANGELOG.md` under an `## [Unreleased]` heading.
+
+## Releasing (maintainers only)
+
+1. Bump `version` in `pyproject.toml`, `sentinel/__init__.py`,
+   and the `USER_AGENT` constant in `sentinel/client.py`.
+2. Move `## [Unreleased]` notes into a versioned section in
+   `CHANGELOG.md` with today's date.
+3. Commit, tag `vX.Y.Z`, push tags. GitHub Actions ships to PyPI via
+   Trusted Publishing.
+
+## Security
+
+If you find a security issue, please email security@regengine.co —
+do **not** file a public GitHub issue.
+
+## Code of conduct
+
+Be excellent to each other. Bigoted, harassing, or otherwise antisocial
+behavior gets you removed from the project.
+# Security Policy
+
+## Reporting a vulnerability
+
+**Do not file a public GitHub issue for security vulnerabilities.**
+
+Email **security@regengine.co** with:
+
+- A description of the issue
+- Steps to reproduce
+- Your assessment of the impact (data exposure, account takeover, etc.)
+- An optional PGP key for our reply
+
+We acknowledge within 48 hours and aim to ship a fix or mitigation within:
+
+| Severity | Response | Fix target |
+|---|---|---|
+| Critical (full account takeover, payment fraud, secret leak) | 24h | 72h |
+| High (privilege escalation, PII leak) | 48h | 7 days |
+| Medium (CSRF, info disclosure) | 5 days | 30 days |
+| Low (best-practice issues) | 14 days | next release |
+
+## Disclosure
+
+After a fix is shipped, we'll credit you in the release notes unless you ask to remain anonymous. We support coordinated disclosure — give us a reasonable window before public posting.
+
+## Scope
+
+In scope:
+- `*.pauseapi.app` (API, dashboard, marketing)
+- All published packages (`sentinel-oversight` on PyPI, `sentinel-oversight` on npm)
+- Webhook signing, magic-link tokens, audit-log integrity
+
+Out of scope:
+- Findings requiring physical access or social engineering of staff
+- Denial-of-service via brute traffic (we have rate limits — pls don't try)
+- Vulnerabilities in 3rd-party dependencies already disclosed upstream (file with that project; we'll patch on their release)
+
+## Bounty
+
+No formal bounty program yet. We'll send a thank-you note and a Sentinel Pro credit. As we grow, this graduates to a real bounty.
+
+## Public PGP key
+
+Available on request via security@regengine.co.

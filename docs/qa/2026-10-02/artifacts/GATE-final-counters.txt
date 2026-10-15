@@ -1,0 +1,24 @@
+UTC start: 2026-10-03T01:58:50+00:00
+Command: python3 -c 'from pathlib import Path; import json,re; base=Path("docs/qa/2026-10-02"); names=["coverage-before.json","coverage-after.json","coverage-passing-only.json"]; [(print(name),print(json.loads((base/"artifacts"/name).read_text())["totals"])) for name in names]; runs=["COORD-final-coverage.txt","COORD-final-dev-only.txt","COORD-final-py314.txt","COORD-passing-coverage.txt"]; [(print(name),print("\n".join(line for line in (base/"artifacts"/name).read_text().splitlines() if re.search(r"[0-9]+ passed|[0-9]+ warnings",line)))) for name in runs]; missing=[]; docs=[base/name for name in ["PLAN.md","FINDINGS.md","COVERAGE.md","SUMMARY.md","SESSION-LOG.md"]]; [(missing.append((str(p),target))) for p in docs for target in re.findall(r"\]\(([^)]+)\)",p.read_text()) if not target.startswith(("https:","http:","#")) and not (p.parent/target.split("#")[0]).exists()]; print("missing_links",missing)'
+Exit: 0
+
+coverage-before.json
+{'covered_lines': 384, 'num_statements': 696, 'percent_covered': 53.62149532710281, 'percent_covered_display': '54', 'missing_lines': 312, 'excluded_lines': 14, 'percent_statements_covered': 55.172413793103445, 'percent_statements_covered_display': '55', 'num_branches': 160, 'num_partial_branches': 15, 'covered_branches': 75, 'missing_branches': 85, 'percent_branches_covered': 46.875, 'percent_branches_covered_display': '47'}
+coverage-after.json
+{'covered_lines': 665, 'num_statements': 696, 'percent_covered': 93.69158878504673, 'percent_covered_display': '94', 'missing_lines': 31, 'excluded_lines': 14, 'percent_statements_covered': 95.54597701149426, 'percent_statements_covered_display': '96', 'num_branches': 160, 'num_partial_branches': 23, 'covered_branches': 137, 'missing_branches': 23, 'percent_branches_covered': 85.625, 'percent_branches_covered_display': '86'}
+coverage-passing-only.json
+{'covered_lines': 656, 'num_statements': 696, 'percent_covered': 92.05607476635514, 'percent_covered_display': '92', 'missing_lines': 40, 'excluded_lines': 14, 'percent_statements_covered': 94.25287356321839, 'percent_statements_covered_display': '94', 'num_branches': 160, 'num_partial_branches': 28, 'covered_branches': 132, 'missing_branches': 28, 'percent_branches_covered': 82.5, 'percent_branches_covered_display': '82'}
+COORD-final-coverage.txt
+192 passed, 32 xfailed in 1.52s
+COORD-final-dev-only.txt
+184 passed, 14 skipped, 26 xfailed in 0.52s
+COORD-final-py314.txt
+tests/test_langgraph_adapter.py: 7 warnings
+tests/test_qa_adapters.py: 10 warnings
+tests/test_openai_agents_adapter.py: 3 warnings
+tests/test_qa_adapters.py: 10 warnings
+tests/test_qa_adapters.py: 10 warnings
+192 passed, 32 xfailed, 42 warnings in 1.99s
+COORD-passing-coverage.txt
+192 passed, 32 deselected in 0.83s
+missing_links []

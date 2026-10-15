@@ -1,0 +1,17 @@
+UTC start: 2026-10-03T01:52:42+00:00
+Command: .venv/bin/python -c 'import importlib.metadata as m,json; from packaging.requirements import Requirement; from packaging.markers import default_environment; from pathlib import Path; qa=Path("docs/qa/2026-10-02/artifacts"); result={};
+for profile, extras in [("runtime",[]),("langchain",["langchain"])]:
+ seen={}; pending=[("sentinel-oversight",extras)];
+ while pending:
+  name, active_extras=pending.pop(); dist=m.distribution(name); canonical=dist.metadata["Name"].lower().replace("_","-")
+  if canonical in seen: continue
+  seen[canonical]=dist.version
+  for spec in dist.requires or []:
+   req=Requirement(spec)
+   if req.marker is None or any(req.marker.evaluate({**default_environment(),"extra": extra}) for extra in ["",*active_extras]): pending.append((req.name,list(req.extras)))
+ seen.pop("sentinel-oversight",None); result[profile]=seen; qa.joinpath("audit-"+profile+"-requirements.txt").write_text("".join(f"{name}=={v}\n" for name,v in sorted(seen.items()))); print(profile,len(seen),"dependencies")
+qa.joinpath("dependency-inventory.json").write_text(json.dumps(result,indent=2)+"\n")'
+Exit: 0
+
+runtime 7 dependencies
+langchain 33 dependencies

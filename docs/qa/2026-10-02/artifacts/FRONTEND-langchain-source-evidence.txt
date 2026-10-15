@@ -1,0 +1,91 @@
+UTC start: 2026-10-03T01:52:58+00:00
+Command: .venv/bin/python -c 'import inspect; from langchain_core.callbacks import BaseCallbackHandler; from langchain_core.callbacks import manager; import importlib.metadata; print("langchain-core",importlib.metadata.version("langchain-core")); print("BaseCallbackHandler.raise_error:",BaseCallbackHandler.raise_error); print("manager:",inspect.getsourcefile(manager)); source,start=inspect.getsourcelines(manager.handle_event); print("".join(f"{i}: {line}" for i,line in enumerate(source,start)))'
+Exit: 0
+
+langchain-core 1.6.6
+BaseCallbackHandler.raise_error: False
+manager: /Users/sellers/Projects/qa-sweep-2026-10-02/sentinel-sdk/.venv/lib/python3.11/site-packages/langchain_core/callbacks/manager.py
+285: def handle_event(
+286:     handlers: list[BaseCallbackHandler],
+287:     event_name: str,
+288:     ignore_condition_name: str | None,
+289:     *args: Any,
+290:     **kwargs: Any,
+291: ) -> None:
+292:     """Generic event handler for `CallbackManager`.
+293: 
+294:     Args:
+295:         handlers: The list of handlers that will handle the event.
+296:         event_name: The name of the event (e.g., `'on_llm_start'`).
+297:         ignore_condition_name: Name of the attribute defined on handler that if `True`
+298:             will cause the handler to be skipped for the given event.
+299:         *args: The arguments to pass to the event handler.
+300:         **kwargs: The keyword arguments to pass to the event handler
+301: 
+302:     """
+303:     coros: list[Coroutine[Any, Any, Any]] = []
+304: 
+305:     try:
+306:         message_strings: list[str] | None = None
+307:         for handler in handlers:
+308:             try:
+309:                 if ignore_condition_name is None or not getattr(
+310:                     handler, ignore_condition_name
+311:                 ):
+312:                     event = getattr(handler, event_name)(*args, **kwargs)
+313:                     if asyncio.iscoroutine(event):
+314:                         if event_name == "on_chat_model_start":
+315:                             event = _achat_model_start_fallback(
+316:                                 event, handler, *args, **kwargs
+317:                             )
+318:                         coros.append(event)
+319:             except NotImplementedError as e:
+320:                 if event_name == "on_chat_model_start":
+321:                     if message_strings is None:
+322:                         message_strings = [get_buffer_string(m) for m in args[1]]
+323:                     handle_event(
+324:                         [handler],
+325:                         "on_llm_start",
+326:                         "ignore_llm",
+327:                         args[0],
+328:                         message_strings,
+329:                         *args[2:],
+330:                         **kwargs,
+331:                     )
+332:                 else:
+333:                     handler_name = handler.__class__.__name__
+334:                     logger.warning(
+335:                         "NotImplementedError in %s.%s callback: %s",
+336:                         handler_name,
+337:                         event_name,
+338:                         repr(e),
+339:                     )
+340:             except Exception as e:
+341:                 logger.warning(
+342:                     "Error in %s.%s callback: %s",
+343:                     handler.__class__.__name__,
+344:                     event_name,
+345:                     repr(e),
+346:                 )
+347:                 if handler.raise_error:
+348:                     raise
+349:     finally:
+350:         if coros:
+351:             try:
+352:                 # Raises RuntimeError if there is no current event loop.
+353:                 asyncio.get_running_loop()
+354:                 loop_running = True
+355:             except RuntimeError:
+356:                 loop_running = False
+357: 
+358:             if loop_running:
+359:                 # If we try to submit this coroutine to the running loop
+360:                 # we end up in a deadlock, as we'd have gotten here from a
+361:                 # running coroutine, which we cannot interrupt to run this one.
+362:                 # The solution is to run the synchronous function on the globally shared
+363:                 # thread pool executor to avoid blocking the main event loop.
+364:                 _executor().submit(copy_context().run, _run_coros, coros).result()
+365:             else:
+366:                 # If there's no running loop, we can run the coroutines directly.
+367:                 _run_coros(coros)
+

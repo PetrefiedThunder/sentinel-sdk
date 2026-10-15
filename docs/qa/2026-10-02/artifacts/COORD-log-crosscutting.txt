@@ -1,0 +1,4 @@
+UTC start: 2026-10-03T01:54:05+00:00
+Command: python3 -c 'from pathlib import Path; from datetime import datetime,timezone; stamp=datetime.now(timezone.utc).isoformat(timespec="seconds"); Path("docs/qa/2026-10-02/COORD-LOG.md").open("a").write("\n- **"+stamp+"** Cross-cutting packaging/security charter (~15-minute timebox): run baseline Python3.11 suite+coverage, Ruff, advisory mypy, wheel/sdist and isolated wheel import; audit resolved runtime+extra using public PyPI metadata; scan local snapshot. Results: 57 pass, Ruff pass, mypy25 existing errors, build/install pass. Initial wheel check used wrong eager-import assumption and failed; source review showed lazy __new__, corrected instantiation check passed. PyPI metadata audit7 runtime/33 langchain dependencies: no known vulnerabilities. Snapshot scan passed; history scan unsupported. A Python3.14 compatibility check is being prepared.\n")'
+Exit: 0
+

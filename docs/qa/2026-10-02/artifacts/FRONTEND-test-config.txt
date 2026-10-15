@@ -1,0 +1,565 @@
+UTC start: 2026-10-03T01:50:46+00:00
+Command: python3 -c 'from pathlib import Path; files=[Path("pyproject.toml"),*Path("tests").glob("test_*adapter.py")]; [(print("\nFILE",str(p)),print(p.read_text())) for p in files]'
+Exit: 0
+
+
+FILE pyproject.toml
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sentinel-oversight"
+version = "0.1.9"
+description = "Python SDK for Sentinel human-in-the-loop oversight"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Christopher Sellers / RegEngine, Inc." }]
+dependencies = [
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+# Adapter extras. Only langchain has a hard third-party import
+# (sentinel/adapters/langchain.py needs langchain_core); the openai-agents and
+# semantic-kernel adapters intentionally have no runtime dependency on their
+# host frameworks, so they need no extra. README only advertises [langchain].
+langchain = ["langchain-core>=0.3"]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio",
+    "ruff==0.16.8",  # pinned to match .pre-commit-config.yaml so CI and pre-commit agree
+]
+
+[project.urls]
+Homepage = "https://pauseapi.app"
+Repository = "https://github.com/PetrefiedThunder/sentinel-sdk"
+
+[tool.hatch.build.targets.wheel]
+packages = ["sentinel"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["dist", "build", ".venv", "tests/fixtures"]
+
+[tool.ruff.lint]
+# Sensible default — pyflakes, pycodestyle, isort, bugbear, comprehensions
+select = ["E", "F", "W", "I", "B", "C4", "UP", "SIM", "TCH"]
+ignore = [
+    "E501",  # line length handled by formatter
+    "B008",  # FastAPI uses Depends() in defaults
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B011"]  # assert False in tests is fine
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
+version_variables = [
+    "sentinel/__init__.py:__version__",
+    "sentinel/client.py:USER_AGENT",
+]
+branch = "main"
+upload_to_pypi = false  # GH Actions publish.yml handles PyPI via OIDC
+upload_to_release = false  # SBOM workflow attaches release assets
+build_command = "python -m pip install build && python -m build"
+commit_message = "chore(release): {version}\n\n{changelog}"
+
+[tool.semantic_release.commit_parser_options]
+allowed_tags = ["feat", "fix", "perf", "refactor", "docs", "build", "ci", "test", "chore"]
+minor_tags = ["feat"]
+patch_tags = ["fix", "perf", "refactor"]
+
+
+FILE tests/test_openai_agents_adapter.py
+import asyncio
+import json
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+from sentinel.adapters.openai_agents import gated
+from sentinel.exceptions import ApprovalRejected
+
+
+class FakeFunctionTool:
+    """Mimics agents.FunctionTool: name + async on_invoke_tool(ctx, args_json)."""
+
+    def __init__(self, name, fn):
+        self.name = name
+        self._fn = fn
+
+        async def on_invoke_tool(ctx, args_json):
+            return self._fn(**json.loads(args_json or "{}"))
+
+        self.on_invoke_tool = on_invoke_tool
+
+
+def _approved_async_client():
+    client = MagicMock()
+    client.acreate_approval = AsyncMock(return_value={"action_id": "act_1"})
+    client.await_for_decision = AsyncMock(return_value={"status": "approved"})
+    return client
+
+
+def _approved_sync_client():
+    client = MagicMock()
+    client.create_approval.return_value = {"action_id": "act_1"}
+    client.wait_for_decision.return_value = {"status": "approved"}
+    return client
+
+
+def test_function_tool_approved_runs_and_returns():
+    client = _approved_async_client()
+
+    def search_web(query, limit=5):
+        return {"query": query, "limit": limit}
+
+    tool = FakeFunctionTool("search_web", search_web)
+    gated_tool = gated(tool, client=client, risk_level="high")
+
+    assert gated_tool is tool  # same object, callback swapped
+    result = asyncio.run(tool.on_invoke_tool(None, json.dumps({"query": "cats", "limit": 3})))
+
+    assert result == {"query": "cats", "limit": 3}
+    client.acreate_approval.assert_awaited_once_with(
+        function_name="search_web",
+        arguments={"query": "cats", "limit": 3},
+        risk_level="high",
+        approvers=None,
+        timeout_seconds=None,
+    )
+    client.await_for_decision.assert_awaited_once_with("act_1", timeout=None)
+
+
+def test_function_tool_rejected_raises_and_tool_not_called():
+    client = MagicMock()
+    client.acreate_approval = AsyncMock(return_value={"action_id": "act_2"})
+    client.await_for_decision = AsyncMock(
+        return_value={"status": "rejected", "reason": "too risky"}
+    )
+
+    ran = {"v": False}
+
+    def dangerous():
+        ran["v"] = True
+        return "done"
+
+    tool = FakeFunctionTool("dangerous", dangerous)
+    gated(tool, client=client)
+
+    with pytest.raises(ApprovalRejected) as exc:
+        asyncio.run(tool.on_invoke_tool(None, "{}"))
+    assert "too risky" in str(exc.value)
+    assert exc.value.action_id == "act_2"
+    assert ran["v"] is False
+
+
+def test_function_tool_empty_args_json():
+    client = _approved_async_client()
+    tool = FakeFunctionTool("noop", lambda: "ok")
+    gated(tool, client=client)
+
+    assert asyncio.run(tool.on_invoke_tool(None, "")) == "ok"
+    assert client.acreate_approval.call_args.kwargs["arguments"] == {}
+
+
+def test_plain_sync_callable_is_gated():
+    client = _approved_sync_client()
+
+    def wire_transfer(amount, recipient):
+        return {"amount": amount, "recipient": recipient}
+
+    wrapped = gated(wire_transfer, client=client, risk_level="critical")
+    result = wrapped(amount=100, recipient="acct_9")
+
+    assert result == {"amount": 100, "recipient": "acct_9"}
+    client.create_approval.assert_called_once_with(
+        function_name="wire_transfer",
+        arguments={"amount": 100, "recipient": "acct_9"},
+        risk_level="critical",
+        approvers=None,
+        timeout_seconds=None,
+    )
+
+
+def test_plain_sync_callable_rejected_raises():
+    client = MagicMock()
+    client.create_approval.return_value = {"action_id": "act_3"}
+    client.wait_for_decision.return_value = {"status": "rejected", "reason": "nope"}
+
+    ran = {"v": False}
+
+    def dangerous():
+        ran["v"] = True
+
+    with pytest.raises(ApprovalRejected):
+        gated(dangerous, client=client)()
+    assert ran["v"] is False
+
+
+def test_plain_async_callable_is_gated():
+    client = _approved_async_client()
+
+    async def async_tool(x):
+        return x * 2
+
+    wrapped = gated(async_tool, client=client)
+    assert asyncio.iscoroutinefunction(wrapped)
+    assert asyncio.run(wrapped(x=21)) == 42
+    client.acreate_approval.assert_awaited_once()
+
+
+def test_explicit_function_name_overrides_tool_name():
+    client = _approved_async_client()
+    tool = FakeFunctionTool("original", lambda: "ok")
+    gated(tool, client=client, function_name="custom_name")
+
+    asyncio.run(tool.on_invoke_tool(None, "{}"))
+    assert client.acreate_approval.call_args.kwargs["function_name"] == "custom_name"
+
+
+def test_non_tool_raises_type_error():
+    with pytest.raises(TypeError):
+        gated(object(), client=MagicMock())
+
+
+def test_importable_without_openai_agents_installed():
+    # The adapter must not import the `agents` package at module level —
+    # importing the adapter must never pull in openai-agents.
+    import sys
+
+    import sentinel.adapters.openai_agents  # noqa: F401
+
+    assert "agents" not in sys.modules
+
+
+FILE tests/test_semantic_kernel_adapter.py
+import asyncio
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+from sentinel.adapters.semantic_kernel import gate_kernel, sentinel_filter
+from sentinel.exceptions import ApprovalRejected
+
+
+class FakeFunction:
+    """Mimics semantic_kernel KernelFunction: name + plugin_name."""
+
+    def __init__(self, name, plugin_name=None):
+        self.name = name
+        self.plugin_name = plugin_name
+
+
+class FakeContext:
+    """Mimics semantic_kernel.filters.FunctionInvocationContext."""
+
+    def __init__(self, function, arguments=None):
+        self.function = function
+        self.arguments = arguments or {}
+        self.result = None
+
+
+def _approved_client():
+    client = MagicMock()
+    client.acreate_approval = AsyncMock(return_value={"action_id": "act_1"})
+    client.await_for_decision = AsyncMock(return_value={"status": "approved"})
+    return client
+
+
+def _run_filter(sk_filter, context):
+    """Drive an SK filter with a `next` that records whether the function ran."""
+    ran = {"v": False}
+
+    async def next_callback(ctx):
+        ran["v"] = True
+        ctx.result = "executed"
+
+    asyncio.run(sk_filter(context, next_callback))
+    return ran["v"]
+
+
+def test_approved_runs_function():
+    client = _approved_client()
+    sk_filter = sentinel_filter(client=client, risk_level="high")
+    ctx = FakeContext(FakeFunction("wire_transfer", "ops"), {"amount": 100, "recipient": "acct_9"})
+
+    assert _run_filter(sk_filter, ctx) is True
+    assert ctx.result == "executed"
+    client.acreate_approval.assert_awaited_once_with(
+        function_name="ops.wire_transfer",
+        arguments={"amount": 100, "recipient": "acct_9"},
+        risk_level="high",
+        approvers=None,
+        timeout_seconds=None,
+    )
+    client.await_for_decision.assert_awaited_once_with("act_1", timeout=None)
+
+
+def test_rejected_raises_and_function_not_called():
+    client = MagicMock()
+    client.acreate_approval = AsyncMock(return_value={"action_id": "act_2"})
+    client.await_for_decision = AsyncMock(
+        return_value={"status": "rejected", "reason": "too risky"}
+    )
+    sk_filter = sentinel_filter(client=client)
+    ctx = FakeContext(FakeFunction("dangerous"))
+
+    ran = {"v": False}
+
+    async def next_callback(c):
+        ran["v"] = True
+
+    with pytest.raises(ApprovalRejected) as exc:
+        asyncio.run(sk_filter(ctx, next_callback))
+    assert "too risky" in str(exc.value)
+    assert exc.value.action_id == "act_2"
+    assert ran["v"] is False
+
+
+def test_unqualified_name_used_when_no_plugin():
+    client = _approved_client()
+    sk_filter = sentinel_filter(client=client)
+    ctx = FakeContext(FakeFunction("lookup"))
+
+    _run_filter(sk_filter, ctx)
+    assert client.acreate_approval.call_args.kwargs["function_name"] == "lookup"
+
+
+def test_allowlist_unlisted_function_calls_through():
+    client = _approved_client()
+    sk_filter = sentinel_filter(client=client, function_allowlist=["wire_transfer"])
+    ctx = FakeContext(FakeFunction("harmless", "ops"))
+
+    assert _run_filter(sk_filter, ctx) is True
+    client.acreate_approval.assert_not_awaited()
+    client.await_for_decision.assert_not_awaited()
+
+
+def test_allowlist_matches_qualified_name():
+    client = _approved_client()
+    sk_filter = sentinel_filter(client=client, function_allowlist=["ops.wire_transfer"])
+    ctx = FakeContext(FakeFunction("wire_transfer", "ops"))
+
+    assert _run_filter(sk_filter, ctx) is True
+    client.acreate_approval.assert_awaited_once()
+
+
+def test_denylist_listed_function_skips_approval():
+    client = _approved_client()
+    sk_filter = sentinel_filter(client=client, function_denylist=["read_only_lookup"])
+    ctx = FakeContext(FakeFunction("read_only_lookup", "data"))
+
+    assert _run_filter(sk_filter, ctx) is True
+    client.acreate_approval.assert_not_awaited()
+
+
+def test_arguments_drop_execution_settings():
+    client = _approved_client()
+    sk_filter = sentinel_filter(client=client)
+    ctx = FakeContext(
+        FakeFunction("act", "ops"),
+        {"amount": 5, "execution_settings": object()},
+    )
+
+    _run_filter(sk_filter, ctx)
+    assert client.acreate_approval.call_args.kwargs["arguments"] == {"amount": 5}
+
+
+def test_gate_kernel_registers_filter_and_returns_kernel():
+    client = _approved_client()
+    kernel = MagicMock()
+
+    returned = gate_kernel(kernel, client=client, risk_level="critical")
+
+    assert returned is kernel
+    kernel.add_filter.assert_called_once()
+    filter_type, registered = kernel.add_filter.call_args.args
+    assert filter_type == "function_invocation"
+    assert callable(registered)
+
+    # The registered filter actually gates: run it and confirm approval flow.
+    ctx = FakeContext(FakeFunction("change_state", "lights"), {"id": 1})
+    assert _run_filter(registered, ctx) is True
+    client.acreate_approval.assert_awaited_once_with(
+        function_name="lights.change_state",
+        arguments={"id": 1},
+        risk_level="critical",
+        approvers=None,
+        timeout_seconds=None,
+    )
+
+
+def test_importable_without_semantic_kernel_installed():
+    # The adapter must not import the `semantic_kernel` package at module
+    # level — importing the adapter must never pull it in.
+    import sys
+
+    import sentinel.adapters.semantic_kernel  # noqa: F401
+
+    assert "semantic_kernel" not in sys.modules
+
+
+FILE tests/test_langgraph_adapter.py
+import asyncio
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+from sentinel.adapters.langgraph import SentinelToolGate
+from sentinel.exceptions import ApprovalRejected
+
+
+def _approved_client():
+    client = MagicMock()
+    client.create_approval.return_value = {"action_id": "act_1"}
+    client.wait_for_decision.return_value = {"status": "approved"}
+    return client
+
+
+def test_approved_runs_and_returns():
+    client = _approved_client()
+    gate = SentinelToolGate(client=client, risk_level="high")
+
+    def search_web(query, limit=5):
+        return {"query": query, "limit": limit}
+
+    wrapped = gate.wrap(search_web)
+    result = wrapped(query="cats", limit=3)
+
+    assert result == {"query": "cats", "limit": 3}
+    client.create_approval.assert_called_once_with(
+        function_name="search_web",
+        arguments={"query": "cats", "limit": 3},
+        risk_level="high",
+        approvers=None,
+        timeout_seconds=None,
+    )
+    client.wait_for_decision.assert_called_once_with("act_1", timeout=None)
+
+
+def test_positional_args_use_args_convention():
+    client = _approved_client()
+    gate = SentinelToolGate(client=client)
+
+    def tool_fn(a, b):
+        return a + b
+
+    assert gate.wrap(tool_fn)(1, 2) == 3
+    arguments = client.create_approval.call_args.kwargs["arguments"]
+    assert arguments == {"args": [1, 2]}
+
+
+def test_rejected_raises_and_fn_not_called():
+    client = MagicMock()
+    client.create_approval.return_value = {"action_id": "act_2"}
+    client.wait_for_decision.return_value = {
+        "status": "rejected",
+        "reason": "too risky",
+    }
+    gate = SentinelToolGate(client=client)
+
+    ran = {"v": False}
+
+    def dangerous():
+        ran["v"] = True
+        return "done"
+
+    with pytest.raises(ApprovalRejected) as exc:
+        gate.wrap(dangerous)()
+    assert "too risky" in str(exc.value)
+    assert exc.value.action_id == "act_2"
+    assert ran["v"] is False
+
+
+def test_allowlist_unlisted_tool_calls_through():
+    client = _approved_client()
+    gate = SentinelToolGate(client=client, tool_allowlist=["wire_transfer"])
+
+    def harmless():
+        return "ok"
+
+    assert gate.wrap(harmless)() == "ok"
+    client.create_approval.assert_not_called()
+    client.wait_for_decision.assert_not_called()
+
+
+def test_allowlist_listed_tool_is_gated():
+    client = _approved_client()
+    gate = SentinelToolGate(client=client, tool_allowlist=["wire_transfer"])
+
+    def wire_transfer():
+        return "sent"
+
+    assert gate.wrap(wire_transfer)() == "sent"
+    client.create_approval.assert_called_once()
+
+
+def test_denylist_listed_tool_skips_approval():
+    client = _approved_client()
+    gate = SentinelToolGate(client=client, tool_denylist=["read_only_lookup"])
+
+    def read_only_lookup():
+        return "data"
+
+    assert gate.wrap(read_only_lookup)() == "data"
+    client.create_approval.assert_not_called()
+
+
+def test_explicit_function_name_overrides_fn_name():
+    client = _approved_client()
+    gate = SentinelToolGate(client=client)
+
+    def fn():
+        return "ok"
+
+    gate.wrap(fn, function_name="custom_name")()
+    assert client.create_approval.call_args.kwargs["function_name"] == "custom_name"
+
+
+def test_async_fn_wrapped_is_awaitable():
+    client = MagicMock()
+    client.acreate_approval = AsyncMock(return_value={"action_id": "act_3"})
+    client.await_for_decision = AsyncMock(return_value={"status": "approved"})
+    gate = SentinelToolGate(client=client)
+
+    async def async_tool(x):
+        return x * 2
+
+    wrapped = gate.wrap(async_tool)
+    assert asyncio.iscoroutinefunction(wrapped)
+    result = asyncio.run(wrapped(x=21))
+
+    assert result == 42
+    client.acreate_approval.assert_awaited_once_with(
+        function_name="async_tool",
+        arguments={"x": 21},
+        risk_level="high",
+        approvers=None,
+        timeout_seconds=None,
+    )
+    client.await_for_decision.assert_awaited_once_with("act_3", timeout=None)
+
+
+def test_async_rejected_raises():
+    client = MagicMock()
+    client.acreate_approval = AsyncMock(return_value={"action_id": "act_4"})
+    client.await_for_decision = AsyncMock(return_value={"status": "rejected", "reason": "nope"})
+    gate = SentinelToolGate(client=client)
+
+    ran = {"v": False}
+
+    async def async_dangerous():
+        ran["v"] = True
+
+    with pytest.raises(ApprovalRejected):
+        asyncio.run(gate.wrap(async_dangerous)())
+    assert ran["v"] is False
+

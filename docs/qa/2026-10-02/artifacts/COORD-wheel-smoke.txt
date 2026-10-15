@@ -1,0 +1,15 @@
+UTC start: 2026-10-03T01:53:00+00:00
+Command: /private/tmp/sentinel-qa-wheel-env/bin/python -I -c 'import importlib,importlib.metadata as m,json,pathlib,hashlib,zipfile; import sentinel; assert "site-packages" in sentinel.__file__; assert sentinel.__version__==m.version("sentinel-oversight"); [getattr(sentinel,n) for n in sentinel.__all__]; [importlib.import_module("sentinel.adapters."+n) for n in ("anthropic","autogen","crewai","langgraph","openai_agents","semantic_kernel")]; print("Installed wheel exports and six dependency-free adapters: PASS"); print("Installed location:",sentinel.__file__); print("Version:",sentinel.__version__); p=pathlib.Path("/private/tmp/sentinel-qa-dist/sentinel_oversight-0.1.9-py3-none-any.whl"); print("Wheel SHA256:",hashlib.sha256(p.read_bytes()).hexdigest()); print("Wheel files:",zipfile.ZipFile(p).namelist());
+try: importlib.import_module("sentinel.adapters.langchain")
+except ImportError as exc: print("Without optional langchain extra:",type(exc).__name__,str(exc))
+else: raise AssertionError("Unexpected optional dependency installed")'
+Exit: 1
+
+Traceback (most recent call last):
+  File "<string>", line 4, in <module>
+AssertionError: Unexpected optional dependency installed
+Installed wheel exports and six dependency-free adapters: PASS
+Installed location: /private/tmp/sentinel-qa-wheel-env/lib/python3.11/site-packages/sentinel/__init__.py
+Version: 0.1.9
+Wheel SHA256: b82a6cfc8eaa1fe20e02e0d277e88da0d11bd58b60e1547533c8d703e7048fed
+Wheel files: ['sentinel/__init__.py', 'sentinel/client.py', 'sentinel/config.py', 'sentinel/decorator.py', 'sentinel/exceptions.py', 'sentinel/adapters/__init__.py', 'sentinel/adapters/anthropic.py', 'sentinel/adapters/autogen.py', 'sentinel/adapters/crewai.py', 'sentinel/adapters/langchain.py', 'sentinel/adapters/langgraph.py', 'sentinel/adapters/openai_agents.py', 'sentinel/adapters/semantic_kernel.py', 'sentinel_oversight-0.1.9.dist-info/METADATA', 'sentinel_oversight-0.1.9.dist-info/WHEEL', 'sentinel_oversight-0.1.9.dist-info/licenses/LICENSE', 'sentinel_oversight-0.1.9.dist-info/RECORD']

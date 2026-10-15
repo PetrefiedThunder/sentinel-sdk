@@ -1,0 +1,5 @@
+UTC start: 2026-10-03T01:50:26+00:00
+Command: pwd
+Exit: 0
+
+/Users/sellers/Projects/qa-sweep-2026-10-02/sentinel-sdk

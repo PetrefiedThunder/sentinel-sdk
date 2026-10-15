@@ -1,0 +1,49 @@
+UTC start: 2026-10-03T01:51:00+00:00
+Command: python3 -c 'from pathlib import Path; from datetime import datetime, timezone; print(datetime.now(timezone.utc).isoformat()); print(Path("docs/qa/2026-10-02/artifacts/qa_run.py").read_text())'
+Exit: 0
+
+2026-10-03T01:51:00.977683+00:00
+#!/usr/bin/env python3
+"""Run a QA command with sanitized output, isolated environment and UTC logging."""
+import datetime
+import os
+from pathlib import Path
+import re
+import shlex
+import subprocess
+import sys
+
+ROOT = Path(__file__).resolve().parents[4]
+QA = ROOT / 'docs/qa/2026-10-02'
+
+def redact(text):
+    text = re.sub(r'(?i)(Bearer\s+)[^\s\"\']+', r'\1[REDACTED]', text)
+    text = re.sub(r'\b(?:sk|amw|ghp|github_pat|xox[baprs])[-_][A-Za-z0-9_\-]{12,}\b', '[REDACTED]', text)
+    return text
+
+def main():
+    group, label, *command = sys.argv[1:]
+    stamp = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')
+    target = QA / 'artifacts' / f'{group}-{label}.txt'
+    env = {key: value for key, value in os.environ.items() if key in {
+        'PATH', 'TMPDIR', 'SYSTEMROOT', 'LANG', 'LC_ALL', 'VIRTUAL_ENV',
+        'PW_TEST_CONNECT_WS_ENDPOINT', 'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR',
+    }}
+    env.update({'HOME': '/private/tmp/sentinel-qa-home', 'NO_COLOR': '1',
+                'UV_CACHE_DIR': '/private/tmp/sentinel-qa-uv-cache',
+                'PYTHONHASHSEED': '0', 'PYTHONPATH': str(ROOT)})
+    Path(env['HOME']).mkdir(exist_ok=True)
+    outcome = subprocess.run(command, cwd=ROOT, env=env, stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT, text=True)
+    output = redact(outcome.stdout)
+    target.write_text(f'UTC start: {stamp}\nCommand: {redact(shlex.join(command))}\nExit: {outcome.returncode}\n\n{output}')
+    end = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')
+    with (QA / f'{group}-LOG.md').open('a') as log:
+        log.write(f'\n- **{stamp} → {end}** `{redact(shlex.join(command))}` — exit **{outcome.returncode}**; [output](artifacts/{target.name}).\n')
+    print(output, end='')
+    print(f'\nQA evidence: {target.relative_to(ROOT)}; exit={outcome.returncode}')
+    return outcome.returncode
+
+if __name__ == '__main__':
+    raise SystemExit(main())
+
