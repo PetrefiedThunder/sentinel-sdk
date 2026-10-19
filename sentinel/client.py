@@ -63,6 +63,22 @@ def _ensure_json_serializable(arguments: Any) -> None:
         ) from e
 
 
+def _audit_event_body(action_id: str, execution_result: Any, error: str | None) -> dict[str, Any]:
+    """Body for POST /v1/audit-events.
+
+    AuditEventCreate.execution_result is a required string. JSON null is a
+    422, and this POST is best-effort, so a rejected body drops the audit.
+    None means the wrapped call produced no return value.
+    """
+    if execution_result is None:
+        execution_result = "failed" if error is not None else ""
+    return {
+        "action_id": action_id,
+        "execution_result": execution_result,
+        "error": error,
+    }
+
+
 def _bounded_poll_delay(interval: float, deadline: float) -> float:
     """Seconds to wait before the next fallback poll, never past `deadline`."""
     remaining = deadline - time.monotonic()
@@ -327,11 +343,7 @@ class SentinelClient:
         execution_result: Any = None,
         error: str | None = None,
     ) -> None:
-        payload = {
-            "action_id": action_id,
-            "execution_result": execution_result,
-            "error": error,
-        }
+        payload = _audit_event_body(action_id, execution_result, error)
         try:  # noqa: SIM105 - keep explicit comment documenting best-effort intent
             self._get_client().post("/v1/audit-events", json=payload, timeout=10.0)
         except Exception:
@@ -487,11 +499,7 @@ class SentinelClient:
         execution_result: Any = None,
         error: str | None = None,
     ) -> None:
-        payload = {
-            "action_id": action_id,
-            "execution_result": execution_result,
-            "error": error,
-        }
+        payload = _audit_event_body(action_id, execution_result, error)
         with contextlib.suppress(Exception):
             await self._get_aclient().post("/v1/audit-events", json=payload, timeout=10.0)
 
