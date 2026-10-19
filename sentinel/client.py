@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import json
 import time
@@ -60,6 +61,14 @@ def _ensure_json_serializable(arguments: Any) -> None:
             f"Got an un-serializable value: {e}. "
             f"Convert sets/objects/bytes to plain dict/list/str/int/float/bool/None before the call."
         ) from e
+
+
+def _bounded_poll_delay(interval: float, deadline: float) -> float:
+    """Seconds to wait before the next fallback poll, never past `deadline`."""
+    remaining = deadline - time.monotonic()
+    if remaining <= 0 or interval <= 0:
+        return 0.0
+    return min(float(interval), remaining)
 
 
 def _raise_for_status(r: httpx.Response) -> None:
@@ -198,9 +207,11 @@ class SentinelClient:
         ~30s wait window), falling back to client polling.
         """
         timeout = timeout or self.config.timeout_seconds
+        interval = self.config.poll_interval if poll_interval is None else poll_interval
         deadline = time.monotonic() + timeout
         while True:
             remaining = max(1.0, min(30.0, deadline - time.monotonic()))
+            fell_back = False
             try:
                 r = self._get_client().get(
                     f"/v1/approvals/{action_id}/wait",
@@ -213,12 +224,19 @@ class SentinelClient:
                 # Fall back to plain polling if /wait isn't available (older server)
                 if e.status_code != 404:
                     raise
+                fell_back = True
                 data = self.get_approval(action_id)
             status = data.get("status") or data.get("decision")
             if status in ("approved", "rejected"):
                 return data
             if time.monotonic() >= deadline:
                 raise ApprovalTimeout(action_id=action_id, timeout_seconds=timeout)
+            if fell_back:
+                delay = _bounded_poll_delay(interval, deadline)
+                if delay > 0:
+                    time.sleep(delay)
+                if time.monotonic() >= deadline:
+                    raise ApprovalTimeout(action_id=action_id, timeout_seconds=timeout)
 
     def get_tenant(self) -> dict:
         """Fetch the current tenant's settings (default_approvers, etc)."""
@@ -372,9 +390,11 @@ class SentinelClient:
         poll_interval: float | None = None,
     ) -> dict:
         timeout = timeout or self.config.timeout_seconds
+        interval = self.config.poll_interval if poll_interval is None else poll_interval
         deadline = time.monotonic() + timeout
         while True:
             remaining = max(1.0, min(30.0, deadline - time.monotonic()))
+            fell_back = False
             try:
                 r = await self._get_aclient().get(
                     f"/v1/approvals/{action_id}/wait",
@@ -386,12 +406,19 @@ class SentinelClient:
             except SentinelAPIError as e:
                 if e.status_code != 404:
                     raise
+                fell_back = True
                 data = await self.aget_approval(action_id)
             status = data.get("status") or data.get("decision")
             if status in ("approved", "rejected"):
                 return data
             if time.monotonic() >= deadline:
                 raise ApprovalTimeout(action_id=action_id, timeout_seconds=timeout)
+            if fell_back:
+                delay = _bounded_poll_delay(interval, deadline)
+                if delay > 0:
+                    await asyncio.sleep(delay)
+                if time.monotonic() >= deadline:
+                    raise ApprovalTimeout(action_id=action_id, timeout_seconds=timeout)
 
     async def aget_tenant(self) -> dict:
         r = await self._get_aclient().get("/v1/tenants/me")
