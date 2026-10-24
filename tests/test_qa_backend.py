@@ -130,9 +130,6 @@ def test_legacy_wait_fallback_returns_terminal_decision(client_factory, mode, st
 
 
 @pytest.mark.parametrize("mode", ["sync", "async"])
-@pytest.mark.xfail(
-    strict=True, raises=AssertionError, reason="BE-001: legacy polling ignores poll_interval"
-)
 def test_legacy_wait_paces_pending_requests(client_factory, monkeypatch, mode):
     polls = []
     sleeper = MagicMock()
