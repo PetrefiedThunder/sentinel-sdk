@@ -625,8 +625,8 @@ async def test_shared_client_keeps_concurrent_request_keys_isolated(client_facto
     ("method", "args", "verb", "path", "payload"),
     [
         ("get_tenant", (), "GET", "/v1/tenants/me", None),
-        ("set_default_approvers", (["qa@example.invalid"],), "PATCH", "/v1/tenants/me", {"default_approvers": ["qa@example.invalid"]}),
-        ("register_sms_contact", ("+15555550101", "Synthetic", "test"), "POST", "/v1/approver-contacts", {"phone_number": "+15555550101", "display_name": "Synthetic", "consent_source": "test", "consent_note": "", "consent_attested": True}),
+        ("set_default_approvers", (["[redacted-email]"],), "PATCH", "/v1/tenants/me", {"default_approvers": ["[redacted-email]"]}),
+        ("register_sms_contact", ("[redacted-phone]", "Synthetic", "test"), "POST", "/v1/approver-contacts", {"phone_number": "[redacted-phone]", "display_name": "Synthetic", "consent_source": "test", "consent_note": "", "consent_attested": True}),
         ("list_sms_contacts", (), "GET", "/v1/approver-contacts", None),
         ("revoke_sms_contact", ("contact",), "DELETE", "/v1/approver-contacts/contact", None),
         ("list_audit_events", (), "GET", "/v1/audit-events", None),

@@ -18,7 +18,7 @@ The final run includes 32 strict expected failures across 11 findings. Executing
 
 ## Module coverage
 
-Percentages below combine statements and branches. JSON artifacts retain exact counts and missing lines.
+Percentages below combine statements and branches. Exact counts and missing lines are in the terminal-output artifacts linked below.
 
 | Module | Before | After | Passing only |
 |---|---:|---:|---:|
@@ -39,11 +39,11 @@ Percentages below combine statements and branches. JSON artifacts retain exact c
 
 | Check | Result | Evidence |
 |---|---|---|
-| Python 3.11 baseline | 57 passed | [Baseline](artifacts/COORD-baseline.txt), [JSON](artifacts/coverage-before.json) |
-| Python 3.11 complete QA environment | 192 passed, 32 strict xfailed, no skips | [Final](artifacts/COORD-final-coverage.txt), [JSON](artifacts/coverage-after.json), [JUnit](artifacts/final-junit.xml) |
-| Passing-only coverage | 192 passed, 32 deselected | [Run](artifacts/COORD-passing-coverage.txt), [JSON](artifacts/coverage-passing-only.json) |
-| Python 3.14.5 | 192 passed, 32 xfailed; 42 deprecation warnings | [Run](artifacts/COORD-final-py314.txt), [JUnit](artifacts/py314-junit.xml) |
-| Normal dev extra only, Python 3.11 | 184 passed, 14 skipped, 26 xfailed | [Run](artifacts/COORD-final-dev-only.txt), [JUnit](artifacts/dev-only-junit.xml) |
+| Python 3.11 baseline | 57 passed | [Baseline](artifacts/COORD-baseline.txt) |
+| Python 3.11 complete QA environment | 192 passed, 32 strict xfailed, no skips | [Final](artifacts/COORD-final-coverage.txt) |
+| Passing-only coverage | 192 passed, 32 deselected | [Run](artifacts/COORD-passing-coverage.txt) |
+| Python 3.14.5 | 192 passed, 32 xfailed; 42 deprecation warnings | [Run](artifacts/COORD-final-py314.txt) |
+| Normal dev extra only, Python 3.11 | 184 passed, 14 skipped, 26 xfailed | [Run](artifacts/COORD-final-dev-only.txt) |
 | Ruff 0.16.8 | Whole-tree lint passed; all five added Python files formatted | [Lint](artifacts/COORD-complete-lint.txt), [Format](artifacts/COORD-changed-format.txt) |
 | Advisory mypy 2.4.0 | 25 existing errors across seven adapters | [Output](artifacts/COORD-mypy.txt) |
 | Wheel and sdist | Build passed; isolated installed wheel exports/imports passed | [Build](artifacts/COORD-build.txt), [Manifest/hash](artifacts/COORD-wheel-smoke.txt), [Corrected smoke](artifacts/COORD-wheel-smoke-corrected.txt) |

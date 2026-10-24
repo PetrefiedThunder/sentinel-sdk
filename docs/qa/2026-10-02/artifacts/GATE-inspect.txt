@@ -792,18 +792,18 @@ async def test_shared_client_keeps_concurrent_request_keys_isolated(client_facto
         ("get_tenant", (), "GET", "/v1/tenants/me", None),
         (
             "set_default_approvers",
-            (["qa@example.invalid"],),
+            (["[redacted-email]"],),
             "PATCH",
             "/v1/tenants/me",
-            {"default_approvers": ["qa@example.invalid"]},
+            {"default_approvers": ["[redacted-email]"]},
         ),
         (
             "register_sms_contact",
-            ("+15555550101", "Synthetic", "test"),
+            ("[redacted-phone]", "Synthetic", "test"),
             "POST",
             "/v1/approver-contacts",
             {
-                "phone_number": "+15555550101",
+                "phone_number": "[redacted-phone]",
                 "display_name": "Synthetic",
                 "consent_source": "test",
                 "consent_note": "",
