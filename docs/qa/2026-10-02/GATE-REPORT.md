@@ -13,7 +13,7 @@ Independent local review of the three QA passes, new tests, network-blocking fix
 ## Independent checks
 
 - `tests/test_qa_adapters.py tests/test_qa_backend.py tests/test_qa_dx.py`: **135 passed, 32 xfailed**, zero unexpected failures or skips in the full QA environment. [Transcript](artifacts/GATE-qa-tests.txt).
-- Four representative expected failures rerun with `--runxfail`: **4 failed at their intended assertions**. Real LangChain executed the local action after rejection; the mutable payload executed `999` after submission of `10`; a late approval returned after the deadline; and configuration repr contained a synthetic credential marker. [Negative-control transcript](artifacts/GATE-unsuppressed-behaviors.txt).
+- Four representative expected failures rerun with `--runxfail`: **4 failed at their intended assertions**. Real LangChain executed the local action after rejection; the mutable payload executed `999` after submission of `10`; a late approval returned after the deadline; and configuration repr contained a random per-run credential marker. [Negative-control transcript](artifacts/GATE-unsuppressed-behaviors.txt).
 - Source review confirmed the reported causes in LangChain callback construction, adapter argument selection, polling/deadline logic, decorator lifecycle/audit paths, configuration defaults/repr, and README onboarding. [Client/decorator evidence](artifacts/GATE-source.txt), [adapter evidence](artifacts/GATE-adapter-source.txt), [new-test evidence](artifacts/GATE-inspect.txt).
 - All expected failures are strict and name a finding. They restrict expected exception classes; the negative controls demonstrate the current failures occur at the intended assertions. Hypothesis is deterministic (`derandomize=True`, fixed 75 examples, no example database); race reproduction coordinates with asyncio events rather than timing sleeps.
 - The network fixture denies socket connection attempts in every test. Added HTTP cases use `httpx.MockTransport`; provider/framework callbacks are mocked except for the local LangChain host itself. No new dependency or product file is changed.
@@ -26,7 +26,7 @@ Independent local review of the three QA passes, new tests, network-blocking fix
 | FE-002, BE-004 | High is justified: each can execute inputs that were not the ones reviewed by the human. These are different causes: omitted positional arguments versus mutation during the wait. |
 | BE-001, UX-001 | Distinct findings. One ignores request pacing in the wait loop; the other ignores the documented environment setting. A complete polling repair needs both addressed. Cross-reference them. |
 | BE-002, BE-003, BE-005 | Medium is appropriate for unclosed decorator-owned clients, missing failure audit evidence on explicit timeout execution, and late decision acceptance. Do not describe local tests as proof of actual resource exhaustion or hosted audit loss. |
-| BE-006 | Medium potential secret exposure is appropriate. Only a synthetic marker was used; no real credential exposure was observed. |
+| BE-006 | Medium potential secret exposure is appropriate. Only a random per-run marker was used; no real credential exposure was observed. |
 | UX-002, UX-003 | Low schematic quickstart gap and Medium premature human approval for an invalid Python call are supported. UX-002 is not an SDK payment-processing defect. |
 
 ## Limits that must remain explicit

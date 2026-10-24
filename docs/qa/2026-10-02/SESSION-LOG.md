@@ -15,7 +15,7 @@ Initial reconnaissance entries below were backfilled at the recorded time, in ex
 - **2026-10-03T01:49:56+00:00 (registration time)** `for ancestor in / /Users /Users/sellers /Users/sellers/Projects /Users/sellers/Projects/qa-sweep-2026-10-02; read existing AGENTS.md` — Only /Users/sellers/AGENTS.md found; stale RegEngine details do not apply.
 - **2026-10-03T01:49:56+00:00 (registration time)** `clock.curr_time` — 2026-10-03 01:49:21 UTC; local task date remains 2026-10-02.
 - **2026-10-03T01:49:56+00:00 (registration time)** `mkdir -p docs/qa/2026-10-02/artifacts` — Created QA artifact directory.
-- **2026-10-03T01:49:56+00:00 (registration time)** `cat > docs/qa/2026-10-02/artifacts/qa_run.py; python3 bootstrap` — Created sanitized command logger and this bootstrap log; no product changes.
+- **2026-10-03T01:49:56+00:00 (registration time)** `cat > docs/qa/2026-10-02/tools/qa_run.py; python3 bootstrap` — Created sanitized command logger and this bootstrap log; no product changes.
 
 ## Pass logs
 

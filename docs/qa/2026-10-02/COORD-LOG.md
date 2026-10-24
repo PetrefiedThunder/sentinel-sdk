@@ -94,13 +94,13 @@ print("Copied",count,"explicit source/QA files to",dest,"for local current-snaps
 
 - **2026-10-03T01:54:41+00:00 → 2026-10-03T01:54:41+00:00** `git status --short` — exit **0**; [output](artifacts/COORD-new-files.txt).
 
-- **2026-10-03T01:54:52+00:00 → 2026-10-03T01:54:52+00:00** `.venv/bin/ruff check docs/qa/2026-10-02/artifacts/qa_run.py tests/conftest.py` — exit **1**; [output](artifacts/COORD-qa-helper-lint.txt).
+- **2026-10-03T01:54:52+00:00 → 2026-10-03T01:54:52+00:00** `.venv/bin/ruff check docs/qa/2026-10-02/tools/qa_run.py tests/conftest.py` — exit **1**; [output](artifacts/COORD-qa-helper-lint.txt).
 
 - **2026-10-03T01:54:52+00:00 → 2026-10-03T01:54:52+00:00** `.venv/bin/python -c 'import json; p=json.load(open("docs/qa/2026-10-02/artifacts/coverage-before.json")); print(json.dumps(p["totals"],indent=2))'` — exit **0**; [output](artifacts/COORD-coverage-baseline-summary.txt).
 
-- **2026-10-03T01:54:56+00:00 → 2026-10-03T01:54:56+00:00** `.venv/bin/ruff check --fix docs/qa/2026-10-02/artifacts/qa_run.py tests/conftest.py` — exit **0**; [output](artifacts/COORD-qa-helper-lint-fix.txt).
+- **2026-10-03T01:54:56+00:00 → 2026-10-03T01:54:56+00:00** `.venv/bin/ruff check --fix docs/qa/2026-10-02/tools/qa_run.py tests/conftest.py` — exit **0**; [output](artifacts/COORD-qa-helper-lint-fix.txt).
 
-- **2026-10-03T01:54:56+00:00 → 2026-10-03T01:54:56+00:00** `.venv/bin/ruff format docs/qa/2026-10-02/artifacts/qa_run.py tests/conftest.py` — exit **0**; [output](artifacts/COORD-qa-helper-format.txt).
+- **2026-10-03T01:54:56+00:00 → 2026-10-03T01:54:56+00:00** `.venv/bin/ruff format docs/qa/2026-10-02/tools/qa_run.py tests/conftest.py` — exit **0**; [output](artifacts/COORD-qa-helper-format.txt).
 
 - **2026-10-03T01:55:30+00:00 → 2026-10-03T01:55:30+00:00** `uv pip install --python /private/tmp/sentinel-qa-wheel-env/bin/python '/private/tmp/sentinel-qa-dist/sentinel_oversight-0.1.9-py3-none-any.whl[dev]'` — exit **0**; [output](artifacts/COORD-install-dev-only.txt).
 
@@ -118,7 +118,7 @@ print("Copied",count,"explicit source/QA files to",dest,"for local current-snaps
 
 - **2026-10-03T01:56:16+00:00 → 2026-10-03T01:56:16+00:00** `.venv/bin/ruff check .` — exit **0**; [output](artifacts/COORD-complete-lint.txt).
 
-- **2026-10-03T01:56:24+00:00 → 2026-10-03T01:56:24+00:00** `.venv/bin/ruff format --check tests/conftest.py tests/test_qa_backend.py tests/test_qa_adapters.py tests/test_qa_dx.py docs/qa/2026-10-02/artifacts/qa_run.py` — exit **0**; [output](artifacts/COORD-changed-format.txt).
+- **2026-10-03T01:56:24+00:00 → 2026-10-03T01:56:24+00:00** `.venv/bin/ruff format --check tests/conftest.py tests/test_qa_backend.py tests/test_qa_adapters.py tests/test_qa_dx.py docs/qa/2026-10-02/tools/qa_run.py` — exit **0**; [output](artifacts/COORD-changed-format.txt).
 
 - **2026-10-03T01:56:22+00:00 → 2026-10-03T01:56:24+00:00** `.venv/bin/python -m pytest tests -m 'not xfail' --cov=sentinel --cov-branch --cov-report=term-missing --cov-report=json:docs/qa/2026-10-02/artifacts/coverage-passing-only.json -q` — exit **0**; [output](artifacts/COORD-passing-coverage.txt).
 

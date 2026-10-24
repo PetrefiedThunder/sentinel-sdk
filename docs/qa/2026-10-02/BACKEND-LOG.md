@@ -17,7 +17,7 @@ Initial command records (the first log header write replaced their generated ind
 - **2026-10-03T01:50:36+00:00** Python numbered source read of project metadata and six core modules — exit 0; [exact command and output](artifacts/BACKEND-core-source.txt).
 - **2026-10-03T01:50:41+00:00** Python numbered read of four existing core test modules — exit 0; [exact command and output](artifacts/BACKEND-existing-tests.txt).
 
-- **2026-10-03T01:51:20+00:00 → 2026-10-03T01:51:20+00:00** `python3 -c 'from pathlib import Path; print("venv_ready",Path(".venv/bin/python").exists()); p=Path("tests/conftest.py"); print(p.read_text() if p.exists() else "no tests/conftest.py"); p=Path("docs/qa/2026-10-02/artifacts/qa_run.py"); print(p.read_text())'` — exit **0**; [output](artifacts/BACKEND-harness-and-ready.txt).
+- **2026-10-03T01:51:20+00:00 → 2026-10-03T01:51:20+00:00** `python3 -c 'from pathlib import Path; print("venv_ready",Path(".venv/bin/python").exists()); p=Path("tests/conftest.py"); print(p.read_text() if p.exists() else "no tests/conftest.py"); p=Path("docs/qa/2026-10-02/tools/qa_run.py"); print(p.read_text())'` — exit **0**; [output](artifacts/BACKEND-harness-and-ready.txt).
 
 - **2026-10-03T01:52:37+00:00 → 2026-10-03T01:52:38+00:00** `.venv/bin/python -m pytest tests/test_qa_backend.py -q -rxX` — exit **1**; [output](artifacts/BACKEND-focused-initial.txt).
 
@@ -37,7 +37,7 @@ Initial command records (the first log header write replaced their generated ind
 
 BE-A completed early after its deterministic assertions resolved: the intended 15-minute timebox is a maximum, not a delay. Six findings have direct reproductions. Final focused run: **72 passed, 16 strict expected failures**. Hypothesis generated 75 deterministic recursive JSON values. Independent clients and ten simultaneous requests on one async client retained their credentials and idempotency keys. Rejected, missing and unknown decisions, authentication errors, and network failures did not run the protected operation.
 
-Tool edits since the first charter: `apply_patch` added `tests/test_qa_backend.py`, corrected its synchronous mock wrapper, extended JSON/endpoint/concurrency coverage, changed one new-test exception-suppression construct for Ruff, and added the synthetic config-repr regression. `ruff format` touched only that new test file. The initial run's seven failures were test-helper errors (`MagicMock` lacks `__name__`), not product defects; they and the initial lint failure remain in artifacts. The deliberate `--runxfail` negative control failed all 16 expected assertions and no others.
+Tool edits since the first charter: `apply_patch` added `tests/test_qa_backend.py`, corrected its synchronous mock wrapper, extended JSON/endpoint/concurrency coverage, changed one new-test exception-suppression construct for Ruff, and added the config-repr regression. `ruff format` touched only that new test file. The initial run's seven failures were test-helper errors (`MagicMock` lacks `__name__`), not product defects; they and the initial lint failure remain in artifacts. The deliberate `--runxfail` negative control failed all 16 expected assertions and no others.
 
 BE-B charter: inspect evidence provenance and map the SDK's local auth, resource, audit and argument-binding risks to OWASP API categories. Verify that each finding has a narrow regression and a practical fix, distinguish server-only unknowns from SDK passes, and write the backend report. No production API, tenant, credential, database, audit ledger or SMS gateway is in scope.
 

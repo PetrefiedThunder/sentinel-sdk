@@ -10,12 +10,13 @@ import pytest
 import sentinel
 import sentinel.config as config_module
 from sentinel import ApprovalRejected, SentinelClient, SentinelConfig, SentinelConfigError
+from tests._qa_values import ACCOUNT_ID, ACTION_ID, DX_HOST, DX_KEY, RECIPIENT, TRANSFER_ID
 
 
 @pytest.fixture
 def isolated_config(monkeypatch):
     config = SentinelConfig(
-        api_url="https://qa.invalid",
+        api_url=f"https://{DX_HOST}",
         api_key=None,
         timeout_seconds=300,
         poll_interval=2,
@@ -31,7 +32,7 @@ def quickstart(monkeypatch, isolated_config):
     readme = (Path(__file__).parents[1] / "README.md").read_text()
     source = re.findall(r"```python\n(.*?)```", readme, flags=re.DOTALL)[0]
     client = MagicMock(spec=SentinelClient)
-    client.create_approval.return_value = {"action_id": "qa-action"}
+    client.create_approval.return_value = {"action_id": ACTION_ID}
     client.wait_for_decision.return_value = {"status": "approved"}
     monkeypatch.setattr("sentinel.decorator.SentinelClient", lambda config: client)
     monkeypatch.setattr(sentinel, "configure", MagicMock())
@@ -47,18 +48,18 @@ def quickstart(monkeypatch, isolated_config):
 )
 def test_readme_quickstart_runs_after_approval(quickstart):
     namespace, _ = quickstart
-    namespace["transfer_funds"](1000, "acct_qa")
+    namespace["transfer_funds"](1000, ACCOUNT_ID)
 
 
 def test_readme_quickstart_passes_when_missing_payment_symbol_is_supplied(quickstart):
     namespace, client = quickstart
-    transfer = MagicMock(return_value={"id": "qa-transfer"})
+    transfer = MagicMock(return_value={"id": TRANSFER_ID})
     namespace["stripe"] = SimpleNamespace(transfers=SimpleNamespace(create=transfer))
-    assert namespace["transfer_funds"](1000, "acct_qa") == {"id": "qa-transfer"}
-    transfer.assert_called_once_with(amount=1000, destination="acct_qa")
+    assert namespace["transfer_funds"](1000, ACCOUNT_ID) == {"id": TRANSFER_ID}
+    transfer.assert_called_once_with(amount=1000, destination=ACCOUNT_ID)
     assert client.create_approval.call_args.kwargs["arguments"] == {
         "amount": 1000,
-        "recipient": "acct_qa",
+        "recipient": ACCOUNT_ID,
     }
 
 
@@ -68,16 +69,16 @@ def test_readme_quickstart_rejection_exposes_reason_and_prevents_payment(quickst
     transfer = MagicMock()
     namespace["stripe"] = SimpleNamespace(transfers=SimpleNamespace(create=transfer))
     with pytest.raises(ApprovalRejected, match="Needs review") as error:
-        namespace["transfer_funds"](1000, "acct_qa")
-    assert error.value.action_id == "qa-action"
+        namespace["transfer_funds"](1000, ACCOUNT_ID)
+    assert error.value.action_id == ACTION_ID
     transfer.assert_not_called()
 
 
 @pytest.mark.parametrize(
     ("env_name", "env_value", "attribute", "expected"),
     [
-        ("SENTINEL_API_URL", "https://qa.invalid", "api_url", "https://qa.invalid"),
-        ("SENTINEL_API_KEY", "qa-placeholder", "api_key", "qa-placeholder"),
+        ("SENTINEL_API_URL", f"https://{DX_HOST}", "api_url", f"https://{DX_HOST}"),
+        ("SENTINEL_API_KEY", DX_KEY, "api_key", DX_KEY),
         ("SENTINEL_TIMEOUT", "17.5", "timeout_seconds", 17.5),
         ("SENTINEL_FALLBACK", "execute", "fallback", "execute"),
         pytest.param(
@@ -126,7 +127,7 @@ def test_oversight_preserves_discoverable_function_signature():
     import inspect
 
     @sentinel.oversight()
-    def action(amount: int, recipient: str = "qa-recipient") -> str:
+    def action(amount: int, recipient: str = RECIPIENT) -> str:
         """Example operation visible to Python help and agent frameworks."""
         return recipient
 

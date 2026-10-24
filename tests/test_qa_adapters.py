@@ -10,13 +10,14 @@ import pytest
 from sentinel.adapters import anthropic, autogen, crewai, langgraph, openai_agents
 from sentinel.adapters.semantic_kernel import sentinel_filter
 from sentinel.exceptions import ApprovalRejected, ApprovalTimeout
+from tests._qa_values import ACTION_ID, RECIPIENT, USE_ID
 
 
 def _client(decision):
     client = MagicMock()
-    client.create_approval.return_value = {"action_id": "qa-action"}
+    client.create_approval.return_value = {"action_id": ACTION_ID}
     client.wait_for_decision.return_value = decision
-    client.acreate_approval = AsyncMock(return_value={"action_id": "qa-action"})
+    client.acreate_approval = AsyncMock(return_value={"action_id": ACTION_ID})
     client.await_for_decision = AsyncMock(return_value=decision)
     return client
 
@@ -34,7 +35,7 @@ def _wrap(adapter, fn, client):
 def _invoke(adapter, client, fn):
     if adapter == "anthropic":
         return anthropic.GatedToolExecutor({"action": fn}, client=client).run_tool_uses(
-            [{"type": "tool_use", "id": "qa-use", "name": "action", "input": {}}]
+            [{"type": "tool_use", "id": USE_ID, "name": "action", "input": {}}]
         )
     if adapter == "semantic_kernel":
         context = SimpleNamespace(function=SimpleNamespace(name="action"), arguments={})
@@ -76,7 +77,7 @@ def test_adapter_direct_invocation_does_not_execute_without_approval(adapter, de
     assert calls == []
     if adapter == "anthropic":
         assert result[0]["is_error"] is True
-        assert result[0]["tool_use_id"] == "qa-use"
+        assert result[0]["tool_use_id"] == USE_ID
 
 
 @pytest.mark.parametrize(
@@ -129,13 +130,13 @@ def test_mixed_sync_arguments_are_fully_presented_for_approval(adapter):
     def action(amount: int, *, recipient: str):
         return amount, recipient
 
-    assert _wrap(adapter, action, client)(90000, recipient="qa-recipient") == (
+    assert _wrap(adapter, action, client)(90000, recipient=RECIPIENT) == (
         90000,
-        "qa-recipient",
+        RECIPIENT,
     )
     assert client.create_approval.call_args.kwargs["arguments"] == {
         "amount": 90000,
-        "recipient": "qa-recipient",
+        "recipient": RECIPIENT,
     }
 
 
@@ -151,13 +152,13 @@ def test_mixed_async_arguments_are_fully_presented_for_approval(adapter):
     async def action(amount: int, *, recipient: str):
         return amount, recipient
 
-    assert asyncio.run(_wrap(adapter, action, client)(90000, recipient="qa-recipient")) == (
+    assert asyncio.run(_wrap(adapter, action, client)(90000, recipient=RECIPIENT)) == (
         90000,
-        "qa-recipient",
+        RECIPIENT,
     )
     assert client.acreate_approval.call_args.kwargs["arguments"] == {
         "amount": 90000,
-        "recipient": "qa-recipient",
+        "recipient": RECIPIENT,
     }
 
 
@@ -184,7 +185,7 @@ def test_real_langchain_tool_does_not_run_after_gate_failure(asynchronous, failu
 
     client = _client({"status": "rejected", "reason": "qa denied"})
     if failure == "timeout":
-        client.wait_for_decision.side_effect = ApprovalTimeout("qa-action", 1)
+        client.wait_for_decision.side_effect = ApprovalTimeout(ACTION_ID, 1)
     elif failure == "transport_error":
         client.create_approval.side_effect = ConnectionError("qa local connection failure")
     config = {"callbacks": [SentinelCallbackHandler(client=client)]}
@@ -223,7 +224,7 @@ def test_real_langchain_approved_tool_executes_once(asynchronous):
     assert result == "executed"
     assert calls == [7]
     client.create_approval.assert_called_once()
-    client.wait_for_decision.assert_called_once_with("qa-action", timeout=None)
+    client.wait_for_decision.assert_called_once_with(ACTION_ID, timeout=None)
 
 
 @pytest.mark.parametrize("block_style", ["mapping", "model"])
@@ -231,14 +232,14 @@ def test_anthropic_unknown_tool_and_non_tool_blocks_are_safe(block_style):
     client = _client({"status": "approved"})
     blocks = [
         {"type": "text", "text": "ignore"},
-        {"type": "tool_use", "id": "qa-use", "name": "missing", "input": {}},
+        {"type": "tool_use", "id": USE_ID, "name": "missing", "input": {}},
     ]
     if block_style == "model":
         blocks = [SimpleNamespace(**block) for block in blocks]
     results = anthropic.GatedToolExecutor({}, client=client).run_tool_uses(blocks)
     assert len(results) == 1
     assert results[0]["is_error"] is True
-    assert results[0]["tool_use_id"] == "qa-use"
+    assert results[0]["tool_use_id"] == USE_ID
     client.create_approval.assert_not_called()
 
 
