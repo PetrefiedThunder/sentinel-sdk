@@ -22,21 +22,43 @@ def _truncate_repr(obj: Any) -> str:
     return s
 
 
-def _serialize_arguments(value: Any) -> Any:
+def _serialize_arguments(value: Any, path: str = "arguments") -> Any:
+    """Return a JSON-safe copy of `value`, or raise TypeError.
+
+    Raises the same exception type as SentinelClient.create_approval so the
+    decorator, adapters and direct client all fail the same way, before any
+    approval request is sent.
+    """
     if isinstance(value, _PRIMITIVES):
         return value
     if isinstance(value, list | tuple):
-        return [_serialize_arguments(v) for v in value]
+        return [_serialize_arguments(v, f"{path}[{i}]") for i, v in enumerate(value)]
     if isinstance(value, dict):
-        return {str(k): _serialize_arguments(v) for k, v in value.items()}
-    return _truncate_repr(value)
+        out = {}
+        for k, v in value.items():
+            if not isinstance(k, _PRIMITIVES):
+                raise TypeError(
+                    f"@oversight arguments must be JSON-serializable. "
+                    f"{path} has a key of type {type(k).__name__}; keys must be str."
+                )
+            out[str(k)] = _serialize_arguments(v, f"{path}[{k!r}]")
+        return out
+    raise TypeError(
+        f"@oversight arguments must be JSON-serializable. "
+        f"{path} is of type {type(value).__name__}. "
+        f"Convert sets to lists, bytes to base64 str, and objects to dicts "
+        f"before the call."
+    )
 
 
 def _bound_arguments(fn: Callable, args: tuple, kwargs: dict) -> dict:
     signature = inspect.signature(fn)
     bound = signature.bind_partial(*args, **kwargs)
     bound.apply_defaults()
-    return _serialize_arguments(dict(bound.arguments))
+    return {
+        name: _serialize_arguments(value, f"arguments[{name!r}]")
+        for name, value in bound.arguments.items()
+    }
 
 
 def oversight(

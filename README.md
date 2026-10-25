@@ -31,6 +31,7 @@ from sentinel import configure, oversight
 
 configure(api_key="sk_live_…")
 
+
 @oversight(
     risk_level="high",
     approvers=["sms:+15551234567", "alice@acme.com"],
@@ -81,21 +82,22 @@ SMS destination without an active consent record — the API returns
 
 ```python
 from sentinel import SentinelClient
+
 client = SentinelClient()
 
 # One-time, per phone number, after you've collected a real opt-in:
 client.register_sms_contact(
     phone_number="+15551234567",
     display_name="Maya (CTO)",
-    consent_source="onboarding_checkbox",       # e.g. "signed_form", "captured_web_form"
+    consent_source="onboarding_checkbox",  # e.g. "signed_form", "captured_web_form"
     consent_note="Checked the SMS opt-in box during signup on 2026-05-25",
 )
 ```
 
 Other helpers:
 ```python
-client.list_sms_contacts()           # all active + revoked contacts for this tenant
-client.revoke_sms_contact("con_…")   # marks consent revoked; future SMS won't send
+client.list_sms_contacts()  # all active + revoked contacts for this tenant
+client.revoke_sms_contact("con_…")  # marks consent revoked; future SMS won't send
 ```
 
 The customer can also reply **STOP** to any Sentinel SMS — the Twilio inbound
@@ -111,6 +113,7 @@ the caller's list is empty.
 
 ```python
 from sentinel import SentinelClient
+
 client = SentinelClient()
 
 client.set_default_approvers(["sms:+15551234567", "ops@yourcompany.com"])
@@ -181,6 +184,7 @@ Every approval creates a hash-chained audit trail. Fetch it:
 
 ```python
 from sentinel import SentinelClient
+
 client = SentinelClient()
 events = client.list_audit_events(action_id="act_…")  # or omit for full log
 ```
@@ -204,8 +208,10 @@ Install with `pip install sentinel-oversight[langchain]`.
 from agents import Agent, function_tool
 from sentinel.adapters.openai_agents import gated
 
+
 @function_tool
 def wire_transfer(amount: int, recipient: str) -> dict: ...
+
 
 agent = Agent(name="ops", tools=[gated(wire_transfer, risk_level="high")])
 ```

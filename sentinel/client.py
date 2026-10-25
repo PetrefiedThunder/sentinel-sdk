@@ -12,7 +12,7 @@ import httpx
 from .config import SentinelConfig, get_config
 from .exceptions import ApprovalTimeout, SentinelAPIError, SentinelConfigError, SentinelError
 
-USER_AGENT = "sentinel-sdk-python/0.1.9"
+USER_AGENT = "sentinel-sdk-python/0.2.0"
 
 
 @dataclass
