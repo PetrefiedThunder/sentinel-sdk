@@ -6,6 +6,16 @@ and adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Exception audits from an approved `@oversight` call are no longer dropped.
+  The API requires `execution_result` to be a string and rejects JSON null.
+  Audit posts are best-effort and do not raise, so that 422 left no execution
+  record when the wrapped function raised. A missing result is now sent as
+  `failed` when `error` is set, and as an empty string otherwise. The
+  exception text stays in `error`.
+
+## [0.2.0]
+
 ### Changed (breaking)
 - `@oversight` now fails fast on arguments that are not JSON-serializable.
   Any argument (at any nesting depth) that is not `str`, `int`, `float`,
@@ -16,7 +26,8 @@ and adheres to [Semantic Versioning](https://semver.org/).
   approvers saw a string that did not match what the function received.
   This matches the direct client (`SentinelClient.create_approval`) and the
   `crewai` / `autogen` adapters, which already raised `TypeError`.
-  - `@oversight` also rejects dict keys that are not `str`. Previously
+  - `@oversight`, the direct client and both adapters reject dict keys that
+    are not `str`. Previously
     `{1: "a"}` was sent as `{"1": "a"}`, `{True: "a"}` as `{"True": "a"}`,
     and `{1: "a", "1": "b"}` collapsed to one key, so the approver could
     see a different dict than the function received.
@@ -37,14 +48,6 @@ and adheres to [Semantic Versioning](https://semver.org/).
   that check, so decorator calls never hit it. Code that relied on this
   conversion must convert those values itself before upgrading to 0.2.0,
   or the call will raise `TypeError`.
-
-### Fixed
-- Exception audits from an approved `@oversight` call are no longer dropped.
-  The API requires `execution_result` to be a string and rejects JSON null.
-  Audit posts are best-effort and do not raise, so that 422 left no execution
-  record when the wrapped function raised. A missing result is now sent as
-  `failed` when `error` is set, and as an empty string otherwise. The
-  exception text stays in `error`.
 
 ## [0.1.9] — 2026-05-26
 

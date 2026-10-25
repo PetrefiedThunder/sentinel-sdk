@@ -270,6 +270,62 @@ def test_oversight_rejects_non_str_dict_key(recorded, payload, type_name):
     assert ran == []
 
 
+@pytest.mark.parametrize(
+    ("payload", "type_name"),
+    [
+        pytest.param({1: "a"}, "int", id="non-str-key"),
+        pytest.param({1: "a", "1": "b"}, "int", id="stringified-key-collision"),
+        pytest.param({"nested": {True: "a"}}, "bool", id="nested-non-str-key"),
+    ],
+)
+@pytest.mark.parametrize("entry_point", ["client", "crewai", "autogen", "oversight"])
+def test_non_str_dict_key_parity(recorded, payload, type_name, entry_point):
+    client, requests = recorded
+    ran = []
+
+    def tool(payload):
+        ran.append(payload)
+
+    with (
+        patch("sentinel.decorator.SentinelClient", return_value=client),
+        pytest.raises(TypeError, match=rf"key of type {type_name}; keys must be str"),
+    ):
+        if entry_point == "client":
+            client.create_approval(function_name="tool", arguments={"payload": payload})
+        elif entry_point == "crewai":
+            crewai.gated(tool, client=client)(payload=payload)
+        elif entry_point == "autogen":
+            autogen.gated(client=client)(tool)(payload=payload)
+        else:
+            oversight()(tool)(payload)
+    assert requests == []
+    assert ran == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("entry_point", ["client", "autogen", "oversight"])
+async def test_async_non_str_dict_key_parity(recorded, entry_point):
+    client, requests = recorded
+    payload = {1: "a", "1": "b"}
+    ran = []
+
+    async def tool(payload):
+        ran.append(payload)
+
+    with (
+        patch("sentinel.decorator.SentinelClient", return_value=client),
+        pytest.raises(TypeError, match="key of type int; keys must be str"),
+    ):
+        if entry_point == "client":
+            await client.acreate_approval(function_name="tool", arguments={"payload": payload})
+        elif entry_point == "autogen":
+            await autogen.gated(client=client)(tool)(payload=payload)
+        else:
+            await oversight()(tool)(payload)
+    assert requests == []
+    assert ran == []
+
+
 def test_oversight_still_accepts_json_values(recorded):
     client, requests = recorded
 

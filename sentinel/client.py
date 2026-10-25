@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import math
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -13,6 +14,7 @@ from .config import SentinelConfig, get_config
 from .exceptions import ApprovalTimeout, SentinelAPIError, SentinelConfigError, SentinelError
 
 USER_AGENT = "sentinel-sdk-python/0.2.0"
+_PRIMITIVES = (str, int, float, bool, type(None))
 
 
 @dataclass
@@ -63,6 +65,39 @@ def _ensure_json_serializable(arguments: Any) -> None:
             f"Got an un-serializable value: {e}. "
             f"Convert sets/objects/bytes to plain dict/list/str/int/float/bool/None before the call."
         ) from e
+    _serialize_arguments(arguments)
+
+
+def _serialize_arguments(value: Any, path: str = "arguments") -> Any:
+    """Return a JSON-safe copy of `value`, or raise TypeError."""
+    if isinstance(value, float) and not math.isfinite(value):
+        raise TypeError(
+            f"@oversight arguments must be JSON-serializable. "
+            f"{path} is {value!r}; floats must be finite."
+        )
+    if isinstance(value, _PRIMITIVES):
+        return value
+    if isinstance(value, list | tuple):
+        return [_serialize_arguments(v, f"{path}[{i}]") for i, v in enumerate(value)]
+    if isinstance(value, dict):
+        out = {}
+        for k, v in value.items():
+            # Non-str keys would be renamed (1 -> "1", True -> "True") and can
+            # collide, so the approver would see a different dict than the
+            # function receives.
+            if not isinstance(k, str):
+                raise TypeError(
+                    f"@oversight arguments must be JSON-serializable. "
+                    f"{path} has a key of type {type(k).__name__}; keys must be str."
+                )
+            out[k] = _serialize_arguments(v, f"{path}[{k!r}]")
+        return out
+    raise TypeError(
+        f"@oversight arguments must be JSON-serializable. "
+        f"{path} is of type {type(value).__name__}. "
+        f"Convert sets to lists, bytes to base64 str, and objects to dicts "
+        f"before the call."
+    )
 
 
 def _audit_event_body(action_id: str, execution_result: Any, error: str | None) -> dict[str, Any]:
