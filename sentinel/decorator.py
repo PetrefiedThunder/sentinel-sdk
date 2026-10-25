@@ -2,17 +2,15 @@ from __future__ import annotations
 
 import functools
 import inspect
-import math
 from typing import TYPE_CHECKING, Any
 
-from .client import SentinelClient
+from .client import SentinelClient, _serialize_arguments
 from .config import get_config
 from .exceptions import ApprovalRejected, ApprovalTimeout
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-_PRIMITIVES = (str, int, float, bool, type(None))
 _MAX_REPR = 500
 
 
@@ -21,43 +19,6 @@ def _truncate_repr(obj: Any) -> str:
     if len(s) > _MAX_REPR:
         return s[:_MAX_REPR] + "...<truncated>"
     return s
-
-
-def _serialize_arguments(value: Any, path: str = "arguments") -> Any:
-    """Return a JSON-safe copy of `value`, or raise TypeError.
-
-    Raises the same exception type as SentinelClient.create_approval so the
-    decorator, adapters and direct client all fail the same way, before any
-    approval request is sent.
-    """
-    if isinstance(value, float) and not math.isfinite(value):
-        raise TypeError(
-            f"@oversight arguments must be JSON-serializable. "
-            f"{path} is {value!r}; floats must be finite."
-        )
-    if isinstance(value, _PRIMITIVES):
-        return value
-    if isinstance(value, list | tuple):
-        return [_serialize_arguments(v, f"{path}[{i}]") for i, v in enumerate(value)]
-    if isinstance(value, dict):
-        out = {}
-        for k, v in value.items():
-            # Non-str keys would be renamed (1 -> "1", True -> "True") and can
-            # collide, so the approver would see a different dict than the
-            # function receives.
-            if not isinstance(k, str):
-                raise TypeError(
-                    f"@oversight arguments must be JSON-serializable. "
-                    f"{path} has a key of type {type(k).__name__}; keys must be str."
-                )
-            out[k] = _serialize_arguments(v, f"{path}[{k!r}]")
-        return out
-    raise TypeError(
-        f"@oversight arguments must be JSON-serializable. "
-        f"{path} is of type {type(value).__name__}. "
-        f"Convert sets to lists, bytes to base64 str, and objects to dicts "
-        f"before the call."
-    )
 
 
 def _bound_arguments(fn: Callable, args: tuple, kwargs: dict) -> dict:
