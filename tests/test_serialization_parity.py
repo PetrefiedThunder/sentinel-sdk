@@ -174,6 +174,102 @@ def test_oversight_rejects_non_primitive_dict_key(recorded):
     assert requests == []
 
 
+NON_FINITE = [
+    pytest.param(float("nan"), id="nan"),
+    pytest.param(float("inf"), id="inf"),
+    pytest.param(float("-inf"), id="-inf"),
+]
+
+
+@pytest.mark.parametrize("value", NON_FINITE)
+def test_direct_client_rejects_non_finite_float(recorded, value):
+    client, requests = recorded
+    with pytest.raises(TypeError, match="JSON-serializable"):
+        client.create_approval(function_name="tool", arguments={"x": [value]})
+    assert requests == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("value", NON_FINITE)
+async def test_direct_client_async_rejects_non_finite_float(recorded, value):
+    client, requests = recorded
+    with pytest.raises(TypeError, match="JSON-serializable"):
+        await client.acreate_approval(function_name="tool", arguments={"x": value})
+    assert requests == []
+
+
+@pytest.mark.parametrize("value", NON_FINITE)
+def test_oversight_rejects_non_finite_float(recorded, value):
+    client, requests = recorded
+    ran = []
+
+    @oversight()
+    def tool(x):
+        ran.append(x)
+
+    with (
+        patch("sentinel.decorator.SentinelClient", return_value=client),
+        pytest.raises(TypeError, match=r"arguments\['x'\]\['n'\] is .*floats must be finite"),
+    ):
+        tool({"n": value})
+    assert requests == []
+    assert ran == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("value", NON_FINITE)
+async def test_oversight_async_rejects_non_finite_float(recorded, value):
+    client, requests = recorded
+
+    @oversight()
+    async def tool(x):
+        pass
+
+    with (
+        patch("sentinel.decorator.SentinelClient", return_value=client),
+        pytest.raises(TypeError, match="floats must be finite"),
+    ):
+        await tool(value)
+    assert requests == []
+
+
+@pytest.mark.parametrize("value", NON_FINITE)
+def test_crewai_gated_rejects_non_finite_float(recorded, value):
+    client, requests = recorded
+    wrapped = crewai.gated(lambda x: None, client=client)
+    with pytest.raises(TypeError, match="JSON-serializable"):
+        wrapped(x=value)
+    assert requests == []
+
+
+@pytest.mark.parametrize(
+    ("payload", "type_name"),
+    [
+        pytest.param({1: "WIRE_100000", "1": "preview"}, "int", id="int-collides-with-str"),
+        pytest.param({True: "v"}, "bool", id="bool"),
+        pytest.param({None: "v"}, "NoneType", id="none"),
+        pytest.param({1.5: "v"}, "float", id="float"),
+    ],
+)
+def test_oversight_rejects_non_str_dict_key(recorded, payload, type_name):
+    """A non-str key would be renamed in the approval payload while the
+    function still receives the original key."""
+    client, requests = recorded
+    ran = []
+
+    @oversight()
+    def tool(payload):
+        ran.append(payload)
+
+    with (
+        patch("sentinel.decorator.SentinelClient", return_value=client),
+        pytest.raises(TypeError, match=rf"key of type {type_name}; keys must be str"),
+    ):
+        tool(payload)
+    assert requests == []
+    assert ran == []
+
+
 def test_oversight_still_accepts_json_values(recorded):
     client, requests = recorded
 

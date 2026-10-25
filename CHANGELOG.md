@@ -16,16 +16,27 @@ and adheres to [Semantic Versioning](https://semver.org/).
   approvers saw a string that did not match what the function received.
   This matches the direct client (`SentinelClient.create_approval`) and the
   `crewai` / `autogen` adapters, which already raised `TypeError`.
+  - `@oversight` also rejects dict keys that are not `str`. Previously
+    `{1: "a"}` was sent as `{"1": "a"}`, `{True: "a"}` as `{"True": "a"}`,
+    and `{1: "a", "1": "b"}` collapsed to one key, so the approver could
+    see a different dict than the function received.
   - Migration: convert values before calling the decorated function. Sets
     to lists (`sorted(s)` or `list(s)`), bytes to base64 strings
     (`base64.b64encode(b).decode()`), custom objects to dicts
-    (`dataclasses.asdict(obj)`, `obj.model_dump()`, or a hand-built dict).
+    (`dataclasses.asdict(obj)`, `obj.model_dump()`, or a hand-built dict),
+    non-str dict keys to `str`.
+- `NaN`, `Infinity` and `-Infinity` float arguments now raise `TypeError`
+  from `@oversight`, the direct client and the adapters. They are not valid
+  JSON; httpx previously raised `ValueError` while encoding the request.
 
 ### Deprecated
-- The repr-conversion behavior of `sentinel-oversight` 0.1.x on PyPI is
-  removed in 0.2.0. Code that relied on 0.1.x silently repr-converting sets,
-  bytes or custom objects passed to `@oversight` must convert those values
-  itself before upgrading to 0.2.0, or the call will raise `TypeError`.
+- The `@oversight` repr-conversion behavior of `sentinel-oversight` 0.1.x
+  on PyPI (including 0.1.8 and 0.1.9) is removed in 0.2.0. The 0.1.8
+  `TypeError` check below ran only in the direct client; `@oversight` had
+  already repr-converted sets, bytes and custom objects into strings before
+  that check, so decorator calls never hit it. Code that relied on this
+  conversion must convert those values itself before upgrading to 0.2.0,
+  or the call will raise `TypeError`.
 
 ### Fixed
 - Exception audits from an approved `@oversight` call are no longer dropped.
@@ -50,8 +61,10 @@ and adheres to [Semantic Versioning](https://semver.org/).
 ## [0.1.8] — 2026-05-26
 
 ### Fixed
-- Fail fast with `TypeError` when `@oversight` arguments contain
-  non-JSON-serializable values (sets, bytes, custom objects). Previously
+- Fail fast with `TypeError` when `SentinelClient.create_approval`
+  arguments contain non-JSON-serializable values (sets, bytes, custom
+  objects). `@oversight` was not affected: it still repr-converted such
+  values to strings before this check, until 0.2.0. Previously
   the call silently succeeded at the SDK layer, then hung for the full
   `timeout_seconds` waiting on an approval the decorator could never
   surface. The validation runs client-side via `json.dumps`, so the

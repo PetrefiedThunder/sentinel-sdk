@@ -54,8 +54,10 @@ def _ensure_json_serializable(arguments: Any) -> None:
     sees the real error.
     """
     try:
-        json.dumps(arguments)
-    except TypeError as e:
+        # allow_nan=False matches httpx's encoder, which raises ValueError on
+        # NaN/Infinity at send time.
+        json.dumps(arguments, allow_nan=False)
+    except (TypeError, ValueError) as e:
         raise TypeError(
             f"@oversight arguments must be JSON-serializable. "
             f"Got an un-serializable value: {e}. "

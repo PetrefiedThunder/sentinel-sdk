@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import inspect
+import math
 from typing import TYPE_CHECKING, Any
 
 from .client import SentinelClient
@@ -29,6 +30,11 @@ def _serialize_arguments(value: Any, path: str = "arguments") -> Any:
     decorator, adapters and direct client all fail the same way, before any
     approval request is sent.
     """
+    if isinstance(value, float) and not math.isfinite(value):
+        raise TypeError(
+            f"@oversight arguments must be JSON-serializable. "
+            f"{path} is {value!r}; floats must be finite."
+        )
     if isinstance(value, _PRIMITIVES):
         return value
     if isinstance(value, list | tuple):
@@ -36,12 +42,15 @@ def _serialize_arguments(value: Any, path: str = "arguments") -> Any:
     if isinstance(value, dict):
         out = {}
         for k, v in value.items():
-            if not isinstance(k, _PRIMITIVES):
+            # Non-str keys would be renamed (1 -> "1", True -> "True") and can
+            # collide, so the approver would see a different dict than the
+            # function receives.
+            if not isinstance(k, str):
                 raise TypeError(
                     f"@oversight arguments must be JSON-serializable. "
                     f"{path} has a key of type {type(k).__name__}; keys must be str."
                 )
-            out[str(k)] = _serialize_arguments(v, f"{path}[{k!r}]")
+            out[k] = _serialize_arguments(v, f"{path}[{k!r}]")
         return out
     raise TypeError(
         f"@oversight arguments must be JSON-serializable. "
