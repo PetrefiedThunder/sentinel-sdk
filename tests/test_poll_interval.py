@@ -39,7 +39,9 @@ def _install_clock(monkeypatch) -> _Clock:
     return clock
 
 
-def _client(handler, *, poll_interval: float = 2.0, timeout_seconds: float = 30.0) -> SentinelClient:
+def _client(
+    handler, *, poll_interval: float = 2.0, timeout_seconds: float = 30.0
+) -> SentinelClient:
     client = SentinelClient(
         SentinelConfig(
             api_key="sk_test",
