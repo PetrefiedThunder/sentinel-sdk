@@ -1,6 +1,7 @@
 """Offline backend QA; strict expected failures document unresolved findings.
 
-All HTTP uses MockTransport, synthetic credentials, and reserved .invalid hosts.
+All HTTP uses MockTransport; credentials, ids and hosts are random per run
+(tests/_qa_values.py) and hosts are never resolved.
 """
 
 import asyncio
@@ -23,6 +24,18 @@ from sentinel import (
     SentinelConfigError,
     oversight,
 )
+from tests._qa_values import (
+    API_KEYS,
+    CREDENTIAL_MARKER,
+    ERR_DETAIL,
+    ERR_OPERATION,
+    ERR_TRANSPORT,
+    ERROR_TEXT,
+    HOSTS,
+    REPLAY_KEY,
+    REQUEST_IDS,
+    RESULT_TEXT,
+)
 
 
 @pytest.fixture
@@ -30,7 +43,7 @@ def client_factory():
     clients = []
 
     def make(handler, *, label="one"):
-        config = SentinelConfig(api_key=f"qa-synthetic-{label}", api_url=f"https://{label}.invalid")
+        config = SentinelConfig(api_key=API_KEYS[label], api_url=f"https://{HOSTS[label]}")
         client = SentinelClient(config)
         client._client = httpx.Client(
             base_url=config.api_url,
@@ -64,13 +77,13 @@ def test_http_errors_preserve_status_without_retry(client_factory, mode, status)
 
     def handler(request):
         calls.append(request)
-        return httpx.Response(status, json={"detail": "synthetic failure"})
+        return httpx.Response(status, json={"detail": ERR_DETAIL})
 
     client = client_factory(handler)
     with pytest.raises(SentinelAPIError) as error:
-        invoke(client, mode, "create_approval", "task", {}, idempotency_key="qa-replay")
+        invoke(client, mode, "create_approval", "task", {}, idempotency_key=REPLAY_KEY)
     assert error.value.status_code == status
-    assert "synthetic failure" in str(error.value)
+    assert ERR_DETAIL in str(error.value)
     assert len(calls) == 1
 
 
@@ -95,7 +108,7 @@ def test_transport_failure_never_replays_approval(client_factory, mode, error_ty
 
     def handler(request):
         calls.append(request)
-        raise error_type("synthetic transport failure", request=request)
+        raise error_type(ERR_TRANSPORT, request=request)
 
     with pytest.raises(error_type):
         invoke(client_factory(handler), mode, "create_approval", "task", {})
@@ -107,7 +120,7 @@ def test_missing_key_fails_before_constructing_transport(monkeypatch, mode):
     constructor = MagicMock(side_effect=AssertionError("network client must not be constructed"))
     # Header validation occurs while evaluating the constructor arguments.
     monkeypatch.setattr(httpx, "AsyncClient" if mode == "async" else "Client", constructor)
-    client = SentinelClient(SentinelConfig(api_key=None, api_url="https://one.invalid"))
+    client = SentinelClient(SentinelConfig(api_key=None, api_url=f"https://{HOSTS['one']}"))
     with pytest.raises(SentinelConfigError):
         invoke(client, mode, "create_approval", "task", {})
     constructor.assert_not_called()
@@ -130,9 +143,6 @@ def test_legacy_wait_fallback_returns_terminal_decision(client_factory, mode, st
 
 
 @pytest.mark.parametrize("mode", ["sync", "async"])
-@pytest.mark.xfail(
-    strict=True, raises=AssertionError, reason="BE-001: legacy polling ignores poll_interval"
-)
 def test_legacy_wait_paces_pending_requests(client_factory, monkeypatch, mode):
     polls = []
     sleeper = MagicMock()
@@ -204,13 +214,13 @@ async def test_concurrent_clients_keep_identity_and_idempotency_isolated(client_
     one = client_factory(handler, label="one")
     two = client_factory(handler, label="two")
     results = await asyncio.gather(
-        one.acreate_approval("task", {}, idempotency_key="one-request"),
-        two.acreate_approval("task", {}, idempotency_key="two-request"),
+        one.acreate_approval("task", {}, idempotency_key=REQUEST_IDS["one"]),
+        two.acreate_approval("task", {}, idempotency_key=REQUEST_IDS["two"]),
     )
-    assert {result["action_id"] for result in results} == {"one-request", "two-request"}
+    assert {result["action_id"] for result in results} == {REQUEST_IDS["one"], REQUEST_IDS["two"]}
     assert set(seen) == {
-        ("one.invalid", "Bearer qa-synthetic-one", "one-request"),
-        ("two.invalid", "Bearer qa-synthetic-two", "two-request"),
+        (HOSTS["one"], f"Bearer {API_KEYS['one']}", REQUEST_IDS["one"]),
+        (HOSTS["two"], f"Bearer {API_KEYS['two']}", REQUEST_IDS["two"]),
     }
 
 
@@ -298,7 +308,7 @@ def test_default_timeout_never_executes(monkeypatch, mode):
 
 @pytest.mark.parametrize("mode", ["sync", "async"])
 @pytest.mark.parametrize(
-    "failure", [SentinelAPIError(403, "denied"), httpx.ReadTimeout("synthetic")]
+    "failure", [SentinelAPIError(403, "denied"), httpx.ReadTimeout(ERR_TRANSPORT)]
 )
 def test_execute_fallback_does_not_bypass_api_or_network_failures(monkeypatch, mode, failure):
     decorator_client(monkeypatch, mode, failure=failure)
@@ -323,7 +333,7 @@ def test_decorator_closes_client_on_every_exit(monkeypatch, mode, outcome):
 
     def operation():
         if outcome == "operation-error":
-            raise ValueError("synthetic operation error")
+            raise ValueError(ERR_OPERATION)
         return "ok"
 
     with contextlib.suppress(ApprovalRejected, ApprovalTimeout, ValueError):
@@ -338,10 +348,10 @@ def test_decorator_closes_client_on_every_exit(monkeypatch, mode, outcome):
 def test_timeout_fallback_exception_is_audited(monkeypatch, mode):
     """BE-003: failed explicit fallback must preserve the error and audit attempt."""
     client = decorator_client(monkeypatch, mode, failure=ApprovalTimeout("action", 1))
-    original_error = ValueError("synthetic operation error")
+    original_error = ValueError(ERR_OPERATION)
     operation = MagicMock(side_effect=original_error)
 
-    with pytest.raises(ValueError, match="synthetic operation error") as raised:
+    with pytest.raises(ValueError, match=ERR_OPERATION) as raised:
         wrap_call(mode, operation, fallback="execute")()
     assert raised.value is original_error
     operation.assert_called_once_with()
@@ -350,9 +360,9 @@ def test_timeout_fallback_exception_is_audited(monkeypatch, mode):
     if mode == "async":
         audit.assert_awaited_once()
     assert audit.call_args.args[0] == "action"
-    assert audit.call_args.kwargs["execution_result"] == "None"
+    assert audit.call_args.kwargs["execution_result"] is None
     assert "timeout-fallback-execute" in audit.call_args.kwargs["error"]
-    assert "synthetic operation error" in audit.call_args.kwargs["error"]
+    assert ERR_OPERATION in audit.call_args.kwargs["error"]
 
 
 @pytest.mark.parametrize("mode", ["sync", "async"])
@@ -480,20 +490,20 @@ async def test_shared_client_keeps_concurrent_request_keys_isolated(client_facto
         ("get_tenant", (), "GET", "/v1/tenants/me", None),
         (
             "set_default_approvers",
-            (["qa@example.invalid"],),
+            ([""],),
             "PATCH",
             "/v1/tenants/me",
-            {"default_approvers": ["qa@example.invalid"]},
+            {"default_approvers": [""]},
         ),
         (
             "register_sms_contact",
-            ("+15555550101", "Synthetic", "test"),
+            ("", "", ""),
             "POST",
             "/v1/approver-contacts",
             {
-                "phone_number": "+15555550101",
-                "display_name": "Synthetic",
-                "consent_source": "test",
+                "phone_number": "",
+                "display_name": "",
+                "consent_source": "",
                 "consent_note": "",
                 "consent_attested": True,
             },
@@ -503,13 +513,13 @@ async def test_shared_client_keeps_concurrent_request_keys_isolated(client_facto
         ("list_audit_events", (), "GET", "/v1/audit-events", None),
         (
             "emit_audit_event",
-            ("action", "synthetic result", "synthetic error"),
+            ("action", RESULT_TEXT, ERROR_TEXT),
             "POST",
             "/v1/audit-events",
             {
                 "action_id": "action",
-                "execution_result": "synthetic result",
-                "error": "synthetic error",
+                "execution_result": RESULT_TEXT,
+                "error": ERROR_TEXT,
             },
         ),
     ],
@@ -532,7 +542,7 @@ def test_supporting_endpoint_contracts(client_factory, mode, method, args, verb,
 @pytest.mark.parametrize("mode", ["sync", "async"])
 def test_audit_transport_errors_remain_best_effort(client_factory, mode):
     def handler(request):
-        raise httpx.ConnectError("synthetic audit failure", request=request)
+        raise httpx.ConnectError(ERR_TRANSPORT, request=request)
 
     assert invoke(client_factory(handler), mode, "emit_audit_event", "action") is None
 
@@ -541,6 +551,6 @@ def test_audit_transport_errors_remain_best_effort(client_factory, mode):
     strict=True, raises=AssertionError, reason="BE-006: config repr contains the credential value"
 )
 def test_config_repr_omits_credential():
-    synthetic_marker = "qa-only-credential-marker"
-    config = SentinelConfig(api_key=synthetic_marker, api_url="https://one.invalid")
-    assert synthetic_marker not in repr(config)
+    credential_marker = CREDENTIAL_MARKER
+    config = SentinelConfig(api_key=credential_marker, api_url=f"https://{HOSTS['one']}")
+    assert credential_marker not in repr(config)

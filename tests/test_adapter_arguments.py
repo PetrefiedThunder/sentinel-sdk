@@ -9,6 +9,7 @@ import pytest
 
 from sentinel.adapters import autogen, crewai, langgraph, openai_agents
 from sentinel.client import _ensure_json_serializable
+from tests._qa_values import ACTION_ID
 
 CASES = [(name, False) for name in ("autogen", "crewai", "langgraph", "openai_agents")]
 CASES += [(name, True) for name in ("autogen", "langgraph", "openai_agents")]
@@ -18,9 +19,9 @@ CASES += [(name, True) for name in ("autogen", "langgraph", "openai_agents")]
 def gated_call(request):
     adapter, asynchronous = request.param
     client = MagicMock()
-    client.create_approval.return_value = {"action_id": "qa-action"}
+    client.create_approval.return_value = {"action_id": ACTION_ID}
     client.wait_for_decision.return_value = {"status": "approved"}
-    client.acreate_approval = AsyncMock(return_value={"action_id": "qa-action"})
+    client.acreate_approval = AsyncMock(return_value={"action_id": ACTION_ID})
     client.await_for_decision = AsyncMock(return_value={"status": "approved"})
 
     def gate(fn):
@@ -152,7 +153,7 @@ def test_omitted_nonserializable_default_stays_out_of_approval(gated_call):
 
     def create_approval(**kwargs):
         _ensure_json_serializable(kwargs["arguments"])
-        return {"action_id": "qa-action"}
+        return {"action_id": ACTION_ID}
 
     approval.side_effect = create_approval
 

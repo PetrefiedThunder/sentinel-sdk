@@ -7,9 +7,12 @@ and adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
-- Send API-compatible string execution results when synchronous or asynchronous
-  `@oversight` calls fail after approval or explicit timeout fallback. Preserve
-  the original exception and the fallback reason in accepted failure audits.
+- Exception audits from an approved `@oversight` call are no longer dropped.
+  The API requires `execution_result` to be a string and rejects JSON null.
+  Audit posts are best-effort and do not raise, so that 422 left no execution
+  record when the wrapped function raised. A missing result is now sent as
+  `failed` when `error` is set, and as an empty string otherwise. The
+  exception text stays in `error`.
 
 ## [0.1.9] — 2026-05-26
 

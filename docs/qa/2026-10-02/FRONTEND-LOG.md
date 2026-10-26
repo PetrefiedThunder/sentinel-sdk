@@ -19,7 +19,7 @@ All timestamps UTC.
 
 - **2026-10-03T01:50:50+00:00 → 2026-10-03T01:50:50+00:00** `python3 -c 'from pathlib import Path; files=["sentinel/adapters/langchain.py","sentinel/adapters/anthropic.py","sentinel/adapters/openai_agents.py","sentinel/adapters/langgraph.py"]; [(print("\nFILE",p),print("".join(f"{i}: {s}" for i,s in enumerate(Path(p).open(),1)))) for p in files]'` — exit **0**; [output](artifacts/FRONTEND-focused-source.txt).
 
-- **2026-10-03T01:51:00+00:00 → 2026-10-03T01:51:00+00:00** `python3 -c 'from pathlib import Path; from datetime import datetime, timezone; print(datetime.now(timezone.utc).isoformat()); print(Path("docs/qa/2026-10-02/artifacts/qa_run.py").read_text())'` — exit **0**; [output](artifacts/FRONTEND-logger-and-time.txt).
+- **2026-10-03T01:51:00+00:00 → 2026-10-03T01:51:00+00:00** `python3 -c 'from pathlib import Path; from datetime import datetime, timezone; print(datetime.now(timezone.utc).isoformat()); print(Path("docs/qa/2026-10-02/tools/qa_run.py").read_text())'` — exit **0**; [output](artifacts/FRONTEND-logger-and-time.txt).
 
 - **2026-10-03T01:51:13+00:00** Charter FE-A (15-minute timebox): prove host-framework callbacks stop side effects after rejection/error; exercise all seven adapters across approved, rejected, unknown and malformed decisions. Inspect metadata and mixed-argument fidelity. Exit with focused regressions and evidence; real defects remain strict expected failures.
 
