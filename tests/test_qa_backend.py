@@ -25,16 +25,23 @@ from sentinel import (
     oversight,
 )
 from tests._qa_values import (
+    ACTION_ID,
+    AMOUNTS,
     API_KEYS,
+    CONTACT_ID,
     CREDENTIAL_MARKER,
     ERR_DETAIL,
     ERR_OPERATION,
     ERR_TRANSPORT,
     ERROR_TEXT,
     HOSTS,
+    ITEM,
+    RECIPIENT,
     REPLAY_KEY,
     REQUEST_IDS,
     RESULT_TEXT,
+    TASK_NAME,
+    rid,
 )
 
 
@@ -81,7 +88,7 @@ def test_http_errors_preserve_status_without_retry(client_factory, mode, status)
 
     client = client_factory(handler)
     with pytest.raises(SentinelAPIError) as error:
-        invoke(client, mode, "create_approval", "task", {}, idempotency_key=REPLAY_KEY)
+        invoke(client, mode, "create_approval", TASK_NAME, {}, idempotency_key=REPLAY_KEY)
     assert error.value.status_code == status
     assert ERR_DETAIL in str(error.value)
     assert len(calls) == 1
@@ -95,7 +102,7 @@ def test_error_body_shapes_are_not_swallowed(client_factory, body):
         return httpx.Response(502, json=body)
 
     with pytest.raises(SentinelAPIError) as error:
-        client_factory(handler).get_approval("action")
+        client_factory(handler).get_approval(ACTION_ID)
     assert error.value.status_code == 502
     expected = body["message"] if isinstance(body, dict) else str(body)
     assert expected in str(error.value)
@@ -111,7 +118,7 @@ def test_transport_failure_never_replays_approval(client_factory, mode, error_ty
         raise error_type(ERR_TRANSPORT, request=request)
 
     with pytest.raises(error_type):
-        invoke(client_factory(handler), mode, "create_approval", "task", {})
+        invoke(client_factory(handler), mode, "create_approval", TASK_NAME, {})
     assert len(calls) == 1
 
 
@@ -122,7 +129,7 @@ def test_missing_key_fails_before_constructing_transport(monkeypatch, mode):
     monkeypatch.setattr(httpx, "AsyncClient" if mode == "async" else "Client", constructor)
     client = SentinelClient(SentinelConfig(api_key=None, api_url=f"https://{HOSTS['one']}"))
     with pytest.raises(SentinelConfigError):
-        invoke(client, mode, "create_approval", "task", {})
+        invoke(client, mode, "create_approval", TASK_NAME, {})
     constructor.assert_not_called()
 
 
@@ -137,9 +144,9 @@ def test_legacy_wait_fallback_returns_terminal_decision(client_factory, mode, st
             return httpx.Response(404, json={"detail": "legacy server"})
         return httpx.Response(200, json={"status": status})
 
-    decision = invoke(client_factory(handler), mode, "wait_for_decision", "action")
+    decision = invoke(client_factory(handler), mode, "wait_for_decision", ACTION_ID)
     assert decision["status"] == status
-    assert paths == ["/v1/approvals/action/wait", "/v1/approvals/action"]
+    assert paths == [f"/v1/approvals/{ACTION_ID}/wait", f"/v1/approvals/{ACTION_ID}"]
 
 
 @pytest.mark.parametrize("mode", ["sync", "async"])
@@ -158,7 +165,9 @@ def test_legacy_wait_paces_pending_requests(client_factory, monkeypatch, mode):
         polls.append(request)
         return httpx.Response(200, json={"status": "pending" if len(polls) == 1 else "approved"})
 
-    invoke(client_factory(handler), mode, "wait_for_decision", "action", timeout=5, poll_interval=2)
+    invoke(
+        client_factory(handler), mode, "wait_for_decision", ACTION_ID, timeout=5, poll_interval=2
+    )
     if mode == "async":
         async_sleeper.assert_awaited_once_with(2)
     else:
@@ -180,7 +189,7 @@ def test_late_approval_does_not_bypass_deadline(client_factory, monkeypatch, mod
         return httpx.Response(200, json={"status": "approved"})
 
     try:
-        invoke(client_factory(handler), mode, "wait_for_decision", "action", timeout=1)
+        invoke(client_factory(handler), mode, "wait_for_decision", ACTION_ID, timeout=1)
     except ApprovalTimeout:
         return
     assert False, "approval returned after the caller's one-second deadline"
@@ -196,8 +205,8 @@ def test_pending_decision_raises_timeout_with_context(client_factory, monkeypatc
         return httpx.Response(200, json={"status": "pending"})
 
     with pytest.raises(ApprovalTimeout) as error:
-        invoke(client_factory(handler), mode, "wait_for_decision", "action", timeout=1)
-    assert error.value.action_id == "action"
+        invoke(client_factory(handler), mode, "wait_for_decision", ACTION_ID, timeout=1)
+    assert error.value.action_id == ACTION_ID
     assert error.value.timeout_seconds == 1
 
 
@@ -214,8 +223,8 @@ async def test_concurrent_clients_keep_identity_and_idempotency_isolated(client_
     one = client_factory(handler, label="one")
     two = client_factory(handler, label="two")
     results = await asyncio.gather(
-        one.acreate_approval("task", {}, idempotency_key=REQUEST_IDS["one"]),
-        two.acreate_approval("task", {}, idempotency_key=REQUEST_IDS["two"]),
+        one.acreate_approval(TASK_NAME, {}, idempotency_key=REQUEST_IDS["one"]),
+        two.acreate_approval(TASK_NAME, {}, idempotency_key=REQUEST_IDS["two"]),
     )
     assert {result["action_id"] for result in results} == {REQUEST_IDS["one"], REQUEST_IDS["two"]}
     assert set(seen) == {
@@ -226,8 +235,8 @@ async def test_concurrent_clients_keep_identity_and_idempotency_isolated(client_
 
 def decorator_client(monkeypatch, mode, *, decision=None, failure=None):
     client = MagicMock()
-    client.create_approval.return_value = {"action_id": "action"}
-    client.acreate_approval = AsyncMock(return_value={"action_id": "action"})
+    client.create_approval.return_value = {"action_id": ACTION_ID}
+    client.acreate_approval = AsyncMock(return_value={"action_id": ACTION_ID})
     client.wait_for_decision.return_value = decision
     client.wait_for_decision.side_effect = failure
     client.await_for_decision = AsyncMock(return_value=decision, side_effect=failure)
@@ -266,7 +275,11 @@ def test_missing_arguments_never_request_approval(monkeypatch, mode, missing):
         operation(amount, recipient, memo=memo)
 
     wrapped = oversight()(async_operation if mode == "async" else operation)
-    args, kwargs = ((10,), {"memo": "test"}) if missing == "positional" else ((10, "recipient"), {})
+    args, kwargs = (
+        ((AMOUNTS["one"],), {"memo": ITEM})
+        if missing == "positional"
+        else ((AMOUNTS["one"], RECIPIENT), {})
+    )
     with pytest.raises(TypeError, match="required.*argument"):
         if mode == "async":
             asyncio.run(wrapped(*args, **kwargs))
@@ -299,7 +312,7 @@ def test_unapproved_decisions_never_execute(monkeypatch, mode, decision):
 
 @pytest.mark.parametrize("mode", ["sync", "async"])
 def test_default_timeout_never_executes(monkeypatch, mode):
-    decorator_client(monkeypatch, mode, failure=ApprovalTimeout("action", 1))
+    decorator_client(monkeypatch, mode, failure=ApprovalTimeout(ACTION_ID, 1))
     operation = MagicMock()
     with pytest.raises(ApprovalTimeout):
         wrap_call(mode, operation)()
@@ -328,7 +341,7 @@ def test_decorator_closes_client_on_every_exit(monkeypatch, mode, outcome):
         monkeypatch,
         mode,
         decision={"status": "rejected" if outcome == "rejected" else "approved"},
-        failure=ApprovalTimeout("action", 1) if outcome == "timeout" else None,
+        failure=ApprovalTimeout(ACTION_ID, 1) if outcome == "timeout" else None,
     )
 
     def operation():
@@ -347,7 +360,7 @@ def test_decorator_closes_client_on_every_exit(monkeypatch, mode, outcome):
 @pytest.mark.parametrize("mode", ["sync", "async"])
 def test_timeout_fallback_exception_is_audited(monkeypatch, mode):
     """BE-003: failed explicit fallback must preserve the error and audit attempt."""
-    client = decorator_client(monkeypatch, mode, failure=ApprovalTimeout("action", 1))
+    client = decorator_client(monkeypatch, mode, failure=ApprovalTimeout(ACTION_ID, 1))
     original_error = ValueError(ERR_OPERATION)
     operation = MagicMock(side_effect=original_error)
 
@@ -359,7 +372,7 @@ def test_timeout_fallback_exception_is_audited(monkeypatch, mode):
     audit.assert_called_once()
     if mode == "async":
         audit.assert_awaited_once()
-    assert audit.call_args.args[0] == "action"
+    assert audit.call_args.args[0] == ACTION_ID
     assert audit.call_args.kwargs["execution_result"] is None
     assert "timeout-fallback-execute" in audit.call_args.kwargs["error"]
     assert ERR_OPERATION in audit.call_args.kwargs["error"]
@@ -368,14 +381,14 @@ def test_timeout_fallback_exception_is_audited(monkeypatch, mode):
 @pytest.mark.parametrize("mode", ["sync", "async"])
 def test_timeout_fallback_success_is_audited(monkeypatch, mode):
     """BE-003: successful explicit fallback keeps its existing result and audit."""
-    client = decorator_client(monkeypatch, mode, failure=ApprovalTimeout("action", 1))
+    client = decorator_client(monkeypatch, mode, failure=ApprovalTimeout(ACTION_ID, 1))
     operation = MagicMock(return_value="success")
 
     assert wrap_call(mode, operation, fallback="execute")() == "success"
     operation.assert_called_once_with()
     audit = client.aemit_audit_event if mode == "async" else client.emit_audit_event
     audit.assert_called_once_with(
-        "action", execution_result="'success'", error="timeout-fallback-execute"
+        ACTION_ID, execution_result="'success'", error="timeout-fallback-execute"
     )
     if mode == "async":
         audit.assert_awaited_once()
@@ -391,12 +404,12 @@ async def test_execution_arguments_match_approved_snapshot(client_factory, monke
     approval_requested = asyncio.Event()
     mutation_done = asyncio.Event()
     observed = {}
-    arguments = {"amount": 10}
+    arguments = {"amount": AMOUNTS["one"]}
 
     async def handler(request):
         if request.url.path == "/v1/approvals":
             observed["approved"] = json.loads(request.content)["arguments"]["payload"]["amount"]
-            return httpx.Response(200, json={"action_id": "action"})
+            return httpx.Response(200, json={"action_id": ACTION_ID})
         if request.url.path.endswith("/wait"):
             approval_requested.set()
             await mutation_done.wait()
@@ -412,7 +425,7 @@ async def test_execution_arguments_match_approved_snapshot(client_factory, monke
 
     async def concurrent_mutation():
         await approval_requested.wait()
-        arguments["amount"] = 999
+        arguments["amount"] = AMOUNTS["one"] + AMOUNTS["two"]
         mutation_done.set()
 
     await asyncio.gather(operation(arguments), concurrent_mutation())
@@ -422,9 +435,9 @@ async def test_execution_arguments_match_approved_snapshot(client_factory, monke
 @pytest.mark.parametrize("mode", ["sync", "async"])
 @pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
 def test_nonfinite_numbers_are_rejected_before_transport(client_factory, mode, value):
-    handler = MagicMock(return_value=httpx.Response(200, json={"action_id": "action"}))
+    handler = MagicMock(return_value=httpx.Response(200, json={"action_id": ACTION_ID}))
     with pytest.raises(ValueError):
-        invoke(client_factory(handler), mode, "create_approval", "task", {"amount": value})
+        invoke(client_factory(handler), mode, "create_approval", TASK_NAME, {"amount": value})
     handler.assert_not_called()
 
 
@@ -436,7 +449,7 @@ def test_json_payload_roundtrip_property(client_factory):
 
     def handler(request):
         received.append(json.loads(request.content)["arguments"])
-        return httpx.Response(200, json={"action_id": "action"})
+        return httpx.Response(200, json={"action_id": ACTION_ID})
 
     client = client_factory(handler)
     scalars = (
@@ -457,7 +470,7 @@ def test_json_payload_roundtrip_property(client_factory):
     @hypothesis.settings(max_examples=75, derandomize=True, database=None, deadline=None)
     @hypothesis.given(values)
     def check(arguments):
-        client.create_approval("task", arguments)
+        client.create_approval(TASK_NAME, arguments)
         assert received[-1] == arguments
 
     check()
@@ -474,13 +487,14 @@ async def test_shared_client_keeps_concurrent_request_keys_isolated(client_facto
         return httpx.Response(200, json={"action_id": key})
 
     client = client_factory(handler)
+    keys = [rid() for _ in range(10)]
     await asyncio.gather(
         *(
-            client.acreate_approval("task", {"request": index}, idempotency_key=f"request-{index}")
-            for index in range(10)
+            client.acreate_approval(TASK_NAME, {"request": index}, idempotency_key=key)
+            for index, key in enumerate(keys)
         )
     )
-    assert received == {f"request-{index}": index for index in range(10)}
+    assert received == {key: index for index, key in enumerate(keys)}
 
 
 @pytest.mark.parametrize("mode", ["sync", "async"])
@@ -509,15 +523,21 @@ async def test_shared_client_keeps_concurrent_request_keys_isolated(client_facto
             },
         ),
         ("list_sms_contacts", (), "GET", "/v1/approver-contacts", None),
-        ("revoke_sms_contact", ("contact",), "DELETE", "/v1/approver-contacts/contact", None),
+        (
+            "revoke_sms_contact",
+            (CONTACT_ID,),
+            "DELETE",
+            f"/v1/approver-contacts/{CONTACT_ID}",
+            None,
+        ),
         ("list_audit_events", (), "GET", "/v1/audit-events", None),
         (
             "emit_audit_event",
-            ("action", RESULT_TEXT, ERROR_TEXT),
+            (ACTION_ID, RESULT_TEXT, ERROR_TEXT),
             "POST",
             "/v1/audit-events",
             {
-                "action_id": "action",
+                "action_id": ACTION_ID,
                 "execution_result": RESULT_TEXT,
                 "error": ERROR_TEXT,
             },
@@ -544,7 +564,7 @@ def test_audit_transport_errors_remain_best_effort(client_factory, mode):
     def handler(request):
         raise httpx.ConnectError(ERR_TRANSPORT, request=request)
 
-    assert invoke(client_factory(handler), mode, "emit_audit_event", "action") is None
+    assert invoke(client_factory(handler), mode, "emit_audit_event", ACTION_ID) is None
 
 
 @pytest.mark.xfail(

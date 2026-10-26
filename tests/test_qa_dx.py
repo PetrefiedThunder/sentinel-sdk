@@ -10,7 +10,16 @@ import pytest
 import sentinel
 import sentinel.config as config_module
 from sentinel import ApprovalRejected, SentinelClient, SentinelConfig, SentinelConfigError
-from tests._qa_values import ACCOUNT_ID, ACTION_ID, DX_HOST, DX_KEY, RECIPIENT, TRANSFER_ID
+from tests._qa_values import (
+    ACCOUNT_ID,
+    ACTION_ID,
+    AMOUNTS,
+    DX_HOST,
+    DX_KEY,
+    ERR_DETAIL,
+    RECIPIENT,
+    TRANSFER_ID,
+)
 
 
 @pytest.fixture
@@ -48,28 +57,28 @@ def quickstart(monkeypatch, isolated_config):
 )
 def test_readme_quickstart_runs_after_approval(quickstart):
     namespace, _ = quickstart
-    namespace["transfer_funds"](1000, ACCOUNT_ID)
+    namespace["transfer_funds"](AMOUNTS["one"], ACCOUNT_ID)
 
 
 def test_readme_quickstart_passes_when_missing_payment_symbol_is_supplied(quickstart):
     namespace, client = quickstart
     transfer = MagicMock(return_value={"id": TRANSFER_ID})
     namespace["stripe"] = SimpleNamespace(transfers=SimpleNamespace(create=transfer))
-    assert namespace["transfer_funds"](1000, ACCOUNT_ID) == {"id": TRANSFER_ID}
-    transfer.assert_called_once_with(amount=1000, destination=ACCOUNT_ID)
+    assert namespace["transfer_funds"](AMOUNTS["one"], ACCOUNT_ID) == {"id": TRANSFER_ID}
+    transfer.assert_called_once_with(amount=AMOUNTS["one"], destination=ACCOUNT_ID)
     assert client.create_approval.call_args.kwargs["arguments"] == {
-        "amount": 1000,
+        "amount": AMOUNTS["one"],
         "recipient": ACCOUNT_ID,
     }
 
 
 def test_readme_quickstart_rejection_exposes_reason_and_prevents_payment(quickstart):
     namespace, client = quickstart
-    client.wait_for_decision.return_value = {"status": "rejected", "reason": "Needs review"}
+    client.wait_for_decision.return_value = {"status": "rejected", "reason": ERR_DETAIL}
     transfer = MagicMock()
     namespace["stripe"] = SimpleNamespace(transfers=SimpleNamespace(create=transfer))
-    with pytest.raises(ApprovalRejected, match="Needs review") as error:
-        namespace["transfer_funds"](1000, ACCOUNT_ID)
+    with pytest.raises(ApprovalRejected, match=ERR_DETAIL) as error:
+        namespace["transfer_funds"](AMOUNTS["one"], ACCOUNT_ID)
     assert error.value.action_id == ACTION_ID
     transfer.assert_not_called()
 
@@ -140,5 +149,5 @@ def test_missing_required_argument_fails_before_requesting_human_approval(quicks
     """UX-003: validate complete arguments before involving an approver."""
     namespace, client = quickstart
     with pytest.raises(TypeError, match="required.*argument"):
-        namespace["transfer_funds"](1000)
+        namespace["transfer_funds"](AMOUNTS["one"])
     client.create_approval.assert_not_called()

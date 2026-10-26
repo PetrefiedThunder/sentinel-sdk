@@ -9,7 +9,7 @@ import pytest
 
 from sentinel.adapters import autogen, crewai, langgraph, openai_agents
 from sentinel.client import _ensure_json_serializable
-from tests._qa_values import ACTION_ID
+from tests._qa_values import ACTION_ID, AMOUNTS, CURRENCY, ITEM, META, NOTE, RECIPIENT
 
 CASES = [(name, False) for name in ("autogen", "crewai", "langgraph", "openai_agents")]
 CASES += [(name, True) for name in ("autogen", "langgraph", "openai_agents")]
@@ -54,21 +54,21 @@ def gated_call(request):
 def test_mixed_inputs_include_variadics_without_omitted_defaults(gated_call):
     gate, _, approval = gated_call
 
-    def action(amount, /, *items, recipient, note="ordinary", **metadata):
+    def action(amount, /, *items, recipient, note=NOTE, **metadata):
         return amount, items, recipient, note, metadata
 
-    assert gate(action)(10, "extra", recipient="recipient", currency="USD") == (
-        10,
-        ("extra",),
-        "recipient",
-        "ordinary",
-        {"currency": "USD"},
+    assert gate(action)(AMOUNTS["one"], ITEM, recipient=RECIPIENT, currency=CURRENCY) == (
+        AMOUNTS["one"],
+        (ITEM,),
+        RECIPIENT,
+        NOTE,
+        {"currency": CURRENCY},
     )
     assert approval.call_args.kwargs["arguments"] == {
-        "amount": 10,
-        "items": ("extra",),
-        "recipient": "recipient",
-        "metadata": {"currency": "USD"},
+        "amount": AMOUNTS["one"],
+        "items": (ITEM,),
+        "recipient": RECIPIENT,
+        "metadata": {"currency": CURRENCY},
     }
 
 
@@ -85,17 +85,17 @@ def test_unavailable_signature_preserves_keyword_collisions(gated_call, monkeypa
         raise error("signature unavailable")
 
     monkeypatch.setattr(inspect, "signature", unavailable)
-    metadata = {"args": "keyword value", "kwargs": "other keyword value"}
-    assert wrapped(10, **metadata) == (10, metadata)
-    assert approval.call_args.kwargs["arguments"] == {"args": [10], "kwargs": metadata}
+    metadata = dict(META)
+    assert wrapped(AMOUNTS["one"], **metadata) == (AMOUNTS["one"], metadata)
+    assert approval.call_args.kwargs["arguments"] == {"args": [AMOUNTS["one"]], "kwargs": metadata}
 
 
 @pytest.mark.parametrize(
     "kwargs",
     [
-        {"amount": 20, "recipient": "recipient"},
-        {"unexpected": "value"},
-        {"recipient": "recipient", "unexpected": "value"},
+        {"amount": AMOUNTS["two"], "recipient": RECIPIENT},
+        {"unexpected": ITEM},
+        {"recipient": RECIPIENT, "unexpected": ITEM},
     ],
     ids=["duplicate", "missing-required", "unexpected"],
 )
@@ -107,7 +107,7 @@ def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
         calls.append((amount, recipient))
 
     with pytest.raises(TypeError):
-        gate(action)(10, **kwargs)
+        gate(action)(AMOUNTS["one"], **kwargs)
     assert calls == []
     client.create_approval.assert_not_called()
     client.acreate_approval.assert_not_called()
@@ -118,8 +118,12 @@ def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
 @pytest.mark.parametrize(
     "args, kwargs, expected",
     [
-        ((10, "recipient"), {}, {"args": [10, "recipient"]}),
-        ((), {"amount": 10, "recipient": "recipient"}, {"amount": 10, "recipient": "recipient"}),
+        ((AMOUNTS["one"], RECIPIENT), {}, {"args": [AMOUNTS["one"], RECIPIENT]}),
+        (
+            (),
+            {"amount": AMOUNTS["one"], "recipient": RECIPIENT},
+            {"amount": AMOUNTS["one"], "recipient": RECIPIENT},
+        ),
         ((), {}, {"args": []}),
     ],
     ids=["positional", "keyword", "empty"],
@@ -127,10 +131,10 @@ def test_invalid_mixed_binding_fails_before_approval(gated_call, kwargs):
 def test_nonmixed_payload_shape_remains_compatible(gated_call, args, kwargs, expected):
     gate, _, approval = gated_call
 
-    def action(amount=10, recipient="recipient"):
+    def action(amount=AMOUNTS["one"], recipient=RECIPIENT):
         return amount, recipient
 
-    assert gate(action)(*args, **kwargs) == (10, "recipient")
+    assert gate(action)(*args, **kwargs) == (AMOUNTS["one"], RECIPIENT)
     assert approval.call_args.kwargs["arguments"] == expected
 
 
@@ -142,7 +146,7 @@ def test_mixed_binding_preserves_raw_values(gated_call):
         assert payload is value
         return recipient
 
-    assert gate(action)(value, recipient="recipient") == "recipient"
+    assert gate(action)(value, recipient=RECIPIENT) == RECIPIENT
     assert approval.call_args.kwargs["arguments"]["payload"] is value
 
 
@@ -160,10 +164,10 @@ def test_omitted_nonserializable_default_stays_out_of_approval(gated_call):
     def action(amount, *, recipient, dependency=dependency):
         return amount, recipient, dependency
 
-    result = gate(action)(10, recipient="recipient")
-    assert result == (10, "recipient", dependency)
+    result = gate(action)(AMOUNTS["one"], recipient=RECIPIENT)
+    assert result == (AMOUNTS["one"], RECIPIENT, dependency)
     assert result[2] is dependency
     assert approval.call_args.kwargs["arguments"] == {
-        "amount": 10,
-        "recipient": "recipient",
+        "amount": AMOUNTS["one"],
+        "recipient": RECIPIENT,
     }

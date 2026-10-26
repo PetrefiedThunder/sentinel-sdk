@@ -38,3 +38,22 @@ ERR_TRANSPORT = rhex()
 ERR_OPERATION = rhex()
 RESULT_TEXT = rhex()
 ERROR_TEXT = rhex()
+
+
+def ramount() -> int:
+    return secrets.randbelow(10**6) + 1
+
+
+def rname() -> str:
+    return f"t_{secrets.token_hex(6)}"
+
+
+AMOUNTS = {"one": ramount(), "two": ramount()}
+CURRENCY = rhex(3)
+NOTE = rhex()
+ITEM = rhex()
+TOOL_NAME = rname()
+MISSING_TOOL = rname()
+TASK_NAME = rname()
+CONTACT_ID = rid()
+META = {"args": rhex(), "kwargs": rhex()}
