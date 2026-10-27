@@ -19,6 +19,7 @@ from tests._qa_values import (
     ERR_DETAIL,
     ERR_TRANSPORT,
     HOSTS,
+    JSON_NUMBER,
     MISSING_TOOL,
     RECIPIENT,
     TOOL_NAME,
@@ -312,7 +313,7 @@ def test_anthropic_unknown_tool_and_non_tool_blocks_are_safe(block_style):
     client.create_approval.assert_not_called()
 
 
-@pytest.mark.parametrize("args_json", ["not json", "[]", "null", "7", "{}"])
+@pytest.mark.parametrize("args_json", ["not json", "[]", "null", JSON_NUMBER, "{}"])
 def test_openai_function_tool_rejection_blocks_malformed_and_valid_inputs(args_json):
     original = AsyncMock(return_value="executed")
     tool = SimpleNamespace(name=TOOL_NAME, on_invoke_tool=original)

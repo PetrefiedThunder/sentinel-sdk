@@ -48,6 +48,16 @@ def rname() -> str:
     return f"t_{secrets.token_hex(6)}"
 
 
+def rseconds() -> float:
+    """A positive duration with two decimals, fresh per run."""
+    return (secrets.randbelow(10**5) + 1) / 100
+
+
+def rclock() -> float:
+    """A monotonic-clock reading, fresh per run."""
+    return float(secrets.randbelow(10**9) + 1)
+
+
 AMOUNTS = {"one": ramount(), "two": ramount()}
 CURRENCY = rhex(3)
 NOTE = rhex()
@@ -57,3 +67,6 @@ MISSING_TOOL = rname()
 TASK_NAME = rname()
 CONTACT_ID = rid()
 META = {"args": rhex(), "kwargs": rhex()}
+TIMEOUT_SECONDS = rseconds()
+POLL_SECONDS = rseconds()
+JSON_NUMBER = str(ramount())

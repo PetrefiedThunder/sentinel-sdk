@@ -17,7 +17,9 @@ from tests._qa_values import (
     DX_HOST,
     DX_KEY,
     ERR_DETAIL,
+    POLL_SECONDS,
     RECIPIENT,
+    TIMEOUT_SECONDS,
     TRANSFER_ID,
 )
 
@@ -88,13 +90,13 @@ def test_readme_quickstart_rejection_exposes_reason_and_prevents_payment(quickst
     [
         ("SENTINEL_API_URL", f"https://{DX_HOST}", "api_url", f"https://{DX_HOST}"),
         ("SENTINEL_API_KEY", DX_KEY, "api_key", DX_KEY),
-        ("SENTINEL_TIMEOUT", "17.5", "timeout_seconds", 17.5),
+        ("SENTINEL_TIMEOUT", str(TIMEOUT_SECONDS), "timeout_seconds", TIMEOUT_SECONDS),
         ("SENTINEL_FALLBACK", "execute", "fallback", "execute"),
         pytest.param(
             "SENTINEL_POLL_INTERVAL",
-            "0.25",
+            str(POLL_SECONDS),
             "poll_interval",
-            0.25,
+            POLL_SECONDS,
             marks=pytest.mark.xfail(
                 strict=True,
                 raises=AssertionError,
@@ -117,9 +119,9 @@ def test_readme_environment_configuration(monkeypatch, env_name, env_value, attr
 
 
 def test_configure_preserves_fields_when_setting_one_option(isolated_config):
-    configured = sentinel.configure(poll_interval=0.25)
+    configured = sentinel.configure(poll_interval=POLL_SECONDS)
     assert sentinel.get_config() is configured
-    assert configured.poll_interval == 0.25
+    assert configured.poll_interval == POLL_SECONDS
     assert configured.api_url == isolated_config.api_url
     assert configured.timeout_seconds == isolated_config.timeout_seconds
 

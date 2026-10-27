@@ -41,7 +41,10 @@ from tests._qa_values import (
     REQUEST_IDS,
     RESULT_TEXT,
     TASK_NAME,
+    rclock,
+    rhex,
     rid,
+    rseconds,
 )
 
 
@@ -154,8 +157,9 @@ def test_legacy_wait_paces_pending_requests(client_factory, monkeypatch, mode):
     polls = []
     sleeper = MagicMock()
     async_sleeper = AsyncMock()
+    start = rclock()
     monkeypatch.setattr(
-        client_module, "time", SimpleNamespace(monotonic=lambda: 100, sleep=sleeper)
+        client_module, "time", SimpleNamespace(monotonic=lambda: start, sleep=sleeper)
     )
     monkeypatch.setattr(asyncio, "sleep", async_sleeper)
 
@@ -181,11 +185,12 @@ def test_legacy_wait_paces_pending_requests(client_factory, monkeypatch, mode):
     reason="BE-005: an approved response after the deadline is accepted",
 )
 def test_late_approval_does_not_bypass_deadline(client_factory, monkeypatch, mode):
-    clock = {"now": 100}
+    start = rclock()
+    clock = {"now": start}
     monkeypatch.setattr(client_module, "time", SimpleNamespace(monotonic=lambda: clock["now"]))
 
     def handler(request):
-        clock["now"] = 102
+        clock["now"] = start + 1 + rseconds()
         return httpx.Response(200, json={"status": "approved"})
 
     try:
@@ -197,11 +202,12 @@ def test_late_approval_does_not_bypass_deadline(client_factory, monkeypatch, mod
 
 @pytest.mark.parametrize("mode", ["sync", "async"])
 def test_pending_decision_raises_timeout_with_context(client_factory, monkeypatch, mode):
-    clock = {"now": 100}
+    start = rclock()
+    clock = {"now": start}
     monkeypatch.setattr(client_module, "time", SimpleNamespace(monotonic=lambda: clock["now"]))
 
     def handler(request):
-        clock["now"] = 102
+        clock["now"] = start + 1 + rseconds()
         return httpx.Response(200, json={"status": "pending"})
 
     with pytest.raises(ApprovalTimeout) as error:
@@ -488,13 +494,14 @@ async def test_shared_client_keeps_concurrent_request_keys_isolated(client_facto
 
     client = client_factory(handler)
     keys = [rid() for _ in range(10)]
+    values = [rhex() for _ in keys]
     await asyncio.gather(
         *(
-            client.acreate_approval(TASK_NAME, {"request": index}, idempotency_key=key)
-            for index, key in enumerate(keys)
+            client.acreate_approval(TASK_NAME, {"request": value}, idempotency_key=key)
+            for key, value in zip(keys, values, strict=True)
         )
     )
-    assert received == {key: index for index, key in enumerate(keys)}
+    assert received == dict(zip(keys, values, strict=True))
 
 
 @pytest.mark.parametrize("mode", ["sync", "async"])
