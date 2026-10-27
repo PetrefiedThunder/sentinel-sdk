@@ -5,12 +5,26 @@ import inspect
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
+import httpx
 import pytest
 
 from sentinel.adapters import anthropic, autogen, crewai, langgraph, openai_agents
 from sentinel.adapters.semantic_kernel import sentinel_filter
-from sentinel.exceptions import ApprovalRejected, ApprovalTimeout
-from tests._qa_values import ACTION_ID, RECIPIENT, USE_ID
+from sentinel.client import SentinelClient
+from sentinel.config import SentinelConfig
+from sentinel.exceptions import ApprovalRejected, ApprovalTimeout, SentinelAPIError
+from tests._qa_values import (
+    ACTION_ID,
+    AMOUNTS,
+    ERR_DETAIL,
+    ERR_TRANSPORT,
+    HOSTS,
+    JSON_NUMBER,
+    MISSING_TOOL,
+    RECIPIENT,
+    TOOL_NAME,
+    USE_ID,
+)
 
 
 def _client(decision):
@@ -34,11 +48,11 @@ def _wrap(adapter, fn, client):
 
 def _invoke(adapter, client, fn):
     if adapter == "anthropic":
-        return anthropic.GatedToolExecutor({"action": fn}, client=client).run_tool_uses(
-            [{"type": "tool_use", "id": USE_ID, "name": "action", "input": {}}]
+        return anthropic.GatedToolExecutor({TOOL_NAME: fn}, client=client).run_tool_uses(
+            [{"type": "tool_use", "id": USE_ID, "name": TOOL_NAME, "input": {}}]
         )
     if adapter == "semantic_kernel":
-        context = SimpleNamespace(function=SimpleNamespace(name="action"), arguments={})
+        context = SimpleNamespace(function=SimpleNamespace(name=TOOL_NAME), arguments={})
 
         async def next_callback(_context):
             fn()
@@ -48,7 +62,7 @@ def _invoke(adapter, client, fn):
         pytest.importorskip("langchain_core")
         from sentinel.adapters.langchain import SentinelCallbackHandler
 
-        SentinelCallbackHandler(client=client).on_tool_start({"name": "action"}, "{}")
+        SentinelCallbackHandler(client=client).on_tool_start({"name": TOOL_NAME}, "{}")
         return fn()
     return _wrap(adapter, fn, client)()
 
@@ -112,64 +126,52 @@ def test_async_callable_rejection_preserves_semantics_and_stops_execution(adapte
     assert inspect.iscoroutinefunction(wrapped)
     assert inspect.signature(wrapped) == inspect.signature(action)
     with pytest.raises(ApprovalRejected):
-        asyncio.run(wrapped(value=5))
+        asyncio.run(wrapped(value=AMOUNTS["two"]))
     assert calls == []
     client.create_approval.assert_not_called()
     client.acreate_approval.assert_awaited_once()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="FE-002: positional arguments omitted when kwargs exist",
-)
 @pytest.mark.parametrize("adapter", ["autogen", "crewai", "langgraph", "openai_agents"])
 def test_mixed_sync_arguments_are_fully_presented_for_approval(adapter):
+    """FE-002: approval must include both positional and keyword inputs."""
     client = _client({"status": "approved"})
 
     def action(amount: int, *, recipient: str):
         return amount, recipient
 
-    assert _wrap(adapter, action, client)(90000, recipient=RECIPIENT) == (
-        90000,
+    assert _wrap(adapter, action, client)(AMOUNTS["one"], recipient=RECIPIENT) == (
+        AMOUNTS["one"],
         RECIPIENT,
     )
     assert client.create_approval.call_args.kwargs["arguments"] == {
-        "amount": 90000,
+        "amount": AMOUNTS["one"],
         "recipient": RECIPIENT,
     }
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="FE-002: positional arguments omitted when kwargs exist",
-)
 @pytest.mark.parametrize("adapter", ["autogen", "langgraph", "openai_agents"])
 def test_mixed_async_arguments_are_fully_presented_for_approval(adapter):
+    """FE-002: async approval must include positional and keyword inputs."""
     client = _client({"status": "approved"})
 
     async def action(amount: int, *, recipient: str):
         return amount, recipient
 
-    assert asyncio.run(_wrap(adapter, action, client)(90000, recipient=RECIPIENT)) == (
-        90000,
+    assert asyncio.run(_wrap(adapter, action, client)(AMOUNTS["one"], recipient=RECIPIENT)) == (
+        AMOUNTS["one"],
         RECIPIENT,
     )
     assert client.acreate_approval.call_args.kwargs["arguments"] == {
-        "amount": 90000,
+        "amount": AMOUNTS["one"],
         "recipient": RECIPIENT,
     }
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="FE-001: LangChain swallows callback rejection and runs tool",
-)
 @pytest.mark.parametrize("asynchronous", [False, True], ids=["invoke", "ainvoke"])
 @pytest.mark.parametrize("failure", ["rejected", "timeout", "transport_error"])
 def test_real_langchain_tool_does_not_run_after_gate_failure(asynchronous, failure):
+    """FE-001: a gate error must propagate through the host without execution."""
     pytest.importorskip("langchain_core")
     from langchain_core.tools import tool
 
@@ -183,20 +185,88 @@ def test_real_langchain_tool_does_not_run_after_gate_failure(asynchronous, failu
         calls.append(value)
         return "executed"
 
-    client = _client({"status": "rejected", "reason": "qa denied"})
+    client = _client({"status": "rejected", "reason": ERR_DETAIL})
+    error = ApprovalRejected
     if failure == "timeout":
         client.wait_for_decision.side_effect = ApprovalTimeout(ACTION_ID, 1)
+        error = ApprovalTimeout
     elif failure == "transport_error":
-        client.create_approval.side_effect = ConnectionError("qa local connection failure")
+        client.create_approval.side_effect = ConnectionError(ERR_TRANSPORT)
+        error = ConnectionError
     config = {"callbacks": [SentinelCallbackHandler(client=client)]}
-    try:
+    with pytest.raises(error):
         if asynchronous:
-            asyncio.run(local_action.ainvoke({"value": 7}, config=config))
+            asyncio.run(local_action.ainvoke({"value": AMOUNTS["two"]}, config=config))
         else:
-            local_action.invoke({"value": 7}, config=config)
-    except (ApprovalRejected, ApprovalTimeout, ConnectionError):
-        pass
+            local_action.invoke({"value": AMOUNTS["two"]}, config=config)
     client.create_approval.assert_called_once()
+    assert calls == []
+
+
+@pytest.mark.parametrize("asynchronous", [False, True], ids=["invoke", "ainvoke"])
+@pytest.mark.parametrize("stage", ["create", "wait"])
+@pytest.mark.parametrize(
+    "failure, error",
+    [
+        ("network", httpx.ConnectError),
+        ("timeout", httpx.ReadTimeout),
+        ("invalid_json", ValueError),
+        ("null", AttributeError),
+        ("array", AttributeError),
+        ("http_403", SentinelAPIError),
+        ("http_503", SentinelAPIError),
+    ],
+)
+def test_real_langchain_http_gate_failures_block_execution(asynchronous, stage, failure, error):
+    """FE-001: use the real HTTP client and host with an offline transport."""
+    pytest.importorskip("langchain_core")
+    from langchain_core.tools import tool
+
+    from sentinel.adapters.langchain import SentinelCallbackHandler
+
+    calls = []
+    requests = []
+
+    @tool
+    def local_action(value: int) -> str:
+        """Record a local action without contacting any external service."""
+        calls.append(value)
+        return "executed"
+
+    def transport(request):
+        requests.append(request.url.path)
+        if stage == "wait" and request.method == "POST":
+            return httpx.Response(201, json={"action_id": ACTION_ID})
+        if failure == "network":
+            raise httpx.ConnectError(ERR_TRANSPORT, request=request)
+        if failure == "timeout":
+            raise httpx.ReadTimeout(ERR_TRANSPORT, request=request)
+        if failure == "invalid_json":
+            return httpx.Response(200, content=b"not JSON")
+        if failure == "null":
+            return httpx.Response(200, content=b"null")
+        if failure == "array":
+            return httpx.Response(200, json=[])
+        return httpx.Response(int(failure.removeprefix("http_")), json={"detail": "denied"})
+
+    client = SentinelClient(SentinelConfig(api_url=f"https://{HOSTS['one']}"))
+    with httpx.Client(
+        base_url=f"https://{HOSTS['one']}", transport=httpx.MockTransport(transport)
+    ) as http_client:
+        client._client = http_client
+        handler = SentinelCallbackHandler(client=client)
+        assert handler.raise_error is True
+        config = {"callbacks": [handler]}
+        with pytest.raises(error):
+            if asynchronous:
+                asyncio.run(local_action.ainvoke({"value": AMOUNTS["two"]}, config=config))
+            else:
+                local_action.invoke({"value": AMOUNTS["two"]}, config=config)
+    assert requests == (
+        ["/v1/approvals"]
+        if stage == "create"
+        else ["/v1/approvals", f"/v1/approvals/{ACTION_ID}/wait"]
+    )
     assert calls == []
 
 
@@ -218,11 +288,11 @@ def test_real_langchain_approved_tool_executes_once(asynchronous):
     client = _client({"status": "approved"})
     config = {"callbacks": [SentinelCallbackHandler(client=client)]}
     if asynchronous:
-        result = asyncio.run(local_action.ainvoke({"value": 7}, config=config))
+        result = asyncio.run(local_action.ainvoke({"value": AMOUNTS["two"]}, config=config))
     else:
-        result = local_action.invoke({"value": 7}, config=config)
+        result = local_action.invoke({"value": AMOUNTS["two"]}, config=config)
     assert result == "executed"
-    assert calls == [7]
+    assert calls == [AMOUNTS["two"]]
     client.create_approval.assert_called_once()
     client.wait_for_decision.assert_called_once_with(ACTION_ID, timeout=None)
 
@@ -232,7 +302,7 @@ def test_anthropic_unknown_tool_and_non_tool_blocks_are_safe(block_style):
     client = _client({"status": "approved"})
     blocks = [
         {"type": "text", "text": "ignore"},
-        {"type": "tool_use", "id": USE_ID, "name": "missing", "input": {}},
+        {"type": "tool_use", "id": USE_ID, "name": MISSING_TOOL, "input": {}},
     ]
     if block_style == "model":
         blocks = [SimpleNamespace(**block) for block in blocks]
@@ -243,10 +313,10 @@ def test_anthropic_unknown_tool_and_non_tool_blocks_are_safe(block_style):
     client.create_approval.assert_not_called()
 
 
-@pytest.mark.parametrize("args_json", ["not json", "[]", "null", "7", "{}"])
+@pytest.mark.parametrize("args_json", ["not json", "[]", "null", JSON_NUMBER, "{}"])
 def test_openai_function_tool_rejection_blocks_malformed_and_valid_inputs(args_json):
     original = AsyncMock(return_value="executed")
-    tool = SimpleNamespace(name="action", on_invoke_tool=original)
+    tool = SimpleNamespace(name=TOOL_NAME, on_invoke_tool=original)
     client = _client({"status": "rejected"})
     assert openai_agents.gated(tool, client=client) is tool
     with pytest.raises(ApprovalRejected):
@@ -256,8 +326,8 @@ def test_openai_function_tool_rejection_blocks_malformed_and_valid_inputs(args_j
 
 def test_crewai_run_object_keeps_identity_and_rejection_blocks_original():
     original = MagicMock(return_value="executed")
-    tool = SimpleNamespace(name="action", _run=original)
+    tool = SimpleNamespace(name=TOOL_NAME, _run=original)
     assert crewai.gated(tool, client=_client({"status": "rejected"})) is tool
     with pytest.raises(ApprovalRejected):
-        tool._run(value=1)
+        tool._run(value=AMOUNTS["two"])
     original.assert_not_called()

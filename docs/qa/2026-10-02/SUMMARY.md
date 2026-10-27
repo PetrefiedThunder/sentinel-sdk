@@ -69,6 +69,8 @@ The five mandatory documents, three separate QA pass logs/reports, independent r
 
 Final handoff checks: [document/count/link validation](artifacts/COORD-validate-handoff.txt), [unchanged product scope](artifacts/COORD-tracked-scope.txt), [redacted current-snapshot secret scan](artifacts/COORD-final-secret-scan.txt), [sanitized scan summary](artifacts/secret-scan-summary.json). Independent final document consistency review passed in [GATE-REPORT.md](GATE-REPORT.md).
 
+Fix pass: see FIXES.md
+
 ## Artifacts
 
 Generated run logs, transcripts and dumps that used to live in `artifacts/` are no

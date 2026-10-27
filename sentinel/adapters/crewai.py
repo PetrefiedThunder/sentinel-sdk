@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING, Any
 
 from ..client import SentinelClient
 from ..exceptions import ApprovalRejected
+from ._arguments import approval_arguments
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -55,8 +56,7 @@ def gated(
     original = _extract_callable(tool)
 
     def wrapper(*args: Any, **kwargs: Any) -> Any:
-        # CrewAI tools are usually called with kwargs; fall back to positional.
-        arguments = kwargs if kwargs else {"args": list(args)}
+        arguments = approval_arguments(original, args, kwargs)
         approval = sentinel_client.create_approval(
             function_name=derived_name,
             arguments=arguments,

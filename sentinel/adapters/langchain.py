@@ -19,6 +19,9 @@ class SentinelCallbackHandler:
     time so the langchain dependency stays optional.
     """
 
+    # Approval is an execution gate: LangChain must not swallow its errors.
+    raise_error = True
+
     def __new__(cls, *args, **kwargs):
         try:
             from langchain_core.callbacks import BaseCallbackHandler  # type: ignore
