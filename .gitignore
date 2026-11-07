@@ -12,3 +12,8 @@ dist/
 .venv/
 venv/
 
+
+# QA run outputs (logs, coverage, dumps) are generated; keep them out of git
+docs/qa/*/artifacts/
+htmlcov/
+coverage.xml
